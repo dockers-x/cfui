@@ -88,8 +88,12 @@ jobs:
           GOARM: ${{ matrix.goarm }}
           CGO_ENABLED: 0
         run: |
+          BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S_UTC')
           go build -v -trimpath \
-            -ldflags="-s -w -X main.Version=${{ github.ref_name }}" \
+            -ldflags="-s -w \
+              -X cfui/version.Version=${{ github.ref_name }} \
+              -X cfui/version.BuildTime=${BUILD_TIME} \
+              -X cfui/version.GitCommit=${{ github.sha }}" \
             -o dist/${{ matrix.exe }} .
 
       - name: Run UPX
@@ -180,3 +184,5 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VERSION=${{ github.ref_name }}
+            BUILD_TIME=${{ github.event.repository.updated_at }}
+            GIT_COMMIT=${{ github.sha }}
