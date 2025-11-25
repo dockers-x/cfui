@@ -26,6 +26,7 @@ type Runner struct {
 	lastError    error
 	restartCount int
 	lastRestart  time.Time
+	configFile   string // Track temporary config file for cleanup
 }
 
 func NewRunner(cfgMgr *config.Manager) *Runner {
@@ -66,6 +67,7 @@ func (r *Runner) Stop() error {
 		return nil
 	}
 
+	// Cancel the context to signal shutdown
 	if r.cancel != nil {
 		r.cancel()
 	}
@@ -81,9 +83,20 @@ func (r *Runner) Stop() error {
 	select {
 	case <-done:
 		log.Println("Tunnel stopped gracefully")
+		// Ensure running state is cleared and cleanup resources
+		r.mu.Lock()
+		r.running = false
+		r.mu.Unlock()
+		// Config file is already cleaned up in runTunnel's defer
 		return nil
 	case <-time.After(30 * time.Second):
 		log.Println("Warning: Tunnel stop timeout exceeded")
+		// Force set running to false even on timeout
+		r.mu.Lock()
+		r.running = false
+		r.mu.Unlock()
+		// Try to cleanup config file even on timeout
+		r.cleanupConfigFile()
 		return fmt.Errorf("timeout waiting for tunnel to stop")
 	}
 }
@@ -111,6 +124,9 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 				shouldAutoRestart = false
 			}
 		}
+
+		// Clean up temporary config file
+		r.cleanupConfigFile()
 
 		r.mu.Lock()
 		r.running = false
@@ -149,15 +165,16 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 	args := []string{"cloudflared", "tunnel"}
 
 	// Create temporary config file if CustomTag is set
-	var configFile string
 	if cfg.CustomTag != "" {
 		var err error
-		configFile, err = r.createTempConfig(cfg.CustomTag)
+		r.mu.Lock()
+		r.configFile, err = r.createTempConfig(cfg.CustomTag)
+		r.mu.Unlock()
+
 		if err != nil {
 			log.Printf("Warning: Failed to create config file for custom tag: %v", err)
 		} else {
-			args = append(args, "--config", configFile)
-			defer os.Remove(configFile) // Clean up after tunnel exits
+			args = append(args, "--config", r.configFile)
 			log.Printf("Using custom identifier tag: %s", cfg.CustomTag)
 		}
 	}
@@ -217,7 +234,14 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 	log.Printf("Starting cloudflared tunnel with args: %v", args)
 
 	err := app.RunContext(ctx, args)
-	if err != nil && ctx.Err() == nil {
+
+	// Check if context was cancelled (normal shutdown)
+	if ctx.Err() != nil {
+		log.Println("Tunnel stopped by user request")
+		return
+	}
+
+	if err != nil {
 		log.Printf("Tunnel error: %v", err)
 		r.mu.Lock()
 		r.lastError = err
@@ -228,11 +252,12 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 			log.Printf("Non-retryable error detected, skipping auto-restart")
 			return
 		}
-	} else if ctx.Err() == nil {
+	} else {
 		// Reset restart count on successful exit
 		r.mu.Lock()
 		r.restartCount = 0
 		r.mu.Unlock()
+		log.Println("Tunnel exited cleanly")
 	}
 }
 
@@ -287,6 +312,22 @@ func (r *Runner) createTempConfig(customTag string) (string, error) {
 	return tempFile.Name(), nil
 }
 
+// cleanupConfigFile removes the temporary config file if it exists
+func (r *Runner) cleanupConfigFile() {
+	r.mu.Lock()
+	configFile := r.configFile
+	r.configFile = ""
+	r.mu.Unlock()
+
+	if configFile != "" {
+		if err := os.Remove(configFile); err != nil && !os.IsNotExist(err) {
+			log.Printf("Warning: Failed to remove temporary config file %s: %v", configFile, err)
+		} else {
+			log.Printf("Cleaned up temporary config file: %s", configFile)
+		}
+	}
+}
+
 func (r *Runner) checkAutoRestart() {
 	cfg := r.cfgMgr.Get()
 	if !cfg.AutoRestart {
@@ -315,9 +356,11 @@ func (r *Runner) checkAutoRestart() {
 
 	r.restartCount++
 	r.lastRestart = time.Now()
+	attemptNum := r.restartCount
 	r.mu.Unlock()
 
-	log.Printf("Auto-restarting in %v (attempt %d)...", delay, r.restartCount)
+	// Sleep without holding the lock to avoid blocking other operations
+	log.Printf("Auto-restarting in %v (attempt %d)...", delay, attemptNum)
 	time.Sleep(delay)
 
 	if err := r.Start(); err != nil {
@@ -377,6 +420,8 @@ func (r *Runner) Initialize() {
 	cfg := r.cfgMgr.Get()
 	if cfg.AutoStart && cfg.Token != "" {
 		log.Println("Auto-starting tunnel...")
-		r.Start()
+		if err := r.Start(); err != nil {
+			log.Printf("Failed to auto-start tunnel: %v", err)
+		}
 	}
 }

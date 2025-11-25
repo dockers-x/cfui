@@ -5,6 +5,7 @@ const state = {
     config: {},
     status: 'unknown',
     currentLang: localStorage.getItem('lang') || 'zh',
+    currentTheme: localStorage.getItem('theme') || 'light',
     translations: {},
     logs: [] // Store log entries for re-rendering when language changes
 };
@@ -22,6 +23,7 @@ const elements = {
     logsContainer: document.getElementById('logs-container'),
     clearLogsBtn: document.getElementById('clear-logs'),
     langSelect: document.getElementById('lang-select'),
+    themeToggle: document.getElementById('theme-toggle'),
     // Advanced config elements
     protocolSelect: document.getElementById('protocol-select'),
     gracePeriodInput: document.getElementById('grace-period-input'),
@@ -31,10 +33,26 @@ const elements = {
     metricsPortInput: document.getElementById('metrics-port-input')
 };
 
+// Theme Management
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    state.currentTheme = savedTheme;
+    document.documentElement.setAttribute('data-theme', savedTheme);
+}
+
+function toggleTheme() {
+    const newTheme = state.currentTheme === 'light' ? 'dark' : 'light';
+    state.currentTheme = newTheme;
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+}
+
 // Init
 async function init() {
+    initTheme();
     await loadLanguage(state.currentLang);
     elements.langSelect.value = state.currentLang;
+    updateUIText();
 
     // Add initial system ready log
     elements.logsContainer.innerHTML = '';
@@ -46,6 +64,8 @@ async function init() {
 }
 
 // Event Listeners
+elements.themeToggle.addEventListener('click', toggleTheme);
+
 elements.toggleVisibilityBtn.addEventListener('click', () => {
     const type = elements.tokenInput.type === 'password' ? 'text' : 'password';
     elements.tokenInput.type = type;

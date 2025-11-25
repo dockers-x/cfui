@@ -8,7 +8,45 @@
     --border-color: #e0e0e0;
     --success-color: #10b981;
     --error-color: #ef4444;
+    --input-bg: #ffffff;
+    --input-border: #e0e0e0;
+    --logs-bg: #f8fafc;
+    --logs-text: #475569;
+    --log-system-color: #2563eb;
+    --log-error-color: #dc2626;
+    --log-info-color: #64748b;
+    --advanced-bg: #fafafa;
+    --advanced-border: #e0e0e0;
+    --advanced-toggle-bg-start: #fafafa;
+    --advanced-toggle-bg-end: #f5f5f5;
+    --advanced-toggle-hover-start: #f5f5f5;
+    --advanced-toggle-hover-end: #f0f0f0;
+    --status-neutral-bg: #f0f0f0;
+    --status-neutral-dot: #9ca3af;
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+[data-theme="dark"] {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #334155;
+    --input-bg: #0f172a;
+    --input-border: #475569;
+    --logs-bg: #020617;
+    --logs-text: #cbd5e1;
+    --log-system-color: #60a5fa;
+    --log-error-color: #f87171;
+    --log-info-color: #cbd5e1;
+    --advanced-bg: #0f172a;
+    --advanced-border: #475569;
+    --advanced-toggle-bg-start: #334155;
+    --advanced-toggle-bg-end: #1e293b;
+    --advanced-toggle-hover-start: #475569;
+    --advanced-toggle-hover-end: #334155;
+    --status-neutral-bg: #334155;
+    --status-neutral-dot: #64748b;
 }
 
 * {
@@ -53,9 +91,9 @@ body {
 
 .lang-select {
     padding: 6px 12px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--input-border);
     border-radius: 4px;
-    background-color: white;
+    background-color: var(--input-bg);
     font-family: var(--font-family);
     font-size: 0.85rem;
     color: var(--text-primary);
@@ -65,6 +103,45 @@ body {
 .lang-select:focus {
     outline: none;
     border-color: var(--cf-orange);
+}
+
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.theme-toggle:hover {
+    background-color: var(--status-neutral-bg);
+}
+
+.theme-toggle:focus {
+    outline: none;
+    border-color: var(--cf-orange);
+}
+
+.theme-toggle .sun-icon,
+.theme-toggle .moon-icon {
+    display: none;
+}
+
+.theme-toggle .sun-icon {
+    display: block;
+}
+
+[data-theme="dark"] .theme-toggle .sun-icon {
+    display: none;
+}
+
+[data-theme="dark"] .theme-toggle .moon-icon {
+    display: block;
 }
 
 .logo-area {
@@ -100,7 +177,8 @@ h2 {
     gap: 8px;
     padding: 6px 12px;
     border-radius: 20px;
-    background-color: #f0f0f0;
+    background-color: var(--status-neutral-bg);
+    color: var(--text-primary);
     font-size: 0.85rem;
     font-weight: 500;
 }
@@ -109,7 +187,7 @@ h2 {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background-color: #9ca3af;
+    background-color: var(--status-neutral-dot);
 }
 
 .status-badge.running .status-dot {
@@ -175,7 +253,9 @@ input[type="password"],
 input[type="number"] {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--input-border);
+    background-color: var(--input-bg);
+    color: var(--text-primary);
     border-radius: 4px;
     font-family: monospace;
     font-size: 0.95rem;
@@ -222,7 +302,8 @@ select:focus {
 .advanced-toggle {
     cursor: pointer;
     padding: 12px 16px;
-    background: linear-gradient(to bottom, #fafafa, #f5f5f5);
+    background: linear-gradient(to bottom, var(--advanced-toggle-bg-start), var(--advanced-toggle-bg-end));
+    color: var(--text-primary);
     user-select: none;
     font-weight: 500;
     font-size: 0.95rem;
@@ -231,7 +312,7 @@ select:focus {
 }
 
 .advanced-toggle:hover {
-    background: linear-gradient(to bottom, #f5f5f5, #f0f0f0);
+    background: linear-gradient(to bottom, var(--advanced-toggle-hover-start), var(--advanced-toggle-hover-end));
 }
 
 .advanced-toggle::before {
@@ -247,8 +328,8 @@ details[open] .advanced-toggle::before {
 
 .advanced-content {
     padding: 20px;
-    background-color: #fafafa;
-    border-top: 1px solid var(--border-color);
+    background-color: var(--advanced-bg);
+    border-top: 1px solid var(--advanced-border);
 }
 
 .form-row {
@@ -261,9 +342,10 @@ details[open] .advanced-toggle::before {
 select.form-select {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--input-border);
     border-radius: 4px;
-    background-color: white;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
     font-family: var(--font-family);
     font-size: 0.9rem;
     cursor: pointer;
@@ -280,6 +362,10 @@ select.form-select {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.form-group .toggle-container {
+    padding: 8px 0;
 }
 
 .switch {
@@ -377,7 +463,7 @@ input:checked+.slider:before {
 }
 
 .btn-ghost:hover {
-    background-color: #f0f0f0;
+    background-color: var(--status-neutral-bg);
     color: var(--text-primary);
 }
 
@@ -391,13 +477,15 @@ input:checked+.slider:before {
 }
 
 .logs-container {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
+    background-color: var(--logs-bg);
+    color: var(--logs-text);
     padding: 15px;
     height: 300px;
     overflow-y: auto;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
 }
 
 .log-entry {
@@ -406,18 +494,41 @@ input:checked+.slider:before {
 }
 
 .log-entry.system {
-    color: #60a5fa;
+    color: var(--log-system-color);
 }
 
 .log-entry.error {
-    color: #f87171;
+    color: var(--log-error-color);
 }
 
 .log-entry.info {
-    color: #d4d4d4;
+    color: var(--log-info-color);
 }
 
 @media (max-width: 768px) {
+    .header {
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .logo-area h1 {
+        font-size: 1.1rem;
+    }
+
+    .cf-logo {
+        height: 28px;
+    }
+
+    .header-controls {
+        order: 3;
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .status-badge {
+        order: 2;
+    }
+
     .form-row {
         grid-template-columns: 1fr;
     }
@@ -426,5 +537,13 @@ input:checked+.slider:before {
         flex-direction: column;
         align-items: stretch;
         gap: 15px;
+    }
+
+    .app-container {
+        padding: 0 15px;
+    }
+
+    body {
+        padding-top: 20px;
     }
 }

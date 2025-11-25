@@ -47,7 +47,9 @@ func main() {
 	}
 
 	fmt.Printf("Cloudflared Web Controller %s\n", Version)
-	fmt.Printf("Starting server on http://localhost:%s\n", port)
+	fmt.Printf("Server listening on 0.0.0.0:%s\n", port)
+	fmt.Printf("Local access: http://localhost:%s\n", port)
+	fmt.Printf("Network access: http://<your-ip>:%s\n", port)
 	if err := srv.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
