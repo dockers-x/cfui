@@ -8,17 +8,17 @@ services:
     container_name: cfui
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "14333:14333"
     volumes:
       # Persist configuration and data
       - cloudflared-data:/app/data
     environment:
-      # Optional: Override default port
-      - PORT=3000
+      # Optional: Override default port (default is 14333)
+      - PORT=14333
       # Optional: Set timezone
       - TZ=UTC
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      test: ["CMD", "sh", "-c", "wget --no-verbose --tries=1 --spider http://localhost:$$PORT/ || exit 1"]
       interval: 30s
       timeout: 3s
       start_period: 5s

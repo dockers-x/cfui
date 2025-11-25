@@ -108,3 +108,15 @@ other = "設定を保存しました"
 
 [status_changed]
 other = "ステータスが変更されました"
+
+[edge_bind_address]
+other = "エッジバインド IP アドレス"
+
+[edge_bind_address_help]
+other = "Cloudflare エッジへの送信接続にバインドするローカル IP アドレス（オプション）"
+
+[no_tls_verify]
+other = "バックエンド TLS 検証を無効化"
+
+[no_tls_verify_help]
+other = "バックエンドサービスの TLS 証明書検証を無効にします（本番環境では非推奨）"

@@ -51,15 +51,15 @@ RUN mkdir -p /app/data && \
 USER appuser
 
 # Expose port
-EXPOSE 3000
+EXPOSE 14333
 
 # Set environment variables
-ENV PORT=3000
+ENV PORT=14333
 ENV DATA_DIR=/app/data
 
-# Health check
+# Health check - uses PORT environment variable
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 1
 
 # Run the application
 CMD ["./cfui"]

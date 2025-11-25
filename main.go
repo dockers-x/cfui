@@ -43,7 +43,7 @@ func main() {
 	// Run
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "14333"
 	}
 
 	fmt.Printf("Cloudflared Web Controller %s\n", Version)

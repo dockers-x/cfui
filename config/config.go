@@ -26,8 +26,9 @@ type Config struct {
 	LogFile         string `json:"log_file"`          // path to log file
 	LogJSON         bool   `json:"log_json"`          // Output logs in JSON format (available since 2025.6.1)
 	EdgeIPVersion   string `json:"edge_ip_version"`   // auto, 4, 6
-	EdgeBindAddress string `json:"edge_bind_address"` // IP address
+	EdgeBindAddress string `json:"edge_bind_address"` // IP address to bind for outgoing connections to Cloudflare edge
 	PostQuantum     bool   `json:"post_quantum"`      // Enable PQC for QUIC
+	NoTLSVerify     bool   `json:"no_tls_verify"`     // Disable TLS verification for backend services
 
 	// Custom extra arguments (space-separated: "--key1 val1 --key2 val2")
 	ExtraArgs string `json:"extra_args"`
@@ -50,6 +51,7 @@ func DefaultConfig() Config {
 		EdgeIPVersion:   "auto",
 		EdgeBindAddress: "",
 		PostQuantum:     false,
+		NoTLSVerify:     false, // Verify TLS by default for security
 		ExtraArgs:       "",
 	}
 }

@@ -144,6 +144,26 @@
                                     <p class="help-text">Port for metrics server</p>
                                 </div>
                             </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="edge-bind-address-input">Edge Bind IP Address</label>
+                                    <input type="text" id="edge-bind-address-input" placeholder="e.g., 192.168.1.100" spellcheck="false">
+                                    <p class="help-text">Local IP address to bind for outgoing connections to Cloudflare edge (optional)</p>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Backend TLS Verification</label>
+                                    <div class="toggle-container">
+                                        <label class="switch">
+                                            <input type="checkbox" id="no-tls-verify-toggle">
+                                            <span class="slider round"></span>
+                                        </label>
+                                        <span class="label-text">Disable Backend TLS Verification</span>
+                                    </div>
+                                    <p class="help-text">Disable TLS certificate verification for backend services (not recommended for production)</p>
+                                </div>
+                            </div>
                         </div>
                     </details>
 

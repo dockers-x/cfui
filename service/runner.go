@@ -11,28 +11,44 @@ import (
 
 	"cfui/config"
 
+	"github.com/cloudflare/cloudflared/cmd/cloudflared/cliutil"
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/tunnel"
 	"github.com/urfave/cli/v2"
 )
 
 // Runner manages the cloudflared tunnel process
 type Runner struct {
-	cfgMgr       *config.Manager
-	ctx          context.Context
-	cancel       context.CancelFunc
-	wg           sync.WaitGroup
-	mu           sync.Mutex
-	running      bool
-	lastError    error
-	restartCount int
-	lastRestart  time.Time
-	configFile   string // Track temporary config file for cleanup
+	cfgMgr            *config.Manager
+	ctx               context.Context
+	cancel            context.CancelFunc
+	wg                sync.WaitGroup
+	mu                sync.Mutex
+	running           bool
+	lastError         error
+	restartCount      int
+	lastRestart       time.Time
+	configFile        string // Track temporary config file for cleanup
+	gracefulShutdownC chan struct{}
+	initOnce          sync.Once
 }
 
 func NewRunner(cfgMgr *config.Manager) *Runner {
-	return &Runner{
-		cfgMgr: cfgMgr,
+	r := &Runner{
+		cfgMgr:            cfgMgr,
+		gracefulShutdownC: make(chan struct{}),
 	}
+	// Initialize cloudflared tunnel package
+	r.initTunnel()
+	return r
+}
+
+// initTunnel initializes the cloudflared tunnel package with required build info
+func (r *Runner) initTunnel() {
+	r.initOnce.Do(func() {
+		buildInfo := cliutil.GetBuildInfo("", "dev")
+		tunnel.Init(buildInfo, r.gracefulShutdownC)
+		log.Println("Cloudflared tunnel initialized successfully")
+	})
 }
 
 // Start launches the cloudflared tunnel
@@ -70,6 +86,13 @@ func (r *Runner) Stop() error {
 	// Cancel the context to signal shutdown
 	if r.cancel != nil {
 		r.cancel()
+	}
+
+	// Signal graceful shutdown to cloudflared
+	select {
+	case r.gracefulShutdownC <- struct{}{}:
+	default:
+		// Channel might be full or not being read, continue anyway
 	}
 	r.mu.Unlock()
 
@@ -223,6 +246,10 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 
 	if cfg.PostQuantum {
 		args = append(args, "--post-quantum")
+	}
+
+	if cfg.NoTLSVerify {
+		args = append(args, "--no-tls-verify")
 	}
 
 	// Parse and add extra arguments

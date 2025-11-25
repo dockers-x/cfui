@@ -24,13 +24,13 @@ A modern web-based control panel for managing Cloudflare Tunnel (cloudflared) wi
 ```bash
 docker run -d \
   --name cfui \
-  -port 3000:3000 \
+  -p 14333:14333 \
   -v cloudflared-data:/app/data \
   --restart unless-stopped \
   czyt/cfui:latest
 ```
 
-Access the web interface at `http://localhost:3000`
+Access the web interface at `http://localhost:14333`
 
 ### Using Docker Compose
 
@@ -45,17 +45,17 @@ services:
     container_name: cfui
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "14333:14333"
     volumes:
       # Persist configuration and data
       - cloudflared-data:/app/data
     environment:
-      # Optional: Override default port
-      - PORT=3000
+      # Optional: Override default port (default is 14333)
+      - PORT=14333
       # Optional: Set timezone
       - TZ=UTC
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      test: ["CMD", "sh", "-c", "wget --no-verbose --tries=1 --spider http://localhost:$$PORT/ || exit 1"]
       interval: 30s
       timeout: 3s
       start_period: 5s
@@ -90,7 +90,7 @@ chmod +x cloudflared-web
 cloudflared-web.exe
 ```
 
-3. Open your browser and navigate to `http://localhost:3000`
+3. Open your browser and navigate to `http://localhost:14333`
 
 ## Building from Source
 
@@ -107,10 +107,10 @@ git clone https://github.com/yourusername/cloudflared-ui.git
 cd cloudflared-ui
 
 # Build
-go build -o cloudflared-ui
+go build -o cfui
 
 # Run
-./cloudflared-ui
+./cfui
 ```
 
 ## Configuration
@@ -122,20 +122,25 @@ The application stores its configuration in the `data` directory:
 
 ### Environment Variables
 
-- `PORT` - Server port (default: 3000)
+- `PORT` - Server port (default: 14333)
 - `DATA_DIR` - Data directory path (default: ./data)
 
 ### Configuration Options
 
+#### Basic Settings
 - **Token**: Your Cloudflare Tunnel token (required)
 - **Auto-start on launch**: Start tunnel automatically when the application starts
 - **Auto-restart on failure**: Automatically restart tunnel on abnormal exit
 - **Custom Tunnel Identifier**: Custom tag shown in Cloudflare dashboard
+
+#### Advanced Settings
 - **Protocol**: Connection protocol (Auto, HTTP/2, QUIC)
 - **Region**: Preferred connection region
-- **Grace Period**: Shutdown grace period
+- **Grace Period**: Shutdown grace period (e.g., 30s)
+- **Max Retries**: Maximum connection retry attempts
 - **Metrics**: Enable Prometheus metrics endpoint
-- **Advanced**: Additional cloudflared parameters
+- **Edge Bind IP Address**: Local IP address to bind for outgoing connections to Cloudflare edge (optional)
+- **Disable Backend TLS Verification**: Disable TLS certificate verification for backend services (not recommended for production)
 
 ## Getting a Tunnel Token
 
@@ -178,10 +183,10 @@ go run main.go
 
 ```bash
 # Build image
-docker build -t cloudflared-ui .
+docker build -t cfui .
 
 # Run container
-docker run -d -p 3000:3000 -v $(pwd)/data:/app/data cloudflared-ui
+docker run -d -p 14333:14333 -v $(pwd)/data:/app/data cfui
 ```
 
 ## Contributing

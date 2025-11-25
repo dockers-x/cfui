@@ -30,7 +30,9 @@ const elements = {
     regionSelect: document.getElementById('region-select'),
     retriesInput: document.getElementById('retries-input'),
     metricsEnableToggle: document.getElementById('metrics-enable-toggle'),
-    metricsPortInput: document.getElementById('metrics-port-input')
+    metricsPortInput: document.getElementById('metrics-port-input'),
+    edgeBindAddressInput: document.getElementById('edge-bind-address-input'),
+    noTLSVerifyToggle: document.getElementById('no-tls-verify-toggle')
 };
 
 // Theme Management
@@ -81,6 +83,8 @@ elements.regionSelect?.addEventListener('change', saveAllConfig);
 elements.retriesInput?.addEventListener('change', saveAllConfig);
 elements.metricsEnableToggle?.addEventListener('change', saveAllConfig);
 elements.metricsPortInput?.addEventListener('change', saveAllConfig);
+elements.edgeBindAddressInput?.addEventListener('change', saveAllConfig);
+elements.noTLSVerifyToggle?.addEventListener('change', saveAllConfig);
 
 elements.actionBtn.addEventListener('click', async () => {
     const action = state.isRunning ? 'stop' : 'start';
@@ -149,6 +153,8 @@ async function fetchConfig() {
         if (elements.retriesInput) elements.retriesInput.value = data.retries || 5;
         if (elements.metricsEnableToggle) elements.metricsEnableToggle.checked = data.metrics_enable || false;
         if (elements.metricsPortInput) elements.metricsPortInput.value = data.metrics_port || 60123;
+        if (elements.edgeBindAddressInput) elements.edgeBindAddressInput.value = data.edge_bind_address || '';
+        if (elements.noTLSVerifyToggle) elements.noTLSVerifyToggle.checked = data.no_tls_verify || false;
     } catch (err) {
         addLog('Failed to load config', 'error');
     }
@@ -165,7 +171,9 @@ async function saveAllConfig() {
         region: elements.regionSelect?.value || '',
         retries: parseInt(elements.retriesInput?.value || '5'),
         metrics_enable: elements.metricsEnableToggle?.checked || false,
-        metrics_port: parseInt(elements.metricsPortInput?.value || '60123')
+        metrics_port: parseInt(elements.metricsPortInput?.value || '60123'),
+        edge_bind_address: elements.edgeBindAddressInput?.value || '',
+        no_tls_verify: elements.noTLSVerifyToggle?.checked || false
     };
 
     try {

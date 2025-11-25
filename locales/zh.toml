@@ -108,3 +108,15 @@ other = "配置已保存"
 
 [status_changed]
 other = "状态已改变"
+
+[edge_bind_address]
+other = "边缘绑定 IP 地址"
+
+[edge_bind_address_help]
+other = "用于连接到 Cloudflare 边缘的本地 IP 地址（可选）"
+
+[no_tls_verify]
+other = "不验证后端服务的 TLS 证书"
+
+[no_tls_verify_help]
+other = "禁用后端服务的 TLS 证书验证（不建议在生产环境使用）"

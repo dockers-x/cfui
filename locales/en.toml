@@ -108,3 +108,15 @@ other = "Configuration saved"
 
 [status_changed]
 other = "Status changed"
+
+[edge_bind_address]
+other = "Edge Bind IP Address"
+
+[edge_bind_address_help]
+other = "Local IP address to bind for outgoing connections to Cloudflare edge (optional)"
+
+[no_tls_verify]
+other = "Disable Backend TLS Verification"
+
+[no_tls_verify_help]
+other = "Disable TLS certificate verification for backend services (not recommended for production)"
