@@ -333,41 +333,57 @@ function updateUIText() {
     // Advanced configuration
     document.querySelector('.advanced-toggle').textContent = t('advanced_config');
 
-    // Tunnel identifier (first field in advanced section)
-    document.querySelector('label[for="custom-version-input"]').textContent = t('tunnel_identifier');
+    const advancedLabels = document.querySelectorAll('.advanced-content label:not(.switch)');
+
+    // Tunnel identifier
+    advancedLabels[0].textContent = t('tunnel_identifier');
     document.querySelectorAll('.advanced-content .help-text')[0].textContent = t('tunnel_identifier_help');
 
     // Protocol
-    document.querySelectorAll('.advanced-content label')[1].textContent = t('protocol');
+    advancedLabels[1].textContent = t('protocol');
     document.querySelector('#protocol-select option[value="auto"]').textContent = t('protocol_auto');
     document.querySelectorAll('.advanced-content .help-text')[1].textContent = t('protocol_help');
 
     // Grace period
-    document.querySelectorAll('.advanced-content label')[2].textContent = t('grace_period');
+    advancedLabels[2].textContent = t('grace_period');
     document.querySelectorAll('.advanced-content .help-text')[2].textContent = t('grace_period_help');
 
     // Region
-    document.querySelectorAll('.advanced-content label')[3].textContent = t('region');
+    advancedLabels[3].textContent = t('region');
     document.querySelector('#region-select option[value=""]').textContent = t('region_global');
     document.querySelector('#region-select option[value="us"]').textContent = t('region_us');
     document.querySelectorAll('.advanced-content .help-text')[3].textContent = t('region_help');
 
     // Max retries
-    document.querySelectorAll('.advanced-content label')[4].textContent = t('max_retries');
+    advancedLabels[4].textContent = t('max_retries');
     document.querySelectorAll('.advanced-content .help-text')[4].textContent = t('max_retries_help');
+
+    // Metrics Server Title
+    advancedLabels[5].textContent = t('metrics_server_title');
 
     // Metrics enable
     document.querySelectorAll('.label-text')[0].textContent = t('metrics_enable');
 
     // Metrics port
-    document.querySelectorAll('.advanced-content label')[5].textContent = t('metrics_port');
+    advancedLabels[6].textContent = t('metrics_port');
     document.querySelectorAll('.advanced-content .help-text')[5].textContent = t('metrics_port_help');
 
+    // Edge Bind IP Address
+    advancedLabels[7].textContent = t('edge_bind_address');
+    document.querySelectorAll('.advanced-content .help-text')[6].textContent = t('edge_bind_address_help');
+
+    // Backend TLS Verification Title
+    advancedLabels[8].textContent = t('backend_tls_title');
+
+    // No TLS Verify
+    document.querySelectorAll('.label-text')[1].textContent = t('no_tls_verify');
+    document.querySelectorAll('.advanced-content .help-text')[7].textContent = t('no_tls_verify_help');
+
     // Autostart
-    document.querySelectorAll('.label-text')[1].textContent = t('autostart');
+    document.querySelectorAll('.label-text')[2].textContent = t('autostart');
 
     // Autorestart
-    document.querySelectorAll('.label-text')[2].textContent = t('autorestart');
+    document.querySelectorAll('.label-text')[3].textContent = t('autorestart');
 
     // Logs section
     document.querySelector('.logs-card .card-header h2').textContent = t('system_logs');

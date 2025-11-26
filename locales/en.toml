@@ -67,8 +67,11 @@ other = "Max Retries"
 [max_retries_help]
 other = "Maximum connection retry attempts"
 
+[metrics_server_title]
+other = "Metrics Server"
+
 [metrics_enable]
-other = "Enable Metrics Server"
+other = "Enable"
 
 [metrics_port]
 other = "Metrics Port"
@@ -115,8 +118,11 @@ other = "Edge Bind IP Address"
 [edge_bind_address_help]
 other = "Local IP address to bind for outgoing connections to Cloudflare edge (optional)"
 
+[backend_tls_title]
+other = "Backend TLS Verification"
+
 [no_tls_verify]
-other = "Disable Backend TLS Verification"
+other = "Disable"
 
 [no_tls_verify_help]
 other = "Disable TLS certificate verification for backend services (not recommended for production)"

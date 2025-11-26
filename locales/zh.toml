@@ -67,8 +67,11 @@ other = "最大重试次数"
 [max_retries_help]
 other = "最大连接重试次数"
 
+[metrics_server_title]
+other = "指标服务器"
+
 [metrics_enable]
-other = "启用指标服务器"
+other = "启用"
 
 [metrics_port]
 other = "指标端口"
@@ -115,8 +118,11 @@ other = "边缘绑定 IP 地址"
 [edge_bind_address_help]
 other = "用于连接到 Cloudflare 边缘的本地 IP 地址（可选）"
 
+[backend_tls_title]
+other = "后端 TLS 验证"
+
 [no_tls_verify]
-other = "不验证后端服务的 TLS 证书"
+other = "禁用"
 
 [no_tls_verify_help]
 other = "禁用后端服务的 TLS 证书验证（不建议在生产环境使用）"
