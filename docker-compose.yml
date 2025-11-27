@@ -12,11 +12,15 @@ services:
     volumes:
       # Persist configuration and data
       - cloudflared-data:/app/data
+      # Persist logs (can be mounted separately for log management)
+      - cloudflared-logs:/app/logs
     environment:
       # Optional: Override default port (default is 14333)
       - PORT=14333
       # Optional: Set timezone
       - TZ=UTC
+      # Optional: Set log level (debug, info, warn, error)
+      # - LOG_LEVEL=info
     healthcheck:
       test: ["CMD", "sh", "-c", "wget --no-verbose --tries=1 --spider http://localhost:$$PORT/ || exit 1"]
       interval: 30s
@@ -35,4 +39,6 @@ services:
 
 volumes:
   cloudflared-data:
+    driver: local
+  cloudflared-logs:
     driver: local

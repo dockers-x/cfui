@@ -3,13 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"cfui/config"
+	"cfui/logger"
 	"cfui/version"
 
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/cliutil"
@@ -46,9 +46,16 @@ func NewRunner(cfgMgr *config.Manager) *Runner {
 // initTunnel initializes the cloudflared tunnel package with required build info
 func (r *Runner) initTunnel() {
 	r.initOnce.Do(func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				logger.Sugar.Errorf("Panic during tunnel initialization: %v", rec)
+				panic(rec) // Re-panic after logging
+			}
+		}()
+
 		buildInfo := cliutil.GetBuildInfo("dockers-x", version.GetFullVersion())
 		tunnel.Init(buildInfo, r.gracefulShutdownC)
-		log.Printf("Cloudflared tunnel initialized successfully (version: %s)", version.GetFullVersion())
+		logger.Sugar.Infof("Cloudflared tunnel initialized successfully (version: %s)", version.GetFullVersion())
 	})
 }
 
@@ -58,11 +65,13 @@ func (r *Runner) Start() error {
 	defer r.mu.Unlock()
 
 	if r.running {
+		logger.Sugar.Warn("Attempted to start tunnel that is already running")
 		return fmt.Errorf("already running")
 	}
 
 	cfg := r.cfgMgr.Get()
 	if cfg.Token == "" {
+		logger.Sugar.Error("Cannot start tunnel: token is missing")
 		return fmt.Errorf("token is required")
 	}
 
@@ -70,6 +79,7 @@ func (r *Runner) Start() error {
 	r.running = true
 	r.lastError = nil
 
+	logger.Sugar.Info("Starting cloudflared tunnel")
 	r.wg.Add(1)
 	go r.runTunnel(r.ctx, cfg.Token)
 
@@ -81,9 +91,11 @@ func (r *Runner) Stop() error {
 	r.mu.Lock()
 	if !r.running {
 		r.mu.Unlock()
+		logger.Sugar.Debug("Stop called but tunnel is not running")
 		return nil
 	}
 
+	logger.Sugar.Info("Initiating tunnel shutdown")
 	// Cancel the context to signal shutdown
 	if r.cancel != nil {
 		r.cancel()
@@ -92,8 +104,10 @@ func (r *Runner) Stop() error {
 	// Signal graceful shutdown to cloudflared
 	select {
 	case r.gracefulShutdownC <- struct{}{}:
+		logger.Sugar.Debug("Graceful shutdown signal sent")
 	default:
 		// Channel might be full or not being read, continue anyway
+		logger.Sugar.Debug("Graceful shutdown channel unavailable")
 	}
 	r.mu.Unlock()
 
@@ -106,7 +120,7 @@ func (r *Runner) Stop() error {
 
 	select {
 	case <-done:
-		log.Println("Tunnel stopped gracefully")
+		logger.Sugar.Info("Tunnel stopped gracefully")
 		// Ensure running state is cleared and cleanup resources
 		r.mu.Lock()
 		r.running = false
@@ -114,7 +128,7 @@ func (r *Runner) Stop() error {
 		// Config file is already cleaned up in runTunnel's defer
 		return nil
 	case <-time.After(30 * time.Second):
-		log.Println("Warning: Tunnel stop timeout exceeded")
+		logger.Sugar.Warn("Tunnel stop timeout exceeded (30s)")
 		// Force set running to false even on timeout
 		r.mu.Lock()
 		r.running = false
@@ -137,14 +151,14 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 		shouldAutoRestart := true
 
 		if rec := recover(); rec != nil {
-			log.Printf("Recovered from panic in tunnel: %v", rec)
+			logger.Sugar.Errorf("Recovered from panic in tunnel: %v", rec)
 			r.mu.Lock()
 			r.lastError = fmt.Errorf("tunnel panic: %v", rec)
 			r.mu.Unlock()
 
 			// Don't auto-restart on metrics registration errors - they won't resolve with restart
 			if strings.Contains(fmt.Sprintf("%v", rec), "duplicate metrics") {
-				log.Printf("Metrics registration error detected - this requires process restart, not tunnel restart")
+				logger.Sugar.Error("Metrics registration error detected - requires process restart, not tunnel restart")
 				shouldAutoRestart = false
 			}
 		}
@@ -157,7 +171,7 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 		r.mu.Unlock()
 
 		if ctx.Err() == nil && shouldAutoRestart {
-			log.Println("Tunnel exited unexpectedly")
+			logger.Sugar.Warn("Tunnel exited unexpectedly, checking auto-restart policy")
 			r.checkAutoRestart()
 		}
 	}()
@@ -170,7 +184,7 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 		// Prevent cli from calling os.Exit on errors
 		ExitErrHandler: func(c *cli.Context, err error) {
 			if err != nil {
-				log.Printf("CLI error handler caught: %v", err)
+				logger.Sugar.Errorf("CLI error handler caught: %v", err)
 			}
 		},
 	}
@@ -178,7 +192,7 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 	// Disable default exit behavior
 	cli.OsExiter = func(exitCode int) {
 		// Don't actually exit, just log it
-		log.Printf("CLI attempted to exit with code %d (intercepted)", exitCode)
+		logger.Sugar.Warnf("CLI attempted to exit with code %d (intercepted)", exitCode)
 		if exitCode != 0 {
 			panic(fmt.Sprintf("CLI exit with code %d", exitCode))
 		}
@@ -196,10 +210,10 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 		r.mu.Unlock()
 
 		if err != nil {
-			log.Printf("Warning: Failed to create config file for custom tag: %v", err)
+			logger.Sugar.Warnf("Failed to create config file for custom tag: %v", err)
 		} else {
 			args = append(args, "--config", r.configFile)
-			log.Printf("Using custom identifier tag: %s", cfg.CustomTag)
+			logger.Sugar.Infof("Using custom identifier tag: %s", cfg.CustomTag)
 		}
 	}
 
@@ -259,25 +273,27 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 		args = append(args, extraArgs...)
 	}
 
-	log.Printf("Starting cloudflared tunnel with args: %v", args)
+	logger.Sugar.Infof("Starting cloudflared tunnel with protocol=%s, region=%s, retries=%d",
+		cfg.Protocol, cfg.Region, cfg.Retries)
+	logger.Sugar.Debugf("Full tunnel arguments: %v", args)
 
 	err := app.RunContext(ctx, args)
 
 	// Check if context was cancelled (normal shutdown)
 	if ctx.Err() != nil {
-		log.Println("Tunnel stopped by user request")
+		logger.Sugar.Info("Tunnel stopped by user request")
 		return
 	}
 
 	if err != nil {
-		log.Printf("Tunnel error: %v", err)
+		logger.Sugar.Errorf("Tunnel error: %v", err)
 		r.mu.Lock()
 		r.lastError = err
 		r.mu.Unlock()
 
 		// If error is not retryable, don't attempt auto-restart
 		if !isRetryableError(err) {
-			log.Printf("Non-retryable error detected, skipping auto-restart")
+			logger.Sugar.Warnf("Non-retryable error detected: %v", err)
 			return
 		}
 	} else {
@@ -285,7 +301,7 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 		r.mu.Lock()
 		r.restartCount = 0
 		r.mu.Unlock()
-		log.Println("Tunnel exited cleanly")
+		logger.Sugar.Info("Tunnel exited cleanly")
 	}
 }
 
@@ -349,9 +365,9 @@ func (r *Runner) cleanupConfigFile() {
 
 	if configFile != "" {
 		if err := os.Remove(configFile); err != nil && !os.IsNotExist(err) {
-			log.Printf("Warning: Failed to remove temporary config file %s: %v", configFile, err)
+			logger.Sugar.Warnf("Failed to remove temporary config file %s: %v", configFile, err)
 		} else {
-			log.Printf("Cleaned up temporary config file: %s", configFile)
+			logger.Sugar.Debugf("Cleaned up temporary config file: %s", configFile)
 		}
 	}
 }
@@ -359,7 +375,7 @@ func (r *Runner) cleanupConfigFile() {
 func (r *Runner) checkAutoRestart() {
 	cfg := r.cfgMgr.Get()
 	if !cfg.AutoRestart {
-		log.Println("Auto-restart is disabled, tunnel will not restart")
+		logger.Sugar.Info("Auto-restart is disabled, tunnel will not restart")
 		return
 	}
 
@@ -377,7 +393,7 @@ func (r *Runner) checkAutoRestart() {
 
 	// Limit maximum restart attempts
 	if r.restartCount >= 10 {
-		log.Printf("Maximum restart attempts reached (%d), stopping auto-restart", r.restartCount)
+		logger.Sugar.Warnf("Maximum restart attempts reached (%d), stopping auto-restart", r.restartCount)
 		r.mu.Unlock()
 		return
 	}
@@ -388,11 +404,11 @@ func (r *Runner) checkAutoRestart() {
 	r.mu.Unlock()
 
 	// Sleep without holding the lock to avoid blocking other operations
-	log.Printf("Auto-restarting in %v (attempt %d)...", delay, attemptNum)
+	logger.Sugar.Infof("Auto-restarting in %v (attempt %d)...", delay, attemptNum)
 	time.Sleep(delay)
 
 	if err := r.Start(); err != nil {
-		log.Printf("Failed to restart tunnel: %v", err)
+		logger.Sugar.Errorf("Failed to restart tunnel: %v", err)
 	}
 }
 
@@ -447,9 +463,9 @@ func isRetryableError(err error) bool {
 func (r *Runner) Initialize() {
 	cfg := r.cfgMgr.Get()
 	if cfg.AutoStart && cfg.Token != "" {
-		log.Println("Auto-starting tunnel...")
+		logger.Sugar.Info("Auto-starting tunnel...")
 		if err := r.Start(); err != nil {
-			log.Printf("Failed to auto-start tunnel: %v", err)
+			logger.Sugar.Errorf("Failed to auto-start tunnel: %v", err)
 		}
 	}
 }

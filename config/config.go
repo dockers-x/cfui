@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"cfui/logger"
 )
 
 type Config struct {
@@ -75,8 +77,15 @@ func NewManager(dir string) (*Manager, error) {
 
 	if err := m.Load(); err != nil {
 		if os.IsNotExist(err) {
-			m.Save(m.cfg)
+			logger.Sugar.Infof("Config file not found, creating default config at %s", path)
+			if saveErr := m.Save(m.cfg); saveErr != nil {
+				logger.Sugar.Errorf("Failed to save default config: %v", saveErr)
+			}
+		} else {
+			logger.Sugar.Errorf("Failed to load config: %v", err)
 		}
+	} else {
+		logger.Sugar.Infof("Loaded configuration from %s", path)
 	}
 
 	return m, nil
@@ -103,10 +112,17 @@ func (m *Manager) Save(cfg Config) error {
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
+		logger.Sugar.Errorf("Failed to marshal config: %v", err)
 		return err
 	}
 
-	return os.WriteFile(m.path, data, 0644)
+	if err := os.WriteFile(m.path, data, 0644); err != nil {
+		logger.Sugar.Errorf("Failed to write config file: %v", err)
+		return err
+	}
+
+	logger.Sugar.Debugf("Configuration saved successfully to %s", m.path)
+	return nil
 }
 
 func (m *Manager) Get() Config {

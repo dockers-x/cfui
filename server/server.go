@@ -4,10 +4,10 @@ import (
 	"embed"
 	"encoding/json"
 	"io/fs"
-	"log"
 	"net/http"
 
 	"cfui/config"
+	"cfui/logger"
 	"cfui/service"
 
 	"github.com/BurntSushi/toml"
@@ -42,32 +42,43 @@ func (s *Server) Run(addr string) error {
 	// The assets are in "web/dist", so we need to strip that prefix
 	fsys, err := fs.Sub(s.assets, "web/dist")
 	if err != nil {
+		logger.Sugar.Errorf("Failed to create sub filesystem: %v", err)
 		return err
 	}
 	mux.Handle("/", http.FileServer(http.FS(fsys)))
 
-	log.Printf("Server listening on %s", addr)
-	return http.ListenAndServe(addr, mux)
+	// Apply middleware chain: logging -> panic recovery -> handler
+	handler := ChainMiddleware(mux, LoggingMiddleware, PanicRecoveryMiddleware)
+
+	logger.Sugar.Infof("Server listening on %s", addr)
+	return http.ListenAndServe(addr, handler)
 }
 
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		json.NewEncoder(w).Encode(s.cfgMgr.Get())
+		cfg := s.cfgMgr.Get()
+		if err := json.NewEncoder(w).Encode(cfg); err != nil {
+			logger.Sugar.Errorf("Failed to encode config: %v", err)
+			http.Error(w, "Failed to encode config", http.StatusInternalServerError)
+		}
 		return
 	}
 
 	if r.Method == http.MethodPost {
 		var cfg config.Config
 		if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+			logger.Sugar.Warnf("Invalid config request from %s: %v", r.RemoteAddr, err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		if err := s.cfgMgr.Save(cfg); err != nil {
+			logger.Sugar.Errorf("Failed to save config: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
+		logger.Sugar.Infof("Configuration updated by %s", r.RemoteAddr)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -89,9 +100,13 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resp["error"] = err.Error()
 		resp["status"] = "error"
+		logger.Sugar.Warnf("Tunnel status error: %v", err)
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	if encodeErr := json.NewEncoder(w).Encode(resp); encodeErr != nil {
+		logger.Sugar.Errorf("Failed to encode status response: %v", encodeErr)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (s *Server) handleControl(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +119,7 @@ func (s *Server) handleControl(w http.ResponseWriter, r *http.Request) {
 		Action string `json:"action"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		logger.Sugar.Warnf("Invalid control request from %s: %v", r.RemoteAddr, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -111,39 +127,50 @@ func (s *Server) handleControl(w http.ResponseWriter, r *http.Request) {
 	var err error
 	switch req.Action {
 	case "start":
+		logger.Sugar.Infof("Starting tunnel (requested by %s)", r.RemoteAddr)
 		err = s.runner.Start()
 		if err != nil {
+			logger.Sugar.Errorf("Failed to start tunnel: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		logger.Sugar.Info("Tunnel started successfully")
 	case "stop":
+		logger.Sugar.Infof("Stopping tunnel (requested by %s)", r.RemoteAddr)
 		// For stop action, respond immediately and stop asynchronously
 		// This prevents the client from getting "Failed to fetch" when the tunnel shuts down
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if encodeErr := json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": true,
 			"action":  "stop",
 			"message": "Tunnel stop initiated",
-		})
+		}); encodeErr != nil {
+			logger.Sugar.Errorf("Failed to encode stop response: %v", encodeErr)
+		}
 		go func() {
 			if stopErr := s.runner.Stop(); stopErr != nil {
-				log.Printf("Error stopping tunnel: %v", stopErr)
+				logger.Sugar.Errorf("Error stopping tunnel: %v", stopErr)
+			} else {
+				logger.Sugar.Info("Tunnel stopped successfully")
 			}
 		}()
 		return
 	default:
+		logger.Sugar.Warnf("Invalid action '%s' from %s", req.Action, r.RemoteAddr)
 		http.Error(w, "Invalid action", http.StatusBadRequest)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if encodeErr := json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"action":  req.Action,
 		"message": "Tunnel started successfully",
-	})
+	}); encodeErr != nil {
+		logger.Sugar.Errorf("Failed to encode control response: %v", encodeErr)
+	}
 }
 
 func (s *Server) handleI18n(w http.ResponseWriter, r *http.Request) {
@@ -157,6 +184,7 @@ func (s *Server) handleI18n(w http.ResponseWriter, r *http.Request) {
 	filePath := "locales/" + lang + ".toml"
 	data, err := s.locales.ReadFile(filePath)
 	if err != nil {
+		logger.Sugar.Warnf("Language file not found: %s (requested by %s)", lang, r.RemoteAddr)
 		http.Error(w, "Language not found", http.StatusNotFound)
 		return
 	}
@@ -164,6 +192,7 @@ func (s *Server) handleI18n(w http.ResponseWriter, r *http.Request) {
 	// Parse TOML into a map
 	var translations map[string]map[string]string
 	if err := toml.Unmarshal(data, &translations); err != nil {
+		logger.Sugar.Errorf("Failed to parse translations for %s: %v", lang, err)
 		http.Error(w, "Failed to parse translations", http.StatusInternalServerError)
 		return
 	}
@@ -177,5 +206,8 @@ func (s *Server) handleI18n(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(simple)
+	if encodeErr := json.NewEncoder(w).Encode(simple); encodeErr != nil {
+		logger.Sugar.Errorf("Failed to encode i18n response for %s: %v", lang, encodeErr)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }

@@ -48,8 +48,8 @@ WORKDIR /app
 # Copy binary from builder (assets are embedded)
 COPY --from=builder /build/cfui .
 
-# Create data directory and set ownership
-RUN mkdir -p /app/data && \
+# Create data and logs directories with proper ownership
+RUN mkdir -p /app/data /app/logs && \
     chown -R appuser:appuser /app
 
 # Switch to non-root user
@@ -61,6 +61,7 @@ EXPOSE 14333
 # Set environment variables
 ENV PORT=14333
 ENV DATA_DIR=/app/data
+ENV LOG_DIR=/app/logs
 
 # Health check - uses PORT environment variable
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
