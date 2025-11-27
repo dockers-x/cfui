@@ -14,6 +14,7 @@ import (
 
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/cliutil"
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/tunnel"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -30,7 +31,8 @@ type Runner struct {
 	lastRestart       time.Time
 	configFile        string // Track temporary config file for cleanup
 	gracefulShutdownC chan struct{}
-	initOnce          sync.Once // Ensure tunnel.Init() is called only once
+	initOnce          sync.Once            // Ensure tunnel.Init() is called only once
+	metricsRegistry   *prometheus.Registry // Current Prometheus registry for tunnel metrics
 }
 
 func NewRunner(cfgMgr *config.Manager) *Runner {
@@ -86,6 +88,16 @@ func (r *Runner) Start() error {
 	// Note: Software name can only be set on FIRST initialization
 	// To change software name, you must restart the entire cfui process
 	r.initTunnel()
+
+	// Create a new Prometheus registry for this tunnel run
+	// Cloudflared registers metrics globally on each tunnel start (not just on Init)
+	// By creating a fresh registry each time, we prevent:
+	// 1. "duplicate metrics collector registration attempted" panics
+	// 2. Metrics pollution from previous runs
+	// We save the registry reference for potential future use (e.g., exposing /metrics endpoint)
+	r.metricsRegistry = prometheus.NewRegistry()
+	prometheus.DefaultRegisterer = r.metricsRegistry
+	logger.Sugar.Debug("Created new Prometheus registry for tunnel metrics")
 
 	r.ctx, r.cancel = context.WithCancel(context.Background())
 	r.running = true
@@ -157,6 +169,15 @@ func (r *Runner) Status() (bool, error) {
 	return r.running, r.lastError
 }
 
+// GetMetricsRegistry returns the current Prometheus registry used by the tunnel.
+// This can be used to expose metrics via an HTTP endpoint in the future.
+// Returns nil if the tunnel is not running or hasn't been started yet.
+func (r *Runner) GetMetricsRegistry() *prometheus.Registry {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.metricsRegistry
+}
+
 func (r *Runner) runTunnel(ctx context.Context, token string) {
 	defer r.wg.Done()
 	defer func() {
@@ -168,9 +189,9 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 			r.lastError = fmt.Errorf("tunnel panic: %v", rec)
 			r.mu.Unlock()
 
-			// Don't auto-restart on metrics registration errors - they won't resolve with restart
+			// Check for metrics registration errors (shouldn't happen with fresh registry)
 			if strings.Contains(fmt.Sprintf("%v", rec), "duplicate metrics") {
-				logger.Sugar.Error("Metrics registration error detected - requires process restart, not tunnel restart")
+				logger.Sugar.Error("Unexpected metrics registration error despite using fresh registry. Please report this issue.")
 				shouldAutoRestart = false
 			}
 		}
