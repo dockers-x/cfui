@@ -6,14 +6,50 @@ on:
       - "v*"
   workflow_dispatch:
 
+
 permissions:
   contents: write
   packages: write
 
 jobs:
-  release:
+  # First job: Create the release with changelog
+  create-github-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          body: |
+            ## Downloads
+            Download the appropriate binary for your platform below.
+
+            ## Installation
+            ```bash
+            # Linux/macOS
+            tar xzf cfui-<platform>.tar.gz
+            chmod +x cfui
+            ./cfui
+
+            # Windows
+            # Extract cfui-windows-amd64.zip
+            # Run cfui.exe
+            ```
+
+  # Second job: Build binaries for all platforms
+  build-binary:
     name: Build for ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
+    needs: create-github-release
+    if: startsWith(github.ref, 'refs/tags/')
     strategy:
       matrix:
         include:
@@ -124,65 +160,7 @@ jobs:
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: dist/cfui-${{ matrix.platform }}.*
-          generate_release_notes: true
+          # Don't generate release notes here - already done in create-release job
           draft: true
-
-  docker:
-    name: Build and push Docker image
-    runs-on: ubuntu-latest
-    needs: release
-    if: startsWith(github.ref, 'refs/tags/')
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            czyt/cfui
-            ghcr.io/${{ github.repository }}
-          tags: |
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VERSION=${{ github.ref_name }}
-            BUILD_TIME=${{ github.event.repository.updated_at }}
-            GIT_COMMIT=${{ github.sha }}
