@@ -126,3 +126,39 @@ other = "無効化"
 
 [no_tls_verify_help]
 other = "バックエンドサービスの TLS 証明書検証を無効にします（本番環境では非推奨）"
+
+[software_name]
+other = "ソフトウェア名"
+
+[software_name_help]
+other = "Cloudflare ダッシュボードに表示されるソフトウェア名（変更には cfui の再起動が必要）"
+
+[view_logs]
+other = "ログを表示"
+
+[log_viewer]
+other = "ログビューア"
+
+[log_connect]
+other = "接続"
+
+[log_disconnect]
+other = "切断"
+
+[log_clear]
+other = "ログをクリア"
+
+[log_total_lines]
+other = "総行数"
+
+[log_last_update]
+other = "最終更新"
+
+[log_status_connected]
+other = "接続済み"
+
+[log_status_disconnected]
+other = "切断済み"
+
+[log_fetch_failed]
+other = "ログの取得に失敗しました"

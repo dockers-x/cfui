@@ -1,8 +1,12 @@
 package logger
 
 import (
+	"bufio"
+	"container/ring"
+	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -10,8 +14,10 @@ import (
 )
 
 var (
-	Logger *zap.Logger
-	Sugar  *zap.SugaredLogger
+	Logger        *zap.Logger
+	Sugar         *zap.SugaredLogger
+	broadcaster   *LogBroadcaster
+	broadcasterMu sync.RWMutex
 )
 
 // Config holds logger configuration
@@ -79,6 +85,11 @@ func Initialize(cfg *Config) error {
 		LocalTime:  true,
 	}
 
+	// Initialize broadcaster with buffer for 500 recent log lines
+	broadcasterMu.Lock()
+	broadcaster = NewLogBroadcaster(500)
+	broadcasterMu.Unlock()
+
 	// Create encoder config
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:        "time",
@@ -94,19 +105,26 @@ func Initialize(cfg *Config) error {
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
 
+	// Wrap file writer with broadcaster using io.MultiWriter
+	fileWriter := io.MultiWriter(lumberjackLogger, newBroadcastWriter(io.Discard, broadcaster))
+
 	// Create cores for both file and console output
 	fileCore := zapcore.NewCore(
 		zapcore.NewJSONEncoder(encoderConfig),
-		zapcore.AddSync(lumberjackLogger),
+		zapcore.AddSync(fileWriter),
 		level,
 	)
 
-	// Console encoder with color
+	// Console encoder with color - also add broadcaster
 	consoleEncoderConfig := encoderConfig
 	consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+
+	// Console output goes to both stdout AND broadcaster
+	consoleWriter := io.MultiWriter(os.Stdout, newBroadcastWriter(io.Discard, broadcaster))
+
 	consoleCore := zapcore.NewCore(
 		zapcore.NewConsoleEncoder(consoleEncoderConfig),
-		zapcore.AddSync(os.Stdout),
+		zapcore.AddSync(consoleWriter),
 		level,
 	)
 
@@ -152,4 +170,128 @@ func RecoverPanicWithHandler(handler func(interface{})) {
 			handler(r)
 		}
 	}
+}
+
+// LogBroadcaster broadcasts log lines to multiple subscribers
+type LogBroadcaster struct {
+	subscribers map[chan string]struct{}
+	buffer      *ring.Ring // Circular buffer for recent logs
+	mu          sync.RWMutex
+	bufferSize  int
+}
+
+// NewLogBroadcaster creates a new log broadcaster with a circular buffer
+func NewLogBroadcaster(bufferSize int) *LogBroadcaster {
+	return &LogBroadcaster{
+		subscribers: make(map[chan string]struct{}),
+		buffer:      ring.New(bufferSize),
+		bufferSize:  bufferSize,
+	}
+}
+
+// Subscribe creates a new subscriber channel
+func (b *LogBroadcaster) Subscribe() chan string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	ch := make(chan string, 100) // Buffered to prevent blocking
+	b.subscribers[ch] = struct{}{}
+	return ch
+}
+
+// Unsubscribe removes a subscriber
+func (b *LogBroadcaster) Unsubscribe(ch chan string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	delete(b.subscribers, ch)
+	close(ch)
+}
+
+// Broadcast sends a log line to all subscribers
+func (b *LogBroadcaster) Broadcast(line string) {
+	b.mu.Lock()
+	// Store in circular buffer
+	b.buffer.Value = line
+	b.buffer = b.buffer.Next()
+
+	// Send to all subscribers (non-blocking)
+	for ch := range b.subscribers {
+		select {
+		case ch <- line:
+		default:
+			// Skip if channel is full (client too slow)
+		}
+	}
+	b.mu.Unlock()
+}
+
+// GetRecentLogs returns the recent logs from the circular buffer
+func (b *LogBroadcaster) GetRecentLogs() []string {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	logs := make([]string, 0, b.bufferSize)
+	b.buffer.Do(func(v interface{}) {
+		if v != nil {
+			if line, ok := v.(string); ok && line != "" {
+				logs = append(logs, line)
+			}
+		}
+	})
+	return logs
+}
+
+// Write implements io.Writer interface
+func (b *LogBroadcaster) Write(p []byte) (n int, err error) {
+	line := string(p)
+	b.Broadcast(line)
+	return len(p), nil
+}
+
+// broadcastWriter wraps an io.Writer and broadcasts lines
+type broadcastWriter struct {
+	writer      io.Writer
+	broadcaster *LogBroadcaster
+	scanner     *bufio.Scanner
+	buffer      []byte
+}
+
+func newBroadcastWriter(w io.Writer, b *LogBroadcaster) *broadcastWriter {
+	return &broadcastWriter{
+		writer:      w,
+		broadcaster: b,
+	}
+}
+
+func (bw *broadcastWriter) Write(p []byte) (n int, err error) {
+	// Write to underlying writer first
+	n, err = bw.writer.Write(p)
+
+	// Broadcast each complete line
+	bw.buffer = append(bw.buffer, p...)
+	for {
+		idx := -1
+		for i, b := range bw.buffer {
+			if b == '\n' {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			break
+		}
+		line := string(bw.buffer[:idx+1])
+		bw.broadcaster.Broadcast(line)
+		bw.buffer = bw.buffer[idx+1:]
+	}
+
+	return n, err
+}
+
+// GetBroadcaster returns the global log broadcaster
+func GetBroadcaster() *LogBroadcaster {
+	broadcasterMu.RLock()
+	defer broadcasterMu.RUnlock()
+	return broadcaster
 }

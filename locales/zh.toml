@@ -126,3 +126,39 @@ other = "禁用"
 
 [no_tls_verify_help]
 other = "禁用后端服务的 TLS 证书验证（不建议在生产环境使用）"
+
+[software_name]
+other = "软件名称"
+
+[software_name_help]
+other = "在 Cloudflare 仪表板中显示的软件名称（需要重启 cfui 才能生效）"
+
+[view_logs]
+other = "查看日志"
+
+[log_viewer]
+other = "日志查看器"
+
+[log_connect]
+other = "连接"
+
+[log_disconnect]
+other = "断开连接"
+
+[log_clear]
+other = "清空日志"
+
+[log_total_lines]
+other = "总行数"
+
+[log_last_update]
+other = "最后更新"
+
+[log_status_connected]
+other = "已连接"
+
+[log_status_disconnected]
+other = "已断开"
+
+[log_fetch_failed]
+other = "获取日志失败"

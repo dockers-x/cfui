@@ -30,7 +30,7 @@ type Runner struct {
 	lastRestart       time.Time
 	configFile        string // Track temporary config file for cleanup
 	gracefulShutdownC chan struct{}
-	initOnce          sync.Once
+	initOnce          sync.Once // Ensure tunnel.Init() is called only once
 }
 
 func NewRunner(cfgMgr *config.Manager) *Runner {
@@ -38,12 +38,12 @@ func NewRunner(cfgMgr *config.Manager) *Runner {
 		cfgMgr:            cfgMgr,
 		gracefulShutdownC: make(chan struct{}),
 	}
-	// Initialize cloudflared tunnel package
-	r.initTunnel()
 	return r
 }
 
 // initTunnel initializes the cloudflared tunnel package with required build info
+// Uses the software name from config
+// IMPORTANT: This can only be called ONCE due to cloudflared's metrics registration
 func (r *Runner) initTunnel() {
 	r.initOnce.Do(func() {
 		defer func() {
@@ -53,9 +53,16 @@ func (r *Runner) initTunnel() {
 			}
 		}()
 
+		cfg := r.cfgMgr.Get()
+		softwareName := cfg.SoftwareName
+		if softwareName == "" {
+			softwareName = "cfui" // Fallback to default
+		}
+
+		version.ChangeSoftName(softwareName)
 		buildInfo := cliutil.GetBuildInfo("dockers-x", version.GetFullVersion())
 		tunnel.Init(buildInfo, r.gracefulShutdownC)
-		logger.Sugar.Infof("Cloudflared tunnel initialized successfully (version: %s)", version.GetFullVersion())
+		logger.Sugar.Infof("Cloudflared tunnel initialized successfully (software: %s, version: %s)", softwareName, version.GetFullVersion())
 	})
 }
 
@@ -74,6 +81,11 @@ func (r *Runner) Start() error {
 		logger.Sugar.Error("Cannot start tunnel: token is missing")
 		return fmt.Errorf("token is required")
 	}
+
+	// Initialize tunnel once (uses sync.Once internally)
+	// Note: Software name can only be set on FIRST initialization
+	// To change software name, you must restart the entire cfui process
+	r.initTunnel()
 
 	r.ctx, r.cancel = context.WithCancel(context.Background())
 	r.running = true

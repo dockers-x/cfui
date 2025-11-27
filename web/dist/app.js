@@ -7,7 +7,9 @@ const state = {
     currentLang: localStorage.getItem('lang') || 'zh',
     currentTheme: localStorage.getItem('theme') || 'light',
     translations: {},
-    logs: [] // Store log entries for re-rendering when language changes
+    logs: [], // Store log entries for re-rendering when language changes
+    logStream: null, // EventSource for log streaming
+    isStreamConnected: false
 };
 
 const elements = {
@@ -16,12 +18,14 @@ const elements = {
     statusText: document.querySelector('.status-text'),
     tokenInput: document.getElementById('token-input'),
     customTagInput: document.getElementById('custom-version-input'),
+    softwareNameInput: document.getElementById('software-name-input'),
     toggleVisibilityBtn: document.getElementById('toggle-visibility'),
     autoStartToggle: document.getElementById('autostart-toggle'),
     autoRestartToggle: document.getElementById('autorestart-toggle'),
     actionBtn: document.getElementById('action-btn'),
     logsContainer: document.getElementById('logs-container'),
     clearLogsBtn: document.getElementById('clear-logs'),
+    toggleStreamBtn: document.getElementById('toggle-stream'),
     langSelect: document.getElementById('lang-select'),
     themeToggle: document.getElementById('theme-toggle'),
     // Advanced config elements
@@ -63,6 +67,9 @@ async function init() {
     await fetchConfig();
     await fetchStatus();
     setInterval(fetchStatus, 2000);
+
+    // Auto-connect log stream
+    connectLogStream();
 }
 
 // Event Listeners
@@ -74,7 +81,8 @@ elements.toggleVisibilityBtn.addEventListener('click', () => {
 });
 
 elements.tokenInput.addEventListener('change', saveAllConfig);
-elements.customVersionInput?.addEventListener('change', saveAllConfig);
+elements.customTagInput?.addEventListener('change', saveAllConfig);
+elements.softwareNameInput?.addEventListener('change', saveAllConfig);
 elements.autoStartToggle.addEventListener('change', saveAllConfig);
 elements.autoRestartToggle.addEventListener('change', saveAllConfig);
 elements.protocolSelect?.addEventListener('change', saveAllConfig);
@@ -127,6 +135,14 @@ elements.clearLogsBtn.addEventListener('click', () => {
     state.logs = []; // Clear the stored logs array
 });
 
+elements.toggleStreamBtn.addEventListener('click', () => {
+    if (state.isStreamConnected) {
+        disconnectLogStream();
+    } else {
+        connectLogStream();
+    }
+});
+
 elements.langSelect.addEventListener('change', async (e) => {
     const newLang = e.target.value;
     await loadLanguage(newLang);
@@ -144,6 +160,7 @@ async function fetchConfig() {
 
         elements.tokenInput.value = data.token || '';
         elements.customTagInput.value = data.custom_tag || '';
+        elements.softwareNameInput.value = data.software_name || 'cfui';
         elements.autoStartToggle.checked = data.auto_start || false;
         elements.autoRestartToggle.checked = data.auto_restart !== undefined ? data.auto_restart : true;
 
@@ -164,6 +181,7 @@ async function saveAllConfig() {
     const config = {
         token: elements.tokenInput.value,
         custom_tag: elements.customTagInput?.value || '',
+        software_name: elements.softwareNameInput?.value || 'cfui',
         auto_start: elements.autoStartToggle.checked,
         auto_restart: elements.autoRestartToggle.checked,
         protocol: elements.protocolSelect?.value || 'auto',
@@ -339,45 +357,49 @@ function updateUIText() {
     advancedLabels[0].textContent = t('tunnel_identifier');
     document.querySelectorAll('.advanced-content .help-text')[0].textContent = t('tunnel_identifier_help');
 
+    // Software name
+    advancedLabels[1].textContent = t('software_name');
+    document.querySelectorAll('.advanced-content .help-text')[1].textContent = t('software_name_help');
+
     // Protocol
-    advancedLabels[1].textContent = t('protocol');
+    advancedLabels[2].textContent = t('protocol');
     document.querySelector('#protocol-select option[value="auto"]').textContent = t('protocol_auto');
-    document.querySelectorAll('.advanced-content .help-text')[1].textContent = t('protocol_help');
+    document.querySelectorAll('.advanced-content .help-text')[2].textContent = t('protocol_help');
 
     // Grace period
-    advancedLabels[2].textContent = t('grace_period');
-    document.querySelectorAll('.advanced-content .help-text')[2].textContent = t('grace_period_help');
+    advancedLabels[3].textContent = t('grace_period');
+    document.querySelectorAll('.advanced-content .help-text')[3].textContent = t('grace_period_help');
 
     // Region
-    advancedLabels[3].textContent = t('region');
+    advancedLabels[4].textContent = t('region');
     document.querySelector('#region-select option[value=""]').textContent = t('region_global');
     document.querySelector('#region-select option[value="us"]').textContent = t('region_us');
-    document.querySelectorAll('.advanced-content .help-text')[3].textContent = t('region_help');
+    document.querySelectorAll('.advanced-content .help-text')[4].textContent = t('region_help');
 
     // Max retries
-    advancedLabels[4].textContent = t('max_retries');
-    document.querySelectorAll('.advanced-content .help-text')[4].textContent = t('max_retries_help');
+    advancedLabels[5].textContent = t('max_retries');
+    document.querySelectorAll('.advanced-content .help-text')[5].textContent = t('max_retries_help');
 
     // Metrics Server Title
-    advancedLabels[5].textContent = t('metrics_server_title');
+    advancedLabels[6].textContent = t('metrics_server_title');
 
     // Metrics enable
     document.querySelectorAll('.label-text')[0].textContent = t('metrics_enable');
 
     // Metrics port
-    advancedLabels[6].textContent = t('metrics_port');
-    document.querySelectorAll('.advanced-content .help-text')[5].textContent = t('metrics_port_help');
+    advancedLabels[7].textContent = t('metrics_port');
+    document.querySelectorAll('.advanced-content .help-text')[6].textContent = t('metrics_port_help');
 
     // Edge Bind IP Address
-    advancedLabels[7].textContent = t('edge_bind_address');
-    document.querySelectorAll('.advanced-content .help-text')[6].textContent = t('edge_bind_address_help');
+    advancedLabels[8].textContent = t('edge_bind_address');
+    document.querySelectorAll('.advanced-content .help-text')[7].textContent = t('edge_bind_address_help');
 
     // Backend TLS Verification Title
-    advancedLabels[8].textContent = t('backend_tls_title');
+    advancedLabels[9].textContent = t('backend_tls_title');
 
     // No TLS Verify
     document.querySelectorAll('.label-text')[1].textContent = t('no_tls_verify');
-    document.querySelectorAll('.advanced-content .help-text')[7].textContent = t('no_tls_verify_help');
+    document.querySelectorAll('.advanced-content .help-text')[8].textContent = t('no_tls_verify_help');
 
     // Autostart
     document.querySelectorAll('.label-text')[2].textContent = t('autostart');
@@ -389,8 +411,81 @@ function updateUIText() {
     document.querySelector('.logs-card .card-header h2').textContent = t('system_logs');
     elements.clearLogsBtn.textContent = t('clear');
 
+    // Update stream button text
+    updateStreamButtonState();
+
     // Re-render all logs with new language
     rerenderAllLogs();
 }
+
+// Log Streaming Functions
+function connectLogStream() {
+    if (state.logStream) {
+        return; // Already connected
+    }
+
+    console.log('Connecting to log stream...');
+    state.logStream = new EventSource(`${API_BASE}/logs/stream`);
+
+    state.logStream.onopen = () => {
+        console.log('Log stream connected');
+        state.isStreamConnected = true;
+        updateStreamButtonState();
+    };
+
+    state.logStream.onmessage = (event) => {
+        // Add streamed log to container (without storing in state.logs)
+        addStreamLog(event.data);
+    };
+
+    state.logStream.onerror = (error) => {
+        console.error('Log stream error:', error);
+        disconnectLogStream();
+    };
+}
+
+function disconnectLogStream() {
+    if (state.logStream) {
+        state.logStream.close();
+        state.logStream = null;
+        state.isStreamConnected = false;
+        updateStreamButtonState();
+        console.log('Log stream disconnected');
+    }
+}
+
+function updateStreamButtonState() {
+    if (state.isStreamConnected) {
+        elements.toggleStreamBtn.textContent = t('log_disconnect');
+        elements.toggleStreamBtn.classList.remove('btn-secondary');
+        elements.toggleStreamBtn.classList.add('btn-success');
+    } else {
+        elements.toggleStreamBtn.textContent = t('log_connect');
+        elements.toggleStreamBtn.classList.remove('btn-success');
+        elements.toggleStreamBtn.classList.add('btn-secondary');
+    }
+}
+
+function addStreamLog(line) {
+    if (!line || line.trim() === '') return;
+
+    const entry = document.createElement('div');
+    entry.className = 'log-entry info';
+    entry.textContent = line;
+    elements.logsContainer.appendChild(entry);
+
+    // Auto-scroll to bottom
+    elements.logsContainer.scrollTop = elements.logsContainer.scrollHeight;
+
+    // Limit to 500 lines for performance
+    while (elements.logsContainer.children.length > 500) {
+        elements.logsContainer.removeChild(elements.logsContainer.firstChild);
+    }
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    disconnectLogStream();
+});
 
 init();

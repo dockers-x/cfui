@@ -91,6 +91,14 @@
                                 </div>
 
                                 <div class="form-group">
+                                    <label for="software-name-input">Software Name</label>
+                                    <input type="text" id="software-name-input" placeholder="cfui" spellcheck="false">
+                                    <p class="help-text">Software name displayed in Cloudflare dashboard (default: cfui)</p>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
                                     <label for="protocol-select">Protocol</label>
                                     <select id="protocol-select" class="form-select">
                                         <option value="auto">Auto</option>
@@ -99,9 +107,7 @@
                                     </select>
                                     <p class="help-text">Connection protocol to Cloudflare network</p>
                                 </div>
-                            </div>
 
-                            <div class="form-row">
                                 <div class="form-group">
                                     <label for="grace-period-input">Grace Period</label>
                                     <input type="text" id="grace-period-input" placeholder="30s" value="30s">
@@ -192,7 +198,10 @@
             <div class="card logs-card">
                 <div class="card-header">
                     <h2>System Logs</h2>
-                    <button id="clear-logs" class="btn btn-sm btn-ghost">Clear</button>
+                    <div class="logs-controls">
+                        <button id="toggle-stream" class="btn btn-sm btn-secondary">Connect Stream</button>
+                        <button id="clear-logs" class="btn btn-sm btn-ghost">Clear</button>
+                    </div>
                 </div>
                 <div class="logs-container" id="logs-container">
                     <div class="log-entry system">System ready. Waiting for configuration...

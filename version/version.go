@@ -13,8 +13,8 @@ var (
 	GitCommit = "unknown"
 )
 
-const (
-	product = "cfui"
+var (
+	defaultSoftName = "cfui"
 )
 
 // GetVersion returns the full version string
@@ -25,12 +25,16 @@ func GetVersion() string {
 	return Version
 }
 
+func ChangeSoftName(newSoftName string) {
+	defaultSoftName = newSoftName
+}
+
 // GetFullVersion returns the version with build info
 func GetFullVersion() string {
 	if Version == "dev" {
-		return fmt.Sprintf("%s/%s (commit: %s, built: %s)", product, Version, GitCommit, BuildTime)
+		return fmt.Sprintf("%s/%s (commit: %s, built: %s)", defaultSoftName, Version, GitCommit, BuildTime)
 	}
-	return fmt.Sprintf("%s/%s", product, Version)
+	return fmt.Sprintf("%s/%s", defaultSoftName, Version)
 }
 
 // GetShortVersion returns just the version number for cloudflared display

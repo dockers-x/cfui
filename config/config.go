@@ -10,10 +10,11 @@ import (
 )
 
 type Config struct {
-	Token       string `json:"token"`
-	AutoStart   bool   `json:"auto_start"`   // Auto-start tunnel when service starts
-	AutoRestart bool   `json:"auto_restart"` // Auto-restart tunnel on abnormal exit
-	CustomTag   string `json:"custom_tag"`   // Custom identifier tag shown in Cloudflare dashboard (displayed as "version=xxx" tag)
+	Token        string `json:"token"`
+	AutoStart    bool   `json:"auto_start"`    // Auto-start tunnel when service starts
+	AutoRestart  bool   `json:"auto_restart"`  // Auto-restart tunnel on abnormal exit
+	CustomTag    string `json:"custom_tag"`    // Custom identifier tag shown in Cloudflare dashboard (displayed as "version=xxx" tag)
+	SoftwareName string `json:"software_name"` // Software name shown in Cloudflare dashboard (default: "cfui")
 
 	// Advanced cloudflared parameters
 	Protocol      string `json:"protocol"`     // auto, http2, quic
@@ -41,6 +42,7 @@ func DefaultConfig() Config {
 	return Config{
 		AutoRestart:     true, // Enable auto-restart by default
 		CustomTag:       "",
+		SoftwareName:    "cfui", // Default software name
 		Protocol:        "auto",
 		GracePeriod:     "30s",
 		Region:          "",

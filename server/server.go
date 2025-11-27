@@ -37,6 +37,8 @@ func (s *Server) Run(addr string) error {
 	mux.HandleFunc("/api/status", s.handleStatus)
 	mux.HandleFunc("/api/control", s.handleControl)
 	mux.HandleFunc("/api/i18n/", s.handleI18n)
+	mux.HandleFunc("/api/logs/stream", s.handleLogStream)
+	mux.HandleFunc("/api/logs/recent", s.handleRecentLogs)
 
 	// Static Files
 	// The assets are in "web/dist", so we need to strip that prefix
@@ -208,6 +210,89 @@ func (s *Server) handleI18n(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if encodeErr := json.NewEncoder(w).Encode(simple); encodeErr != nil {
 		logger.Sugar.Errorf("Failed to encode i18n response for %s: %v", lang, encodeErr)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+// handleLogStream streams logs to client using Server-Sent Events (SSE)
+func (s *Server) handleLogStream(w http.ResponseWriter, r *http.Request) {
+	// Set headers for SSE
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	broadcaster := logger.GetBroadcaster()
+	if broadcaster == nil {
+		logger.Sugar.Error("Log broadcaster not initialized")
+		http.Error(w, "Log streaming not available", http.StatusInternalServerError)
+		return
+	}
+
+	// Subscribe to log broadcasts
+	logChan := broadcaster.Subscribe()
+	defer broadcaster.Unsubscribe(logChan)
+
+	// Get flusher for SSE
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		logger.Sugar.Error("Streaming not supported")
+		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	logger.Sugar.Infof("Log stream client connected: %s", r.RemoteAddr)
+
+	// Send initial recent logs
+	recentLogs := broadcaster.GetRecentLogs()
+	for _, line := range recentLogs {
+		_, err := w.Write([]byte("data: " + line + "\n\n"))
+		if err != nil {
+			return
+		}
+	}
+	flusher.Flush()
+
+	// Stream new logs
+	ctx := r.Context()
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Sugar.Infof("Log stream client disconnected: %s", r.RemoteAddr)
+			return
+		case logLine, ok := <-logChan:
+			if !ok {
+				return
+			}
+			// Send log line as SSE event
+			_, err := w.Write([]byte("data: " + logLine + "\n\n"))
+			if err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
+}
+
+// handleRecentLogs returns recent logs from the circular buffer
+func (s *Server) handleRecentLogs(w http.ResponseWriter, r *http.Request) {
+	broadcaster := logger.GetBroadcaster()
+	if broadcaster == nil {
+		logger.Sugar.Error("Log broadcaster not initialized")
+		http.Error(w, "Log broadcaster not available", http.StatusInternalServerError)
+		return
+	}
+
+	recentLogs := broadcaster.GetRecentLogs()
+
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"logs":  recentLogs,
+		"count": len(recentLogs),
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Sugar.Errorf("Failed to encode recent logs response: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }

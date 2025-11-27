@@ -451,6 +451,40 @@ details[open] .advanced-toggle::before {
     font-size: 0.85rem;
 }
 
+.btn-secondary {
+    background: rgba(107, 114, 128, 0.2);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: rgba(107, 114, 128, 0.3);
+    border-color: var(--text-secondary);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-color) 0%, #047857 100%);
+    color: white;
+    border: none;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    filter: brightness(1.1);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--error-color) 0%, #B91C1C 100%);
+    color: white;
+}
+
+.btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    filter: brightness(1.1);
+}
+
 /* --- Toggles --- */
 .toggle-container {
     display: flex;
@@ -507,6 +541,17 @@ input:checked+.slider:before {
 /* --- Logs --- */
 .logs-card {
     border: 1px solid var(--border-color);
+}
+
+.logs-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logs-controls {
+    display: flex;
+    gap: 8px;
 }
 
 .logs-container {

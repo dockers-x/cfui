@@ -126,3 +126,39 @@ other = "Disable"
 
 [no_tls_verify_help]
 other = "Disable TLS certificate verification for backend services (not recommended for production)"
+
+[software_name]
+other = "Software Name"
+
+[software_name_help]
+other = "Software name displayed in Cloudflare dashboard (requires cfui restart to take effect)"
+
+[view_logs]
+other = "View Logs"
+
+[log_viewer]
+other = "Log Viewer"
+
+[log_connect]
+other = "Connect"
+
+[log_disconnect]
+other = "Disconnect"
+
+[log_clear]
+other = "Clear Logs"
+
+[log_total_lines]
+other = "Total Lines"
+
+[log_last_update]
+other = "Last Update"
+
+[log_status_connected]
+other = "Connected"
+
+[log_status_disconnected]
+other = "Disconnected"
+
+[log_fetch_failed]
+other = "Failed to fetch logs"
