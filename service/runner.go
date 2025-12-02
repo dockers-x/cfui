@@ -33,12 +33,20 @@ type Runner struct {
 	gracefulShutdownC chan struct{}
 	initOnce          sync.Once            // Ensure tunnel.Init() is called only once
 	metricsRegistry   *prometheus.Registry // Current Prometheus registry for tunnel metrics
+
+	// Protocol fallback management (for auto mode)
+	currentProtocol     string         // Currently active protocol (quic, http2, or auto)
+	protocolFailures    map[string]int // Track consecutive failures per protocol
+	lastProtocolSwitch  time.Time      // Last time we switched protocols
+	protocolSwitchCount int            // Number of times we've switched protocols
 }
 
 func NewRunner(cfgMgr *config.Manager) *Runner {
 	r := &Runner{
 		cfgMgr:            cfgMgr,
 		gracefulShutdownC: make(chan struct{}),
+		protocolFailures:  make(map[string]int),
+		currentProtocol:   "auto", // Start with auto
 	}
 	return r
 }
@@ -168,12 +176,15 @@ func (r *Runner) Stop() error {
 	}
 }
 
-func (r *Runner) Status() (bool, error) {
+func (r *Runner) Status() (bool, error, string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.running, r.lastError
+	return r.running, r.lastError, r.currentProtocol
 }
 
+// GetMetricsRegistry returns the current Prometheus registry used by the tunnel.
+// This can be used to expose metrics via an HTTP endpoint in the future.
+// Returns nil if the tunnel is not running or hasn't been started yet.
 // GetMetricsRegistry returns the current Prometheus registry used by the tunnel.
 // This can be used to expose metrics via an HTTP endpoint in the future.
 // Returns nil if the tunnel is not running or hasn't been started yet.
@@ -181,6 +192,124 @@ func (r *Runner) GetMetricsRegistry() *prometheus.Registry {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.metricsRegistry
+}
+
+// selectProtocol determines which protocol to use based on configuration and failure history
+// This method should be called with the mutex held
+func (r *Runner) selectProtocol(configProtocol string) string {
+	// If user explicitly specified a protocol (not auto), always use that
+	if configProtocol != "" && configProtocol != "auto" {
+		r.currentProtocol = configProtocol
+		return configProtocol
+	}
+
+	// Auto mode: implement intelligent fallback
+	// Priority order: quic -> http2 -> quic (cycle)
+
+	const (
+		maxFailuresBeforeSwitch = 3                // Switch after 3 consecutive failures
+		protocolCooldown        = 10 * time.Minute // Wait 10 minutes before trying a failed protocol again
+	)
+
+	// If current protocol has too many failures, try to switch
+	if r.protocolFailures[r.currentProtocol] >= maxFailuresBeforeSwitch {
+		// Determine next protocol to try
+		var nextProtocol string
+		if r.currentProtocol == "quic" || r.currentProtocol == "auto" {
+			nextProtocol = "http2"
+		} else {
+			// If we've been on http2 for a while, try quic again
+			if time.Since(r.lastProtocolSwitch) > protocolCooldown {
+				nextProtocol = "quic"
+			} else {
+				nextProtocol = "http2" // Stay on http2
+			}
+		}
+
+		logger.Sugar.Warnf("Protocol %s has failed %d times, switching to %s",
+			r.currentProtocol, r.protocolFailures[r.currentProtocol], nextProtocol)
+
+		r.currentProtocol = nextProtocol
+		r.lastProtocolSwitch = time.Now()
+		r.protocolSwitchCount++
+
+		return nextProtocol
+	}
+
+	// Default to current protocol or quic if not set
+	if r.currentProtocol == "" || r.currentProtocol == "auto" {
+		r.currentProtocol = "quic"
+	}
+
+	return r.currentProtocol
+}
+
+// recordProtocolSuccess resets failure count for the current protocol
+func (r *Runner) recordProtocolSuccess() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.currentProtocol != "" && r.currentProtocol != "auto" {
+		logger.Sugar.Infof("Protocol %s connected successfully, resetting failure count", r.currentProtocol)
+		r.protocolFailures[r.currentProtocol] = 0
+		// Also reset restart count on successful connection
+		r.restartCount = 0
+	}
+}
+
+// recordProtocolFailure increments failure count for the current protocol
+func (r *Runner) recordProtocolFailure(err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.currentProtocol == "" || r.currentProtocol == "auto" {
+		r.currentProtocol = "quic" // Assume quic if not set
+	}
+
+	// Only count certain types of errors as protocol failures
+	if isProtocolRelatedError(err) {
+		r.protocolFailures[r.currentProtocol]++
+		logger.Sugar.Warnf("Protocol %s failure count: %d (error: %v)",
+			r.currentProtocol, r.protocolFailures[r.currentProtocol], err)
+	}
+}
+
+// isProtocolRelatedError determines if an error is related to protocol issues
+func isProtocolRelatedError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := strings.ToLower(err.Error())
+
+	// QUIC-specific errors
+	quicErrors := []string{
+		"quic",
+		"timeout: no recent network activity",
+		"failed to dial to edge with quic",
+		"failed to accept quic stream",
+	}
+
+	for _, pattern := range quicErrors {
+		if strings.Contains(errMsg, pattern) {
+			return true
+		}
+	}
+
+	// General connection errors that might be protocol-related
+	connectionErrors := []string{
+		"connection refused",
+		"connection reset",
+		"connection timeout",
+	}
+
+	for _, pattern := range connectionErrors {
+		if strings.Contains(errMsg, pattern) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (r *Runner) runTunnel(ctx context.Context, token string) {
@@ -257,8 +386,18 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 
 	// Add "run" subcommand
 	args = append(args, "run", "--token", token)
-	if cfg.Protocol != "" && cfg.Protocol != "auto" {
-		args = append(args, "--protocol", cfg.Protocol)
+
+	// Select protocol based on config and failure history
+	r.mu.Lock()
+	selectedProtocol := r.selectProtocol(cfg.Protocol)
+	r.mu.Unlock()
+
+	// Always specify protocol explicitly when not using cloudflared's default
+	if selectedProtocol != "" && selectedProtocol != "auto" {
+		args = append(args, "--protocol", selectedProtocol)
+		logger.Sugar.Infof("Using protocol: %s (config: %s)", selectedProtocol, cfg.Protocol)
+	} else {
+		logger.Sugar.Info("Using cloudflared default protocol (auto)")
 	}
 
 	if cfg.GracePeriod != "" && cfg.GracePeriod != "30s" {
@@ -311,8 +450,8 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 		args = append(args, extraArgs...)
 	}
 
-	logger.Sugar.Infof("Starting cloudflared tunnel with protocol=%s, region=%s, retries=%d",
-		cfg.Protocol, cfg.Region, cfg.Retries)
+	logger.Sugar.Infof("Starting cloudflared tunnel with protocol=%s (selected), config_protocol=%s, region=%s, retries=%d",
+		selectedProtocol, cfg.Protocol, cfg.Region, cfg.Retries)
 	logger.Sugar.Debugf("Full tunnel arguments: %v", args)
 
 	err := app.RunContext(ctx, args)
@@ -329,16 +468,17 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 		r.lastError = err
 		r.mu.Unlock()
 
+		// Record protocol failure for intelligent fallback
+		r.recordProtocolFailure(err)
+
 		// If error is not retryable, don't attempt auto-restart
 		if !isRetryableError(err) {
 			logger.Sugar.Warnf("Non-retryable error detected: %v", err)
 			return
 		}
 	} else {
-		// Reset restart count on successful exit
-		r.mu.Lock()
-		r.restartCount = 0
-		r.mu.Unlock()
+		// Successful exit - record protocol success
+		r.recordProtocolSuccess()
 		logger.Sugar.Info("Tunnel exited cleanly")
 	}
 }

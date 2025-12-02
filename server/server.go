@@ -94,15 +94,16 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	running, err := s.runner.Status()
+	running, err, protocol := s.runner.Status()
 	status := "stopped"
 	if running {
 		status = "running"
 	}
 
 	resp := map[string]interface{}{
-		"running": running,
-		"status":  status,
+		"running":  running,
+		"status":   status,
+		"protocol": protocol,
 	}
 	if err != nil {
 		resp["error"] = err.Error()
