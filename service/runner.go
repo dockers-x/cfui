@@ -255,7 +255,7 @@ func (r *Runner) selectProtocol(configProtocol string) string {
 
 	const (
 		maxFailuresBeforeSwitch = 3                // Switch after 3 consecutive failures
-		protocolCooldown        = 10 * time.Minute // Wait 10 minutes before trying a failed protocol again
+		protocolCooldown        = 10 * time.Minute // Wait 10 minutes before retrying a failed protocol
 	)
 
 	// If current protocol has too many failures, try to switch
@@ -265,16 +265,15 @@ func (r *Runner) selectProtocol(configProtocol string) string {
 		if r.currentProtocol == "quic" || r.currentProtocol == "auto" {
 			nextProtocol = "http2"
 		} else {
-			// If we've been on http2 for a while, try quic again
-			if time.Since(r.lastProtocolSwitch) > protocolCooldown {
-				nextProtocol = "quic"
-			} else {
-				nextProtocol = "http2" // Stay on http2
-			}
+			nextProtocol = "quic"
 		}
 
 		logger.Sugar.Warnf("Protocol %s has failed %d times, switching to %s",
 			r.currentProtocol, r.protocolFailures[r.currentProtocol], nextProtocol)
+
+		// Important: Reset the CURRENT protocol's failure count when switching away from it
+		// This ensures that if we switch back later, it gets a fresh start
+		r.protocolFailures[r.currentProtocol] = 0
 
 		r.currentProtocol = nextProtocol
 		r.lastProtocolSwitch = time.Now()
@@ -292,15 +291,27 @@ func (r *Runner) selectProtocol(configProtocol string) string {
 }
 
 // recordProtocolSuccess resets failure count for the current protocol
+// Also clears all protocol failure counts if connection has been stable
 func (r *Runner) recordProtocolSuccess() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if r.currentProtocol != "" && r.currentProtocol != "auto" {
-		logger.Sugar.Infof("Protocol %s connected successfully, resetting failure count", r.currentProtocol)
+		logger.Sugar.Infof("Protocol %s connected successfully, resetting failure counts", r.currentProtocol)
+
+		// Reset current protocol's failure count
 		r.protocolFailures[r.currentProtocol] = 0
+
 		// Also reset restart count on successful connection
 		r.restartCount = 0
+
+		// If we've had a successful connection for a while (implied by clean exit),
+		// clear all protocol failure history to give other protocols a fresh chance
+		// This prevents permanent blacklisting of protocols after temporary issues
+		for proto := range r.protocolFailures {
+			r.protocolFailures[proto] = 0
+		}
+		logger.Sugar.Debug("Cleared all protocol failure history after successful connection")
 	}
 }
 
