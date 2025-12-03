@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -145,7 +146,7 @@ func main() {
 		logger.Sugar.Info("Graceful shutdown complete")
 
 	case err := <-serverErrors:
-		if err != nil && err != http.ErrServerClosed {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Sugar.Errorf("Server failed: %v", err)
 			log.Fatal(err)
 		}

@@ -18,6 +18,43 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// safeRegisterer wraps a Prometheus registry and gracefully handles duplicate registrations
+// This prevents panics when cloudflared attempts to register metrics multiple times
+type safeRegisterer struct {
+	prometheus.Registerer
+}
+
+func newSafeRegisterer(reg prometheus.Registerer) prometheus.Registerer {
+	return &safeRegisterer{Registerer: reg}
+}
+
+func (s *safeRegisterer) Register(c prometheus.Collector) error {
+	err := s.Registerer.Register(c)
+	if err != nil {
+		// Check if this is a duplicate registration error by examining the error string
+		// This is more reliable than type assertion across different prometheus versions
+		errStr := err.Error()
+		if strings.Contains(errStr, "duplicate") || strings.Contains(errStr, "already registered") {
+			logger.Sugar.Debugf("Collector already registered (ignored): %v", err)
+			return nil // Silently ignore duplicate registration
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *safeRegisterer) MustRegister(cs ...prometheus.Collector) {
+	for _, c := range cs {
+		if err := s.Register(c); err != nil {
+			// Only panic if it's not a duplicate registration error
+			errStr := err.Error()
+			if !strings.Contains(errStr, "duplicate") && !strings.Contains(errStr, "already registered") {
+				panic(err)
+			}
+		}
+	}
+}
+
 // Runner manages the cloudflared tunnel process
 type Runner struct {
 	cfgMgr            *config.Manager
@@ -59,7 +96,8 @@ func (r *Runner) initTunnel() {
 		defer func() {
 			if rec := recover(); rec != nil {
 				logger.Sugar.Errorf("Panic during tunnel initialization: %v", rec)
-				panic(rec) // Re-panic after logging
+				// Do NOT re-panic - let the initialization fail gracefully
+				// The tunnel will not start, but the cfui process will continue running
 			}
 		}()
 
@@ -77,7 +115,18 @@ func (r *Runner) initTunnel() {
 }
 
 // Start launches the cloudflared tunnel
-func (r *Runner) Start() error {
+func (r *Runner) Start() (err error) {
+	// Add panic protection at the outermost level to prevent any initialization panic
+	// from crashing the entire cfui process
+	defer func() {
+		if rec := recover(); rec != nil {
+			logger.Sugar.Errorf("Panic during tunnel start (recovered): %v", rec)
+			// Don't try to lock here as we might already hold the lock
+			// Just set the error and let the caller handle it
+			err = fmt.Errorf("start panic: %v", rec)
+		}
+	}()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -98,14 +147,12 @@ func (r *Runner) Start() error {
 	r.initTunnel()
 
 	// Create a new Prometheus registry for this tunnel run
-	// Cloudflared registers metrics globally on each tunnel start (not just on Init)
-	// By creating a fresh registry each time, we prevent:
-	// 1. "duplicate metrics collector registration attempted" panics
-	// 2. Metrics pollution from previous runs
-	// We save the registry reference for potential future use (e.g., exposing /metrics endpoint)
+	// Cloudflared registers metrics on each tunnel start (not just on Init)
+	// By creating a safe registerer wrapper, we prevent duplicate registration panics
+	// while still allowing metrics collection to work
 	r.metricsRegistry = prometheus.NewRegistry()
-	prometheus.DefaultRegisterer = r.metricsRegistry
-	logger.Sugar.Debug("Created new Prometheus registry for tunnel metrics")
+	prometheus.DefaultRegisterer = newSafeRegisterer(r.metricsRegistry)
+	logger.Sugar.Debug("Created new Prometheus registry with safe registerer wrapper")
 
 	// Cancel any existing context to prevent context leak
 	if r.cancel != nil {
@@ -315,19 +362,11 @@ func isProtocolRelatedError(err error) bool {
 func (r *Runner) runTunnel(ctx context.Context, token string) {
 	defer r.wg.Done()
 	defer func() {
-		shouldAutoRestart := true
-
 		if rec := recover(); rec != nil {
 			logger.Sugar.Errorf("Recovered from panic in tunnel: %v", rec)
 			r.mu.Lock()
 			r.lastError = fmt.Errorf("tunnel panic: %v", rec)
 			r.mu.Unlock()
-
-			// Check for metrics registration errors (shouldn't happen with fresh registry)
-			if strings.Contains(fmt.Sprintf("%v", rec), "duplicate metrics") {
-				logger.Sugar.Error("Unexpected metrics registration error despite using fresh registry. Please report this issue.")
-				shouldAutoRestart = false
-			}
 		}
 
 		// Clean up temporary config file
@@ -337,7 +376,7 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 		r.running = false
 		r.mu.Unlock()
 
-		if ctx.Err() == nil && shouldAutoRestart {
+		if ctx.Err() == nil {
 			logger.Sugar.Warn("Tunnel exited unexpectedly, checking auto-restart policy")
 			r.checkAutoRestart()
 		}
