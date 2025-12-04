@@ -1,6 +1,10 @@
 package main
 
 import (
+	"cfui/internal/config"
+	"cfui/internal/logger"
+	"cfui/internal/server"
+	"cfui/internal/service"
 	"context"
 	"embed"
 	"errors"
@@ -13,10 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	"cfui/config"
-	"cfui/logger"
-	"cfui/server"
-	"cfui/service"
 	"cfui/version"
 )
 

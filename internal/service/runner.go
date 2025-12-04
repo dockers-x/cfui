@@ -1,6 +1,8 @@
 package service
 
 import (
+	"cfui/internal/config"
+	"cfui/internal/logger"
 	"context"
 	"fmt"
 	"os"
@@ -8,14 +10,53 @@ import (
 	"sync"
 	"time"
 
-	"cfui/config"
-	"cfui/logger"
 	"cfui/version"
 
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/cliutil"
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/tunnel"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/urfave/cli/v2"
+)
+
+// Package-level error patterns for efficient reuse
+var (
+	// QUIC-specific error patterns
+	quicErrorPatterns = []string{
+		"quic",
+		"timeout: no recent network activity",
+		"failed to dial to edge with quic",
+		"failed to accept quic stream",
+	}
+
+	// General connection error patterns that might be protocol-related
+	connectionErrorPatterns = []string{
+		"connection refused",
+		"connection reset",
+		"connection timeout",
+	}
+
+	// Network errors that are retryable
+	retryableErrorPatterns = []string{
+		"connection refused",
+		"connection reset",
+		"timeout",
+		"temporary failure",
+		"network is unreachable",
+		"no route to host",
+		"broken pipe",
+		"i/o timeout",
+	}
+
+	// Configuration/authentication errors that are not retryable
+	nonRetryableErrorPatterns = []string{
+		"invalid token",
+		"authentication failed",
+		"unauthorized",
+		"forbidden",
+		"bad request",
+		"invalid configuration",
+		"missing required",
+	}
 )
 
 // safeRegisterer wraps a Prometheus registry and gracefully handles duplicate registrations
@@ -340,28 +381,15 @@ func isProtocolRelatedError(err error) bool {
 
 	errMsg := strings.ToLower(err.Error())
 
-	// QUIC-specific errors
-	quicErrors := []string{
-		"quic",
-		"timeout: no recent network activity",
-		"failed to dial to edge with quic",
-		"failed to accept quic stream",
-	}
-
-	for _, pattern := range quicErrors {
+	// Check QUIC-specific errors
+	for _, pattern := range quicErrorPatterns {
 		if strings.Contains(errMsg, pattern) {
 			return true
 		}
 	}
 
-	// General connection errors that might be protocol-related
-	connectionErrors := []string{
-		"connection refused",
-		"connection reset",
-		"connection timeout",
-	}
-
-	for _, pattern := range connectionErrors {
+	// Check general connection errors that might be protocol-related
+	for _, pattern := range connectionErrorPatterns {
 		if strings.Contains(errMsg, pattern) {
 			return true
 		}
@@ -440,6 +468,11 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 	// Select protocol based on config and failure history
 	r.mu.Lock()
 	selectedProtocol := r.selectProtocol(cfg.Protocol)
+	// Log failure counts for debugging
+	if cfg.Protocol == "auto" {
+		logger.Sugar.Debugf("Protocol failure counts: quic=%d, http2=%d",
+			r.protocolFailures["quic"], r.protocolFailures["http2"])
+	}
 	r.mu.Unlock()
 
 	// Always specify protocol explicitly when not using cloudflared's default
@@ -648,36 +681,15 @@ func isRetryableError(err error) bool {
 
 	errMsg := err.Error()
 
-	// Network errors - retryable
-	retryablePatterns := []string{
-		"connection refused",
-		"connection reset",
-		"timeout",
-		"temporary failure",
-		"network is unreachable",
-		"no route to host",
-		"broken pipe",
-		"i/o timeout",
-	}
-
-	for _, pattern := range retryablePatterns {
+	// Check network errors - retryable
+	for _, pattern := range retryableErrorPatterns {
 		if strings.Contains(strings.ToLower(errMsg), pattern) {
 			return true
 		}
 	}
 
-	// Configuration/authentication errors - not retryable
-	nonRetryablePatterns := []string{
-		"invalid token",
-		"authentication failed",
-		"unauthorized",
-		"forbidden",
-		"bad request",
-		"invalid configuration",
-		"missing required",
-	}
-
-	for _, pattern := range nonRetryablePatterns {
+	// Check configuration/authentication errors - not retryable
+	for _, pattern := range nonRetryableErrorPatterns {
 		if strings.Contains(strings.ToLower(errMsg), pattern) {
 			return false
 		}

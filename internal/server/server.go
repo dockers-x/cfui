@@ -1,17 +1,87 @@
 package server
 
 import (
+	"cfui/internal/config"
+	"cfui/internal/logger"
+	"cfui/internal/pool"
+	"cfui/internal/service"
 	"embed"
 	"encoding/json"
 	"io/fs"
 	"net/http"
 	"time"
 
-	"cfui/config"
-	"cfui/logger"
-	"cfui/service"
+	"cfui/version"
 
 	"github.com/BurntSushi/toml"
+)
+
+// API Response structures for type safety
+
+// StatusResponse represents the tunnel status response
+type StatusResponse struct {
+	Running  bool   `json:"running"`
+	Status   string `json:"status"`
+	Protocol string `json:"protocol"`
+	Error    string `json:"error,omitempty"`
+}
+
+// Reset resets the StatusResponse to its zero state
+func (r *StatusResponse) Reset() {
+	r.Running = false
+	r.Status = ""
+	r.Protocol = ""
+	r.Error = ""
+}
+
+// ControlResponse represents the control action response
+type ControlResponse struct {
+	Success bool   `json:"success"`
+	Action  string `json:"action"`
+	Message string `json:"message"`
+}
+
+// Reset resets the ControlResponse to its zero state
+func (r *ControlResponse) Reset() {
+	r.Success = false
+	r.Action = ""
+	r.Message = ""
+}
+
+// RecentLogsResponse represents the recent logs response
+type RecentLogsResponse struct {
+	Logs  []string `json:"logs"`
+	Count int      `json:"count"`
+}
+
+// Reset resets the RecentLogsResponse to its zero state
+func (r *RecentLogsResponse) Reset() {
+	r.Logs = nil
+	r.Count = 0
+}
+
+// VersionResponse represents the version information response
+type VersionResponse struct {
+	Version   string `json:"version"`
+	BuildTime string `json:"build_time"`
+	GitCommit string `json:"git_commit"`
+	FullInfo  string `json:"full_info"`
+}
+
+// Reset resets the VersionResponse to its zero state
+func (r *VersionResponse) Reset() {
+	r.Version = ""
+	r.BuildTime = ""
+	r.GitCommit = ""
+	r.FullInfo = ""
+}
+
+// Response struct pools for efficient memory reuse
+var (
+	statusResponsePool     = pool.New(func() *StatusResponse { return &StatusResponse{} })
+	controlResponsePool    = pool.New(func() *ControlResponse { return &ControlResponse{} })
+	recentLogsResponsePool = pool.New(func() *RecentLogsResponse { return &RecentLogsResponse{} })
+	versionResponsePool    = pool.New(func() *VersionResponse { return &VersionResponse{} })
 )
 
 type Server struct {
@@ -38,6 +108,7 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/status", s.handleStatus)
 	mux.HandleFunc("/api/control", s.handleControl)
+	mux.HandleFunc("/api/version", s.handleVersion)
 	mux.HandleFunc("/api/i18n/", s.handleI18n)
 	mux.HandleFunc("/api/logs/stream", s.handleLogStream)
 	mux.HandleFunc("/api/logs/recent", s.handleRecentLogs)
@@ -100,14 +171,15 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		status = "running"
 	}
 
-	resp := map[string]interface{}{
-		"running":  running,
-		"status":   status,
-		"protocol": protocol,
-	}
+	resp := statusResponsePool.Get()
+	defer statusResponsePool.Put(resp)
+
+	resp.Running = running
+	resp.Status = status
+	resp.Protocol = protocol
 	if err != nil {
-		resp["error"] = err.Error()
-		resp["status"] = "error"
+		resp.Error = err.Error()
+		resp.Status = "error"
 		logger.Sugar.Warnf("Tunnel status error: %v", err)
 	}
 
@@ -147,13 +219,17 @@ func (s *Server) handleControl(w http.ResponseWriter, r *http.Request) {
 		logger.Sugar.Infof("Stopping tunnel (requested by %s)", r.RemoteAddr)
 		// For stop action, respond immediately and stop asynchronously
 		// This prevents the client from getting "Failed to fetch" when the tunnel shuts down
+		resp := controlResponsePool.Get()
+		resp.Success = true
+		resp.Action = "stop"
+		resp.Message = "Tunnel stop initiated"
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		if encodeErr := json.NewEncoder(w).Encode(map[string]interface{}{
-			"success": true,
-			"action":  "stop",
-			"message": "Tunnel stop initiated",
-		}); encodeErr != nil {
+		encodeErr := json.NewEncoder(w).Encode(resp)
+		controlResponsePool.Put(resp)
+
+		if encodeErr != nil {
 			logger.Sugar.Errorf("Failed to encode stop response: %v", encodeErr)
 		}
 		go func() {
@@ -170,13 +246,16 @@ func (s *Server) handleControl(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resp := controlResponsePool.Get()
+	defer controlResponsePool.Put(resp)
+
+	resp.Success = true
+	resp.Action = req.Action
+	resp.Message = "Tunnel started successfully"
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if encodeErr := json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"action":  req.Action,
-		"message": "Tunnel started successfully",
-	}); encodeErr != nil {
+	if encodeErr := json.NewEncoder(w).Encode(resp); encodeErr != nil {
 		logger.Sugar.Errorf("Failed to encode control response: %v", encodeErr)
 	}
 }
@@ -308,14 +387,32 @@ func (s *Server) handleRecentLogs(w http.ResponseWriter, r *http.Request) {
 
 	recentLogs := broadcaster.GetRecentLogs()
 
-	w.Header().Set("Content-Type", "application/json")
-	response := map[string]interface{}{
-		"logs":  recentLogs,
-		"count": len(recentLogs),
-	}
+	resp := recentLogsResponsePool.Get()
+	defer recentLogsResponsePool.Put(resp)
 
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	resp.Logs = recentLogs
+	resp.Count = len(recentLogs)
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		logger.Sugar.Errorf("Failed to encode recent logs response: %v", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+// handleVersion returns version information
+func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
+	resp := versionResponsePool.Get()
+	defer versionResponsePool.Put(resp)
+
+	resp.Version = version.GetVersion()
+	resp.BuildTime = version.BuildTime
+	resp.GitCommit = version.GitCommit
+	resp.FullInfo = version.GetFullVersion()
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		logger.Sugar.Errorf("Failed to encode version response: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }

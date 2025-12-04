@@ -1,12 +1,11 @@
 package config
 
 import (
+	"cfui/internal/logger"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"sync"
-
-	"cfui/logger"
 )
 
 type Config struct {

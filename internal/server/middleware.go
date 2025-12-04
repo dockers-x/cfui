@@ -1,10 +1,9 @@
 package server
 
 import (
+	"cfui/internal/logger"
 	"net/http"
 	"runtime/debug"
-
-	"cfui/logger"
 )
 
 // PanicRecoveryMiddleware recovers from panics in HTTP handlers
