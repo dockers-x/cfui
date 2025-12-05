@@ -463,7 +463,8 @@ func (r *Runner) runTunnel(ctx context.Context, token string) {
 	}
 
 	// Add "run" subcommand
-	args = append(args, "run", "--token", token)
+	// Disable auto-update to prevent panic in embedded usage (updater expects non-nil parameters)
+	args = append(args, "run", "--token", token, "--no-autoupdate")
 
 	// Select protocol based on config and failure history
 	r.mu.Lock()
