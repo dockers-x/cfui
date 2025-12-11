@@ -91,22 +91,28 @@ func main() {
 
 	// Setup Server
 	srv := server.NewServer(cfgMgr, runner, assets, locales)
-
+	// Bind Host
+	bindHost := os.Getenv("BIND_HOST")
+	if bindHost == "" {
+		bindHost = "0.0.0.0"
+	}
 	// Run
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "14333"
 	}
 
+	serveAddr := fmt.Sprintf("%s:%s", bindHost, port)
+
 	fmt.Printf("Cloudflared Web Controller %s\n", version.GetFullVersion())
-	fmt.Printf("Server listening on 0.0.0.0:%s\n", port)
+	fmt.Printf("Server listening on %s", serveAddr)
 	fmt.Printf("Local access: http://localhost:%s\n", port)
 	fmt.Printf("Network access: http://<your-ip>:%s\n", port)
-	logger.Sugar.Infof("Server starting on 0.0.0.0:%s", port)
+	logger.Sugar.Infof("Server starting on %s", serveAddr)
 
 	// Create HTTP server with explicit configuration
 	httpServer := &http.Server{
-		Addr:    ":" + port,
+		Addr:    serveAddr,
 		Handler: srv.GetHandler(),
 	}
 

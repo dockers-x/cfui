@@ -50,6 +50,8 @@ services:
       # Persist configuration and data
       - cloudflared-data:/app/data
     environment:
+      # Optional: Override default bind address (default is 0.0.0.0)
+      - BIND_HOST=0.0.0.0
       # Optional: Override default port (default is 14333)
       - PORT=14333
       # Optional: Set timezone
@@ -151,8 +153,11 @@ The application stores its configuration in the `data` directory:
 
 ### Environment Variables
 
+- `BIND_HOST` - Server bind address (default: 0.0.0.0)
 - `PORT` - Server port (default: 14333)
 - `DATA_DIR` - Data directory path (default: ./data)
+- `LOG_DIR` - Log directory path (default: {DATA_DIR}/logs)
+- `LOG_LEVEL` - Log level: debug, info, warn, error (default: info)
 
 ### Configuration Options
 

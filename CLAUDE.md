@@ -130,6 +130,7 @@ make version
 
 ## Environment Variables
 
+- `BIND_HOST`: Web server bind address (default: `0.0.0.0`)
 - `PORT`: Web server port (default: `14333`)
 - `DATA_DIR`: Data directory for config (default: `./data`, Docker: `/app/data`)
 - `LOG_DIR`: Log directory (default: `{DATA_DIR}/logs`, Docker: `/app/logs`)
