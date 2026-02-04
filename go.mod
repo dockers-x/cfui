@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/cloudflare/cloudflared v0.0.0-20260113130816-18eab5879f11
+	github.com/cloudflare/cloudflared v0.0.0-20260123124553-d7c62aed71e2
 	github.com/prometheus/client_golang v1.23.2
 	github.com/urfave/cli/v2 v2.27.7
 	go.uber.org/zap v1.27.1
