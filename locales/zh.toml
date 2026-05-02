@@ -168,3 +168,90 @@ other = "已断开"
 
 [log_fetch_failed]
 other = "获取日志失败"
+
+[remote_tunnel_manager]
+other = "远程隧道管理"
+
+[remote_tunnel_manager_subtitle]
+other = "独立管理 Cloudflare 托管的 ingress 规则，不影响本地运行器。"
+
+[manager_enable]
+other = "启用远程管理"
+
+[account_id]
+other = "账户 ID / App ID"
+
+[managed_tunnel_id]
+other = "隧道 ID"
+
+[authentication]
+other = "认证方式"
+
+[api_token]
+other = "API Token"
+
+[email_api_key]
+other = "邮箱 + API Key"
+
+[api_email]
+other = "API 邮箱"
+
+[api_key]
+other = "API Key"
+
+[save_manager_settings]
+other = "保存管理配置"
+
+[load_tunnel_config]
+other = "加载隧道配置"
+
+[ingress_rules]
+other = "公共主机名"
+
+[published_app_title]
+other = "添加已发布应用"
+
+[published_app_help]
+other = "按 Cloudflare Zero Trust 隧道表单的方式创建公共主机名路由。"
+
+[subdomain]
+other = "子域名"
+
+[domain]
+other = "域名"
+
+[path]
+other = "路径"
+
+[service_type]
+other = "类型"
+
+[service]
+other = "URL"
+
+[http_host_header]
+other = "HTTP Host Header"
+
+[origin_server_name]
+other = "Origin Server Name"
+
+[cancel_edit]
+other = "取消编辑"
+
+[add_rule]
+other = "添加规则"
+
+[update_rule]
+other = "更新规则"
+
+[api_token_configured]
+other = "API Token 已配置。"
+
+[api_token_not_saved]
+other = "尚未保存 Token。"
+
+[api_key_configured]
+other = "API Key 已配置。"
+
+[api_key_not_saved]
+other = "尚未保存 Key。"

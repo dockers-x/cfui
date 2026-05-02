@@ -9,7 +9,11 @@ const state = {
     translations: {},
     logs: [], // Store log entries for re-rendering when language changes
     logStream: null, // EventSource for log streaming
-    isStreamConnected: false
+    isStreamConnected: false,
+    tunnelManager: {
+        settings: {},
+        config: null
+    }
 };
 
 const elements = {
@@ -37,7 +41,36 @@ const elements = {
     metricsEnableToggle: document.getElementById('metrics-enable-toggle'),
     metricsPortInput: document.getElementById('metrics-port-input'),
     edgeBindAddressInput: document.getElementById('edge-bind-address-input'),
-    noTLSVerifyToggle: document.getElementById('no-tls-verify-toggle')
+    noTLSVerifyToggle: document.getElementById('no-tls-verify-toggle'),
+    managerStatus: document.getElementById('manager-status'),
+    managerEnableToggle: document.getElementById('manager-enable-toggle'),
+    managerAccountId: document.getElementById('manager-account-id'),
+    managerTunnelId: document.getElementById('manager-tunnel-id'),
+    managerAuthMode: document.getElementById('manager-auth-mode'),
+    managerTokenField: document.querySelector('.manager-token-field'),
+    managerKeyFields: document.querySelector('.manager-key-fields'),
+    managerAPIToken: document.getElementById('manager-api-token'),
+    managerAPIEmail: document.getElementById('manager-api-email'),
+    managerAPIKey: document.getElementById('manager-api-key'),
+    managerTokenState: document.getElementById('manager-token-state'),
+    managerKeyState: document.getElementById('manager-key-state'),
+    managerSaveSettings: document.getElementById('manager-save-settings'),
+    managerLoadConfig: document.getElementById('manager-load-config'),
+    managerConfigPanel: document.getElementById('manager-config-panel'),
+    managerConfigMeta: document.getElementById('manager-config-meta'),
+    managerRulesList: document.getElementById('manager-rules-list'),
+    managerEntryForm: document.getElementById('manager-entry-form'),
+    managerEntryIndex: document.getElementById('manager-entry-index'),
+    managerEntrySubdomain: document.getElementById('manager-entry-subdomain'),
+    managerEntryDomain: document.getElementById('manager-entry-domain'),
+    managerEntryPath: document.getElementById('manager-entry-path'),
+    managerEntryServiceType: document.getElementById('manager-entry-service-type'),
+    managerEntryService: document.getElementById('manager-entry-service'),
+    managerEntryHTTPHostHeader: document.getElementById('manager-entry-http-host-header'),
+    managerEntryOriginServerName: document.getElementById('manager-entry-origin-server-name'),
+    managerEntryNoTLS: document.getElementById('manager-entry-no-tls'),
+    managerEntrySubmit: document.getElementById('manager-entry-submit'),
+    managerEntryCancel: document.getElementById('manager-entry-cancel')
 };
 
 // Theme Management
@@ -67,6 +100,10 @@ async function init() {
 
     await fetchVersion();
     await fetchConfig();
+    await fetchTunnelManagerSettings();
+    if (state.tunnelManager.settings?.enabled && state.tunnelManager.settings?.account_id && state.tunnelManager.settings?.tunnel_id) {
+        await loadTunnelManagerConfig();
+    }
     await fetchStatus();
     setInterval(fetchStatus, 2000);
 
@@ -95,6 +132,21 @@ elements.metricsEnableToggle?.addEventListener('change', saveAllConfig);
 elements.metricsPortInput?.addEventListener('change', saveAllConfig);
 elements.edgeBindAddressInput?.addEventListener('change', saveAllConfig);
 elements.noTLSVerifyToggle?.addEventListener('change', saveAllConfig);
+
+elements.managerAuthMode?.addEventListener('change', updateManagerAuthMode);
+elements.managerEntryServiceType?.addEventListener('change', updateServicePlaceholder);
+elements.managerSaveSettings?.addEventListener('click', () => saveTunnelManagerSettings(false));
+elements.managerLoadConfig?.addEventListener('click', async () => {
+    await saveTunnelManagerSettings(true);
+    await loadTunnelManagerConfig();
+});
+elements.managerTunnelId?.addEventListener('change', async () => {
+    if (!elements.managerEnableToggle?.checked) return;
+    await saveTunnelManagerSettings(true);
+    await loadTunnelManagerConfig();
+});
+elements.managerEntryForm?.addEventListener('submit', submitTunnelManagerEntry);
+elements.managerEntryCancel?.addEventListener('click', resetTunnelEntryForm);
 
 elements.actionBtn.addEventListener('click', async () => {
     const action = state.isRunning ? 'stop' : 'start';
@@ -221,7 +273,8 @@ async function saveAllConfig() {
         metrics_enable: elements.metricsEnableToggle?.checked || false,
         metrics_port: parseInt(elements.metricsPortInput?.value || '60123'),
         edge_bind_address: elements.edgeBindAddressInput?.value || '',
-        no_tls_verify: elements.noTLSVerifyToggle?.checked || false
+        no_tls_verify: elements.noTLSVerifyToggle?.checked || false,
+        tunnel_management: state.config.tunnel_management || {}
     };
 
     try {
@@ -233,6 +286,300 @@ async function saveAllConfig() {
         addLog(t('config_saved'), 'system');
     } catch (err) {
         addLog('Failed to save config', 'error');
+    }
+}
+
+async function fetchTunnelManagerSettings() {
+    if (!elements.managerEnableToggle) return;
+    try {
+        const res = await fetch(`${API_BASE}/tunnel-manager/settings`);
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.tunnelManager.settings = data;
+        renderTunnelManagerSettings(data);
+    } catch (err) {
+        setManagerStatus(`Settings error: ${err.message}`, 'error');
+        addLog(`Tunnel manager settings failed: ${err.message}`, 'error');
+    }
+}
+
+function renderTunnelManagerSettings(settings) {
+    elements.managerEnableToggle.checked = !!settings.enabled;
+    elements.managerAccountId.value = settings.account_id || '';
+    elements.managerTunnelId.value = settings.tunnel_id || '';
+    elements.managerAuthMode.value = settings.auth_mode === 'key' ? 'key' : 'token';
+    elements.managerAPIEmail.value = settings.api_email || '';
+    elements.managerAPIToken.value = '';
+    elements.managerAPIKey.value = '';
+    elements.managerTokenState.textContent = settings.api_token_set ? 'API token is configured.' : 'No token saved.';
+    elements.managerKeyState.textContent = settings.api_key_set ? 'API key is configured.' : 'No key saved.';
+    updateManagerAuthMode();
+    setManagerStatus(settings.enabled ? 'Ready' : 'Disabled', settings.enabled ? 'ready' : 'disabled');
+}
+
+function updateManagerAuthMode() {
+    const keyMode = elements.managerAuthMode?.value === 'key';
+    if (elements.managerTokenField) elements.managerTokenField.hidden = keyMode;
+    if (elements.managerKeyFields) elements.managerKeyFields.hidden = !keyMode;
+}
+
+function updateServicePlaceholder() {
+    if (!elements.managerEntryService || !elements.managerEntryServiceType) return;
+    const placeholders = {
+        http: 'localhost:8080',
+        https: 'localhost:8443',
+        ssh: 'localhost:22',
+        rdp: 'localhost:3389',
+        tcp: 'localhost:5432',
+        unix: '/var/run/app.sock',
+        http_status: '404',
+        raw: 'http://localhost:8080'
+    };
+    elements.managerEntryService.placeholder = placeholders[elements.managerEntryServiceType.value] || placeholders.http;
+}
+
+async function saveTunnelManagerSettings(quiet = false) {
+    if (!elements.managerEnableToggle) return;
+    const payload = {
+        enabled: elements.managerEnableToggle.checked,
+        account_id: elements.managerAccountId.value.trim(),
+        tunnel_id: elements.managerTunnelId.value.trim(),
+        api_token: elements.managerAuthMode.value === 'token' ? elements.managerAPIToken.value.trim() : '',
+        api_email: elements.managerAuthMode.value === 'key' ? elements.managerAPIEmail.value.trim() : '',
+        api_key: elements.managerAuthMode.value === 'key' ? elements.managerAPIKey.value.trim() : ''
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/tunnel-manager/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.tunnelManager.settings = data;
+        renderTunnelManagerSettings(data);
+        state.config.tunnel_management = state.config.tunnel_management || {};
+        state.config.tunnel_management.enabled = payload.enabled;
+        state.config.tunnel_management.account_id = payload.account_id;
+        state.config.tunnel_management.tunnel_id = payload.tunnel_id;
+        state.config.tunnel_management.api_email = payload.api_email;
+        if (payload.api_token) state.config.tunnel_management.api_token = payload.api_token;
+        if (payload.api_key) state.config.tunnel_management.api_key = payload.api_key;
+        if (!quiet) {
+            addLog('Tunnel manager settings saved', 'system');
+        }
+    } catch (err) {
+        setManagerStatus(err.message, 'error');
+        addLog(`Tunnel manager settings failed: ${err.message}`, 'error');
+    }
+}
+
+async function loadTunnelManagerConfig() {
+    try {
+        setManagerStatus('Loading remote config...', 'loading');
+        const res = await fetch(`${API_BASE}/tunnel-manager/config`);
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.tunnelManager.config = data;
+        renderTunnelManagerConfig(data);
+        setManagerStatus('Loaded', 'ready');
+        addLog(`Loaded tunnel config ${data.tunnel_id || ''} v${data.version}`, 'system');
+    } catch (err) {
+        setManagerStatus(err.message, 'error');
+        addLog(`Tunnel manager load failed: ${err.message}`, 'error');
+    }
+}
+
+function renderTunnelManagerConfig(config) {
+    elements.managerConfigPanel.hidden = false;
+    elements.managerConfigMeta.textContent = `Tunnel ${config.tunnel_id || elements.managerTunnelId.value} · Version ${config.version || 0} · ${config.entries?.length || 0} rules`;
+    elements.managerRulesList.innerHTML = '';
+
+    if (!config.entries || config.entries.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = 'No ingress rules found. Add the first rule below.';
+        elements.managerRulesList.appendChild(empty);
+        return;
+    }
+
+    config.entries.forEach((entry) => {
+        const row = document.createElement('div');
+        row.className = 'rule-row';
+
+        const content = document.createElement('div');
+        content.className = 'rule-content';
+        const title = document.createElement('div');
+        title.className = 'rule-title';
+        title.textContent = entry.hostname || '(catch-all rule)';
+        const detail = document.createElement('div');
+        detail.className = 'rule-detail';
+        detail.textContent = `${entry.path || '/'} → ${entry.service}${entry.no_tls_verify ? ' · no TLS verify' : ''}`;
+        content.append(title, detail);
+
+        const actions = document.createElement('div');
+        actions.className = 'rule-actions';
+        const edit = document.createElement('button');
+        edit.className = 'btn btn-sm btn-secondary';
+        edit.type = 'button';
+        edit.textContent = 'Edit';
+        edit.addEventListener('click', () => editTunnelManagerEntry(entry));
+        const del = document.createElement('button');
+        del.className = 'btn btn-sm btn-ghost';
+        del.type = 'button';
+        del.textContent = 'Delete';
+        del.addEventListener('click', () => deleteTunnelManagerEntry(entry.index));
+        actions.append(edit, del);
+
+        row.append(content, actions);
+        elements.managerRulesList.appendChild(row);
+    });
+}
+
+function editTunnelManagerEntry(entry) {
+    const hostname = splitHostname(entry.hostname || '');
+    const service = splitService(entry.service || '');
+    elements.managerEntryIndex.value = String(entry.index);
+    elements.managerEntrySubdomain.value = hostname.subdomain;
+    elements.managerEntryDomain.value = hostname.domain;
+    elements.managerEntryPath.value = entry.path || '';
+    elements.managerEntryServiceType.value = service.type;
+    elements.managerEntryService.value = service.value;
+    elements.managerEntryHTTPHostHeader.value = entry.http_host_header || '';
+    elements.managerEntryOriginServerName.value = entry.origin_server_name || '';
+    elements.managerEntryNoTLS.checked = !!entry.no_tls_verify;
+    elements.managerEntrySubmit.textContent = 'Update Rule';
+    updateServicePlaceholder();
+    elements.managerEntryService.focus();
+}
+
+function resetTunnelEntryForm() {
+    elements.managerEntryIndex.value = '';
+    elements.managerEntrySubdomain.value = '';
+    elements.managerEntryDomain.value = '';
+    elements.managerEntryPath.value = '';
+    elements.managerEntryServiceType.value = 'http';
+    elements.managerEntryService.value = '';
+    elements.managerEntryHTTPHostHeader.value = '';
+    elements.managerEntryOriginServerName.value = '';
+    elements.managerEntryNoTLS.checked = false;
+    elements.managerEntrySubmit.textContent = 'Add Rule';
+    updateServicePlaceholder();
+}
+
+function buildHostname(subdomain, domain) {
+    subdomain = (subdomain || '').trim().replace(/^\.+|\.+$/g, '');
+    domain = (domain || '').trim().replace(/^\.+|\.+$/g, '');
+    if (!subdomain) return domain;
+    if (!domain) return subdomain;
+    return `${subdomain}.${domain}`;
+}
+
+function splitHostname(hostname) {
+    hostname = (hostname || '').trim();
+    if (!hostname || !hostname.includes('.')) {
+        return { subdomain: hostname, domain: '' };
+    }
+    const parts = hostname.split('.');
+    return {
+        subdomain: parts.shift(),
+        domain: parts.join('.')
+    };
+}
+
+function buildService(type, value) {
+    value = (value || '').trim();
+    if (type === 'raw') return value;
+    if (type === 'http_status') return value.startsWith('http_status:') ? value : `http_status:${value || '404'}`;
+    if (value.startsWith(`${type}:`)) return value;
+    return `${type}://${value}`;
+}
+
+function splitService(service) {
+    service = (service || '').trim();
+    const statusPrefix = 'http_status:';
+    if (service.startsWith(statusPrefix)) {
+        return { type: 'http_status', value: service.slice(statusPrefix.length) };
+    }
+    const match = service.match(/^([a-z_]+):\/\/(.+)$/i);
+    if (match) {
+        const supported = ['http', 'https', 'ssh', 'rdp', 'tcp', 'unix'];
+        return {
+            type: supported.includes(match[1]) ? match[1] : 'raw',
+            value: match[2]
+        };
+    }
+    return { type: 'raw', value: service };
+}
+
+async function submitTunnelManagerEntry(event) {
+    event.preventDefault();
+    const index = elements.managerEntryIndex.value;
+    const hostname = buildHostname(elements.managerEntrySubdomain.value, elements.managerEntryDomain.value);
+    const entry = {
+        hostname,
+        path: elements.managerEntryPath.value.trim(),
+        service: buildService(elements.managerEntryServiceType.value, elements.managerEntryService.value),
+        no_tls_verify: elements.managerEntryNoTLS.checked,
+        http_host_header: elements.managerEntryHTTPHostHeader.value.trim(),
+        origin_server_name: elements.managerEntryOriginServerName.value.trim()
+    };
+    if (!entry.service) {
+        setManagerStatus('Service is required', 'error');
+        return;
+    }
+
+    const url = index === '' ? `${API_BASE}/tunnel-manager/entries` : `${API_BASE}/tunnel-manager/entries/${index}`;
+    const method = index === '' ? 'POST' : 'PUT';
+    try {
+        setManagerStatus(index === '' ? 'Adding rule...' : 'Updating rule...', 'loading');
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entry)
+        });
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.tunnelManager.config = data;
+        renderTunnelManagerConfig(data);
+        resetTunnelEntryForm();
+        setManagerStatus('Saved', 'ready');
+        addLog(index === '' ? 'Tunnel rule added' : 'Tunnel rule updated', 'system');
+    } catch (err) {
+        setManagerStatus(err.message, 'error');
+        addLog(`Tunnel rule save failed: ${err.message}`, 'error');
+    }
+}
+
+async function deleteTunnelManagerEntry(index) {
+    try {
+        setManagerStatus('Deleting rule...', 'loading');
+        const res = await fetch(`${API_BASE}/tunnel-manager/entries/${index}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.tunnelManager.config = data;
+        renderTunnelManagerConfig(data);
+        setManagerStatus('Deleted', 'ready');
+        addLog('Tunnel rule deleted', 'system');
+    } catch (err) {
+        setManagerStatus(err.message, 'error');
+        addLog(`Tunnel rule delete failed: ${err.message}`, 'error');
+    }
+}
+
+function setManagerStatus(message, type = 'disabled') {
+    if (!elements.managerStatus) return;
+    elements.managerStatus.textContent = message;
+    elements.managerStatus.className = `manager-status ${type}`;
+}
+
+async function responseError(res) {
+    try {
+        const data = await res.json();
+        return data.error || res.statusText;
+    } catch {
+        return res.statusText;
     }
 }
 
@@ -443,9 +790,45 @@ function updateUIText() {
 
     // Update stream button text
     updateStreamButtonState();
+    updateTunnelManagerText();
 
     // Re-render all logs with new language
     rerenderAllLogs();
+}
+
+function updateTunnelManagerText() {
+    const managerTitle = document.getElementById('manager-title');
+    if (!managerTitle) return;
+
+    managerTitle.textContent = t('remote_tunnel_manager');
+    document.getElementById('manager-subtitle').textContent = t('remote_tunnel_manager_subtitle');
+    document.getElementById('manager-enable-label').textContent = t('manager_enable');
+    document.querySelector('label[for="manager-account-id"]').textContent = t('account_id');
+    document.querySelector('label[for="manager-tunnel-id"]').textContent = t('managed_tunnel_id');
+    document.querySelector('label[for="manager-auth-mode"]').textContent = t('authentication');
+    document.querySelector('#manager-auth-mode option[value="token"]').textContent = t('api_token');
+    document.querySelector('#manager-auth-mode option[value="key"]').textContent = t('email_api_key');
+    document.querySelector('label[for="manager-api-token"]').textContent = t('api_token');
+    document.querySelector('label[for="manager-api-email"]').textContent = t('api_email');
+    document.querySelector('label[for="manager-api-key"]').textContent = t('api_key');
+    elements.managerSaveSettings.textContent = t('save_manager_settings');
+    elements.managerLoadConfig.textContent = t('load_tunnel_config');
+    document.querySelector('.section-heading h3').textContent = t('ingress_rules');
+    document.getElementById('published-app-title').textContent = t('published_app_title');
+    document.getElementById('published-app-help').textContent = t('published_app_help');
+    document.querySelector('label[for="manager-entry-subdomain"]').textContent = t('subdomain');
+    document.querySelector('label[for="manager-entry-domain"]').textContent = t('domain');
+    document.querySelector('label[for="manager-entry-path"]').textContent = t('path');
+    document.querySelector('label[for="manager-entry-service-type"]').textContent = t('service_type');
+    document.querySelector('label[for="manager-entry-service"]').textContent = t('service');
+    document.querySelector('label[for="manager-entry-http-host-header"]').textContent = t('http_host_header');
+    document.querySelector('label[for="manager-entry-origin-server-name"]').textContent = t('origin_server_name');
+    elements.managerEntryCancel.textContent = t('cancel_edit');
+    elements.managerEntrySubmit.textContent = elements.managerEntryIndex.value === '' ? t('add_rule') : t('update_rule');
+
+    const settings = state.tunnelManager.settings || {};
+    if (elements.managerTokenState) elements.managerTokenState.textContent = settings.api_token_set ? t('api_token_configured') : t('api_token_not_saved');
+    if (elements.managerKeyState) elements.managerKeyState.textContent = settings.api_key_set ? t('api_key_configured') : t('api_key_not_saved');
 }
 
 // Log Streaming Functions

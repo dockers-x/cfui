@@ -168,3 +168,90 @@ other = "切断済み"
 
 [log_fetch_failed]
 other = "ログの取得に失敗しました"
+
+[remote_tunnel_manager]
+other = "リモートトンネル管理"
+
+[remote_tunnel_manager_subtitle]
+other = "ローカルランナーとは独立して Cloudflare 管理の ingress ルールを管理します。"
+
+[manager_enable]
+other = "リモート管理を有効化"
+
+[account_id]
+other = "アカウント ID / App ID"
+
+[managed_tunnel_id]
+other = "トンネル ID"
+
+[authentication]
+other = "認証"
+
+[api_token]
+other = "API Token"
+
+[email_api_key]
+other = "メール + API Key"
+
+[api_email]
+other = "API メール"
+
+[api_key]
+other = "API Key"
+
+[save_manager_settings]
+other = "管理設定を保存"
+
+[load_tunnel_config]
+other = "トンネル設定を読み込む"
+
+[ingress_rules]
+other = "パブリックホスト名"
+
+[published_app_title]
+other = "公開アプリを追加"
+
+[published_app_help]
+other = "Cloudflare Zero Trust のトンネルフォームに近い形でパブリックホスト名ルートを作成します。"
+
+[subdomain]
+other = "サブドメイン"
+
+[domain]
+other = "ドメイン"
+
+[path]
+other = "パス"
+
+[service_type]
+other = "タイプ"
+
+[service]
+other = "URL"
+
+[http_host_header]
+other = "HTTP Host Header"
+
+[origin_server_name]
+other = "Origin Server Name"
+
+[cancel_edit]
+other = "編集をキャンセル"
+
+[add_rule]
+other = "ルールを追加"
+
+[update_rule]
+other = "ルールを更新"
+
+[api_token_configured]
+other = "API Token は設定済みです。"
+
+[api_token_not_saved]
+other = "Token は保存されていません。"
+
+[api_key_configured]
+other = "API Key は設定済みです。"
+
+[api_key_not_saved]
+other = "Key は保存されていません。"

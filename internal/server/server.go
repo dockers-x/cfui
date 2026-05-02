@@ -5,10 +5,14 @@ import (
 	"cfui/internal/logger"
 	"cfui/internal/pool"
 	"cfui/internal/service"
+	"cfui/internal/tunnelmgr"
 	"embed"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"cfui/version"
@@ -85,18 +89,20 @@ var (
 )
 
 type Server struct {
-	cfgMgr  *config.Manager
-	runner  *service.Runner
-	assets  embed.FS
-	locales embed.FS
+	cfgMgr    *config.Manager
+	runner    *service.Runner
+	tunnelMgr *tunnelmgr.Manager
+	assets    embed.FS
+	locales   embed.FS
 }
 
 func NewServer(cfgMgr *config.Manager, runner *service.Runner, assets embed.FS, locales embed.FS) *Server {
 	return &Server{
-		cfgMgr:  cfgMgr,
-		runner:  runner,
-		assets:  assets,
-		locales: locales,
+		cfgMgr:    cfgMgr,
+		runner:    runner,
+		tunnelMgr: tunnelmgr.NewManager(cfgMgr),
+		assets:    assets,
+		locales:   locales,
 	}
 }
 
@@ -112,6 +118,10 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/i18n/", s.handleI18n)
 	mux.HandleFunc("/api/logs/stream", s.handleLogStream)
 	mux.HandleFunc("/api/logs/recent", s.handleRecentLogs)
+	mux.HandleFunc("/api/tunnel-manager/settings", s.handleTunnelManagerSettings)
+	mux.HandleFunc("/api/tunnel-manager/config", s.handleTunnelManagerConfig)
+	mux.HandleFunc("/api/tunnel-manager/entries", s.handleTunnelManagerEntries)
+	mux.HandleFunc("/api/tunnel-manager/entries/", s.handleTunnelManagerEntry)
 
 	// Static Files
 	// The assets are in "web/dist", so we need to strip that prefix
@@ -124,6 +134,117 @@ func (s *Server) GetHandler() http.Handler {
 
 	// Apply middleware chain: logging -> panic recovery -> handler
 	return ChainMiddleware(mux, LoggingMiddleware, PanicRecoveryMiddleware)
+}
+
+func (s *Server) handleTunnelManagerSettings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, s.tunnelMgr.Settings())
+	case http.MethodPost:
+		var req tunnelmgr.SettingsRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		if err := s.tunnelMgr.SaveSettings(req); err != nil {
+			writeAPIError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, s.tunnelMgr.Settings())
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleTunnelManagerConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	cfg, err := s.tunnelMgr.Fetch(r.Context())
+	if err != nil {
+		writeTunnelManagerError(w, err)
+		return
+	}
+	writeJSON(w, cfg)
+}
+
+func (s *Server) handleTunnelManagerEntries(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var entry tunnelmgr.IngressRule
+	if err := json.NewDecoder(r.Body).Decode(&entry); err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	cfg, err := s.tunnelMgr.AddEntry(r.Context(), entry)
+	if err != nil {
+		writeTunnelManagerError(w, err)
+		return
+	}
+	writeJSON(w, cfg)
+}
+
+func (s *Server) handleTunnelManagerEntry(w http.ResponseWriter, r *http.Request) {
+	indexText := strings.TrimPrefix(r.URL.Path, "/api/tunnel-manager/entries/")
+	index, err := strconv.Atoi(indexText)
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, errors.New("invalid entry index"))
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var entry tunnelmgr.IngressRule
+		if err := json.NewDecoder(r.Body).Decode(&entry); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		cfg, err := s.tunnelMgr.UpdateEntry(r.Context(), index, entry)
+		if err != nil {
+			writeTunnelManagerError(w, err)
+			return
+		}
+		writeJSON(w, cfg)
+	case http.MethodDelete:
+		cfg, err := s.tunnelMgr.DeleteEntry(r.Context(), index)
+		if err != nil {
+			writeTunnelManagerError(w, err)
+			return
+		}
+		writeJSON(w, cfg)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func writeTunnelManagerError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, tunnelmgr.ErrDisabled):
+		writeAPIError(w, http.StatusConflict, err)
+	case strings.Contains(err.Error(), "required"), strings.Contains(err.Error(), "out of range"):
+		writeAPIError(w, http.StatusBadRequest, err)
+	default:
+		writeAPIError(w, http.StatusBadGateway, err)
+	}
+}
+
+func writeAPIError(w http.ResponseWriter, status int, err error) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if encodeErr := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()}); encodeErr != nil {
+		logger.Sugar.Errorf("Failed to encode error response: %v", encodeErr)
+	}
+}
+
+func writeJSON(w http.ResponseWriter, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		logger.Sugar.Errorf("Failed to encode JSON response: %v", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (s *Server) Run(addr string) error {

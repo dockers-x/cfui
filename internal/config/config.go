@@ -34,6 +34,22 @@ type Config struct {
 
 	// Custom extra arguments (space-separated: "--key1 val1 --key2 val2")
 	ExtraArgs string `json:"extra_args"`
+
+	// Optional Cloudflare API-backed tunnel configuration manager.
+	TunnelManagement TunnelManagementConfig `json:"tunnel_management"`
+}
+
+// TunnelManagementConfig stores optional credentials and identifiers used to
+// manage remotely hosted Cloudflare Tunnel configuration. It is intentionally
+// separate from the local cloudflared runner configuration so disabling it does
+// not affect the existing token-based tunnel start/stop workflow.
+type TunnelManagementConfig struct {
+	Enabled   bool   `json:"enabled"`
+	AccountID string `json:"account_id"`
+	TunnelID  string `json:"tunnel_id"`
+	APIToken  string `json:"api_token"`
+	APIEmail  string `json:"api_email"`
+	APIKey    string `json:"api_key"`
 }
 
 // DefaultConfig returns a Config with default values
@@ -56,6 +72,55 @@ func DefaultConfig() Config {
 		PostQuantum:     false,
 		NoTLSVerify:     false, // Verify TLS by default for security
 		ExtraArgs:       "",
+		TunnelManagement: TunnelManagementConfig{
+			Enabled: false,
+		},
+	}
+}
+
+// EffectiveTunnelManagement returns tunnel-management settings after applying
+// environment-variable overrides. Explicit environment values win over saved UI
+// settings so deployments can inject credentials without writing secrets to disk.
+func (c Config) EffectiveTunnelManagement() TunnelManagementConfig {
+	cfg := c.TunnelManagement
+
+	if v, ok := firstEnv("CFUI_TUNNEL_MGMT_ENABLED", "CFUI_TUNNEL_MANAGEMENT_ENABLED"); ok {
+		cfg.Enabled = parseBool(v)
+	}
+	if v, ok := firstEnv("CFUI_TUNNEL_ACCOUNT_ID", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_APP_ID"); ok {
+		cfg.AccountID = v
+	}
+	if v, ok := firstEnv("CFUI_TUNNEL_ID", "CLOUDFLARE_TUNNEL_ID"); ok {
+		cfg.TunnelID = v
+	}
+	if v, ok := firstEnv("CFUI_TUNNEL_API_TOKEN", "CLOUDFLARE_API_TOKEN"); ok {
+		cfg.APIToken = v
+	}
+	if v, ok := firstEnv("CFUI_TUNNEL_API_EMAIL", "CLOUDFLARE_API_EMAIL"); ok {
+		cfg.APIEmail = v
+	}
+	if v, ok := firstEnv("CFUI_TUNNEL_API_KEY", "CLOUDFLARE_API_KEY"); ok {
+		cfg.APIKey = v
+	}
+
+	return cfg
+}
+
+func firstEnv(keys ...string) (string, bool) {
+	for _, key := range keys {
+		if v := os.Getenv(key); v != "" {
+			return v, true
+		}
+	}
+	return "", false
+}
+
+func parseBool(v string) bool {
+	switch v {
+	case "1", "true", "TRUE", "True", "yes", "YES", "Yes", "on", "ON", "On", "enabled", "ENABLED", "Enabled":
+		return true
+	default:
+		return false
 	}
 }
 

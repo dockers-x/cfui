@@ -168,3 +168,90 @@ other = "Disconnected"
 
 [log_fetch_failed]
 other = "Failed to fetch logs"
+
+[remote_tunnel_manager]
+other = "Remote Tunnel Manager"
+
+[remote_tunnel_manager_subtitle]
+other = "Manage Cloudflare-hosted ingress rules independently from the local runner."
+
+[manager_enable]
+other = "Enable remote management"
+
+[account_id]
+other = "Account ID / App ID"
+
+[managed_tunnel_id]
+other = "Tunnel ID"
+
+[authentication]
+other = "Authentication"
+
+[api_token]
+other = "API Token"
+
+[email_api_key]
+other = "Email + API Key"
+
+[api_email]
+other = "API Email"
+
+[api_key]
+other = "API Key"
+
+[save_manager_settings]
+other = "Save Manager Settings"
+
+[load_tunnel_config]
+other = "Load Tunnel Config"
+
+[ingress_rules]
+other = "Public hostnames"
+
+[published_app_title]
+other = "Add published application"
+
+[published_app_help]
+other = "Create a public hostname route like the Cloudflare Zero Trust tunnel form."
+
+[subdomain]
+other = "Subdomain"
+
+[domain]
+other = "Domain"
+
+[path]
+other = "Path"
+
+[service_type]
+other = "Type"
+
+[service]
+other = "URL"
+
+[http_host_header]
+other = "HTTP Host Header"
+
+[origin_server_name]
+other = "Origin Server Name"
+
+[cancel_edit]
+other = "Cancel Edit"
+
+[add_rule]
+other = "Add Rule"
+
+[update_rule]
+other = "Update Rule"
+
+[api_token_configured]
+other = "API token is configured."
+
+[api_token_not_saved]
+other = "No token saved."
+
+[api_key_configured]
+other = "API key is configured."
+
+[api_key_not_saved]
+other = "No key saved."

@@ -353,6 +353,7 @@ label {
 input[type="text"],
 input[type="password"],
 input[type="number"],
+input[type="email"],
 select.form-select {
     width: 100%;
     padding: 12px 16px;
@@ -680,5 +681,176 @@ input:checked+.slider:before {
     .btn {
         width: 100%;
         text-align: center;
+    }
+}
+
+.stacked-header {
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.manager-status {
+    display: inline-flex;
+    align-items: center;
+    max-width: 340px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    background: var(--input-bg);
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.manager-status.ready {
+    color: var(--success-color);
+    border-color: rgba(5, 150, 105, 0.35);
+}
+
+.manager-status.error {
+    color: var(--error-color);
+    border-color: rgba(220, 38, 38, 0.35);
+}
+
+.manager-status.loading {
+    color: var(--cf-orange);
+    border-color: rgba(246, 130, 31, 0.35);
+}
+
+.manager-settings {
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.manager-enable-row {
+    margin-bottom: 24px;
+}
+
+.manager-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.manager-config-panel {
+    padding-top: 24px;
+}
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.section-heading h3 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.rules-list {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.rule-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--advanced-toggle-bg);
+}
+
+.rule-content {
+    min-width: 0;
+}
+
+.rule-title {
+    color: var(--text-primary);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.rule-detail {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+}
+
+.rule-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.entry-form {
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--advanced-bg);
+}
+
+.public-hostname-form {
+    display: grid;
+    gap: 18px;
+    background: var(--input-bg);
+}
+
+.public-hostname-title {
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.public-hostname-title h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-section-label {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.form-row-wide {
+    grid-template-columns: 1fr;
+}
+
+.public-hostname-advanced {
+    margin: 0;
+}
+
+.public-hostname-advanced .advanced-content {
+    padding: 18px;
+}
+
+.empty-state {
+    padding: 16px;
+    border: 1px dashed var(--border-color);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .rule-row,
+    .stacked-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rule-actions {
+        width: 100%;
     }
 }
