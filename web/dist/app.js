@@ -13,7 +13,8 @@ const state = {
     tunnelManager: {
         settings: {},
         config: null,
-        zones: []
+        zones: [],
+        zonesLoaded: false
     }
 };
 
@@ -112,6 +113,7 @@ async function init() {
     await fetchVersion();
     await fetchConfig();
     await fetchTunnelManagerSettings();
+    await maybeLoadTunnelManagerZones(true);
     if (state.tunnelManager.settings?.enabled && state.tunnelManager.settings?.account_id && state.tunnelManager.settings?.tunnel_id) {
         await loadTunnelManagerConfig();
     }
@@ -145,7 +147,10 @@ elements.edgeBindAddressInput?.addEventListener('change', saveAllConfig);
 elements.noTLSVerifyToggle?.addEventListener('change', saveAllConfig);
 
 elements.localTab?.addEventListener('click', () => activateTab('local'));
-elements.managerTab?.addEventListener('click', () => activateTab('manager'));
+elements.managerTab?.addEventListener('click', async () => {
+    activateTab('manager');
+    await maybeLoadTunnelManagerZones(true);
+});
 elements.managerAuthMode?.addEventListener('change', updateManagerAuthMode);
 elements.managerAPIHelp?.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -156,11 +161,9 @@ document.addEventListener('click', (event) => {
     if (event.target === elements.managerAPIHelp || elements.managerAPIHelpPanel.contains(event.target)) return;
     toggleAPIHelp(false);
 });
-elements.managerRefreshZones?.addEventListener('click', loadTunnelManagerZones);
+elements.managerRefreshZones?.addEventListener('click', () => loadTunnelManagerZones(false));
 elements.managerEntryDomainSelect?.addEventListener('change', () => {
-    if (elements.managerEntryDomainSelect.value) {
-        elements.managerEntryDomain.value = elements.managerEntryDomainSelect.value;
-    }
+    updateDomainInputMode({ clearSelectedZone: true });
 });
 elements.managerEntryServiceType?.addEventListener('change', updateServicePlaceholder);
 elements.managerSaveSettings?.addEventListener('click', () => saveTunnelManagerSettings(false));
@@ -399,6 +402,25 @@ function updateServicePlaceholder() {
     elements.managerEntryService.placeholder = placeholders[elements.managerEntryServiceType.value] || placeholders.http;
 }
 
+function canLoadTunnelManagerZones(settings = state.tunnelManager.settings) {
+    return !!(settings?.enabled && settings?.account_id && (settings?.api_token_set || settings?.api_key_set));
+}
+
+async function maybeLoadTunnelManagerZones(quiet = true) {
+    if (!elements.managerEntryDomainSelect) return;
+    if (!canLoadTunnelManagerZones()) {
+        state.tunnelManager.zones = [];
+        state.tunnelManager.zonesLoaded = false;
+        renderTunnelManagerZones();
+        return;
+    }
+    if (state.tunnelManager.zonesLoaded) {
+        renderTunnelManagerZones();
+        return;
+    }
+    await loadTunnelManagerZones(quiet);
+}
+
 async function saveTunnelManagerSettings(quiet = false) {
     if (!elements.managerEnableToggle) return;
     const payload = {
@@ -419,6 +441,7 @@ async function saveTunnelManagerSettings(quiet = false) {
         if (!res.ok) throw new Error(await responseError(res));
         const data = await res.json();
         state.tunnelManager.settings = data;
+        state.tunnelManager.zonesLoaded = false;
         renderTunnelManagerSettings(data);
         state.config.tunnel_management = state.config.tunnel_management || {};
         state.config.tunnel_management.enabled = payload.enabled;
@@ -430,8 +453,11 @@ async function saveTunnelManagerSettings(quiet = false) {
         if (!quiet) {
             addLog(t('manager_settings_saved'), 'system');
         }
-        if (data.enabled) {
+        if (canLoadTunnelManagerZones(data)) {
             await loadTunnelManagerZones(true);
+        } else {
+            state.tunnelManager.zones = [];
+            renderTunnelManagerZones();
         }
     } catch (err) {
         setManagerStatus(err.message, 'error');
@@ -447,11 +473,15 @@ async function loadTunnelManagerZones(quiet = false) {
         if (!res.ok) throw new Error(await responseError(res));
         const data = await res.json();
         state.tunnelManager.zones = data.zones || [];
+        state.tunnelManager.zonesLoaded = true;
         renderTunnelManagerZones();
         if (!quiet) {
             setManagerStatus(t('manager_status_zones_loaded'), 'ready');
         }
     } catch (err) {
+        state.tunnelManager.zones = [];
+        state.tunnelManager.zonesLoaded = false;
+        renderTunnelManagerZones();
         if (!quiet) {
             setManagerStatus(err.message, 'error');
             addLog(`${t('zone_load_failed')}: ${err.message}`, 'error');
@@ -459,10 +489,33 @@ async function loadTunnelManagerZones(quiet = false) {
     }
 }
 
+function updateDomainInputMode(options = {}) {
+    const select = elements.managerEntryDomainSelect;
+    const input = elements.managerEntryDomain;
+    if (!select || !input) return;
+
+    const manual = !select.value;
+    input.hidden = !manual;
+
+    if (!manual) {
+        input.value = select.value;
+        return;
+    }
+
+    if (options.clearSelectedZone) {
+        const zoneNames = new Set((state.tunnelManager.zones || []).map(zone => zone.name));
+        if (zoneNames.has(input.value.trim())) {
+            input.value = '';
+        }
+    }
+}
+
 function renderTunnelManagerZones() {
     const select = elements.managerEntryDomainSelect;
     if (!select) return;
-    const current = elements.managerEntryDomain.value || select.value;
+    const current = elements.managerEntryDomain.value.trim() || select.value;
+    const zones = state.tunnelManager.zones || [];
+    const zoneNames = new Set(zones.map(zone => zone.name));
     select.innerHTML = '';
 
     const manual = document.createElement('option');
@@ -470,18 +523,21 @@ function renderTunnelManagerZones() {
     manual.textContent = t('manual_domain_option');
     select.appendChild(manual);
 
-    for (const zone of state.tunnelManager.zones || []) {
+    for (const zone of zones) {
         const option = document.createElement('option');
         option.value = zone.name;
         option.textContent = zone.status ? `${zone.name} (${zone.status})` : zone.name;
         select.appendChild(option);
     }
 
-    if (current && Array.from(select.options).some(option => option.value === current)) {
+    if (current && zoneNames.has(current)) {
         select.value = current;
+    } else if (!current && zones.length > 0) {
+        select.value = zones[0].name;
     } else {
         select.value = '';
     }
+    updateDomainInputMode();
 }
 
 async function loadTunnelManagerConfig() {
@@ -552,6 +608,7 @@ function editTunnelManagerEntry(entry) {
     elements.managerEntryIndex.value = String(entry.index);
     elements.managerEntrySubdomain.value = hostname.subdomain;
     elements.managerEntryDomain.value = hostname.domain;
+    renderTunnelManagerZones();
     elements.managerEntryPath.value = entry.path || '';
     elements.managerEntryServiceType.value = service.type;
     elements.managerEntryService.value = service.value;
@@ -567,6 +624,7 @@ function resetTunnelEntryForm() {
     elements.managerEntryIndex.value = '';
     elements.managerEntrySubdomain.value = '';
     elements.managerEntryDomain.value = '';
+    renderTunnelManagerZones();
     elements.managerEntryPath.value = '';
     elements.managerEntryServiceType.value = 'http';
     elements.managerEntryService.value = '';
