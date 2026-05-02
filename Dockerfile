@@ -62,6 +62,10 @@ EXPOSE 14333
 ENV PORT=14333
 ENV DATA_DIR=/app/data
 ENV LOG_DIR=/app/logs
+# Remote Cloudflare Tunnel manager is optional and disabled by default.
+# Inject CFUI_TUNNEL_MGMT_ENABLED, CLOUDFLARE_ACCOUNT_ID,
+# CLOUDFLARE_TUNNEL_ID, and CLOUDFLARE_API_TOKEN at runtime when needed.
+ENV CFUI_TUNNEL_MGMT_ENABLED=false
 
 # Health check - uses PORT environment variable
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

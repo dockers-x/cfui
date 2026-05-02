@@ -57,10 +57,10 @@ Update the image name in `docker-compose.yml`:
 
 ```yaml
 services:
-  cloudflared-ui:
-    image: yourusername/cloudflared-ui:latest
+  cfui:
+    image: ghcr.io/dockers-x/cfui:latest
     # Or use GitHub Container Registry:
-    # image: ghcr.io/yourusername/cloudflared-ui:latest
+    # image: yourusername/cloudflared-ui:latest
 ```
 
 ## Step 4: Create a Release
@@ -104,7 +104,7 @@ This will create the following Docker tags:
 
 ```bash
 docker pull yourusername/cloudflared-ui:latest
-docker run -d -p 3000:3000 -v cloudflared-data:/app/data yourusername/cloudflared-ui:latest
+docker run -d -p 14333:14333 -v cloudflared-data:/app/data yourusername/cloudflared-ui:latest
 ```
 
 ### From GitHub Container Registry
@@ -115,7 +115,34 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
 
 # Pull and run
 docker pull ghcr.io/yourusername/cloudflared-ui:latest
-docker run -d -p 3000:3000 -v cloudflared-data:/app/data ghcr.io/yourusername/cloudflared-ui:latest
+docker run -d -p 14333:14333 -v cloudflared-data:/app/data ghcr.io/yourusername/cloudflared-ui:latest
+```
+
+### Optional Remote Tunnel Manager Environment
+
+The image can also manage Cloudflare-hosted tunnel public hostname rules. This
+feature is disabled by default and is independent from the local cloudflared
+runner.
+
+Prefer secrets or environment injection instead of committing credentials:
+
+```yaml
+environment:
+  - CFUI_TUNNEL_MGMT_ENABLED=true
+  - CLOUDFLARE_ACCOUNT_ID=your-account-id
+  - CLOUDFLARE_TUNNEL_ID=your-tunnel-id
+  - CLOUDFLARE_API_TOKEN=your-api-token
+```
+
+Alternative global API key auth is also supported:
+
+```yaml
+environment:
+  - CFUI_TUNNEL_MGMT_ENABLED=true
+  - CLOUDFLARE_ACCOUNT_ID=your-account-id
+  - CLOUDFLARE_TUNNEL_ID=your-tunnel-id
+  - CLOUDFLARE_API_EMAIL=you@example.com
+  - CLOUDFLARE_API_KEY=your-global-api-key
 ```
 
 ### Using Docker Compose

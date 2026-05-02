@@ -15,6 +15,11 @@ A modern web-based control panel for managing Cloudflare Tunnel (cloudflared) wi
   - Post-quantum cryptography
   - And more...
 - **Real-time Logs**: View system logs and tunnel status in real-time
+- **Remote Tunnel Manager**: Optional Cloudflare API-backed manager for published application/public hostname rules
+  - Load existing remote tunnel config by Account ID/App ID and Tunnel ID
+  - Add, edit, and delete ingress rules for the selected tunnel
+  - Cloudflare-like "Add published application" form for subdomain, domain, path, service type, and origin settings
+  - Credentials can be configured in the UI or injected by environment variables
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
 ## Quick Start
@@ -56,6 +61,12 @@ services:
       - PORT=14333
       # Optional: Set timezone
       - TZ=UTC
+      # Optional: Enable remote Cloudflare Tunnel configuration management.
+      # Prefer environment variables for credentials in container deployments.
+      # - CFUI_TUNNEL_MGMT_ENABLED=true
+      # - CLOUDFLARE_ACCOUNT_ID=your-account-id
+      # - CLOUDFLARE_TUNNEL_ID=your-tunnel-id
+      # - CLOUDFLARE_API_TOKEN=your-api-token
     healthcheck:
       test: ["CMD", "sh", "-c", "wget --no-verbose --tries=1 --spider http://localhost:$$PORT/ || exit 1"]
       interval: 30s
@@ -158,6 +169,12 @@ The application stores its configuration in the `data` directory:
 - `DATA_DIR` - Data directory path (default: ./data)
 - `LOG_DIR` - Log directory path (default: {DATA_DIR}/logs)
 - `LOG_LEVEL` - Log level: debug, info, warn, error (default: info)
+- `CFUI_TUNNEL_MGMT_ENABLED` / `CFUI_TUNNEL_MANAGEMENT_ENABLED` - Enable optional remote tunnel manager
+- `CFUI_TUNNEL_ACCOUNT_ID` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_APP_ID` - Cloudflare account ID used by the manager
+- `CFUI_TUNNEL_ID` / `CLOUDFLARE_TUNNEL_ID` - Remote tunnel ID to load/manage
+- `CFUI_TUNNEL_API_TOKEN` / `CLOUDFLARE_API_TOKEN` - Cloudflare API token for the manager
+- `CFUI_TUNNEL_API_EMAIL` / `CLOUDFLARE_API_EMAIL` - Cloudflare account email for global API key auth
+- `CFUI_TUNNEL_API_KEY` / `CLOUDFLARE_API_KEY` - Cloudflare global API key for email/key auth
 
 ### Configuration Options
 
@@ -176,6 +193,27 @@ The application stores its configuration in the `data` directory:
 - **Edge Bind IP Address**: Local IP address to bind for outgoing connections to Cloudflare edge (optional)
 - **Disable Backend TLS Verification**: Disable TLS certificate verification for backend services (not recommended for production)
 
+#### Remote Tunnel Manager
+
+The remote tunnel manager is independent from the local token-based cloudflared runner. It is disabled by default; when disabled, existing tunnel start/stop behavior is unchanged.
+
+Use it when you want cfui to manage Cloudflare-hosted tunnel ingress configuration for published applications:
+
+1. Enable **Remote Tunnel Manager** in the UI, or set `CFUI_TUNNEL_MGMT_ENABLED=true`.
+2. Provide **Account ID/App ID** and **Tunnel ID** in the UI or via environment variables.
+3. Authenticate with either:
+   - API Token (recommended): `CLOUDFLARE_API_TOKEN`
+   - Email + Global API Key: `CLOUDFLARE_API_EMAIL` and `CLOUDFLARE_API_KEY`
+4. Click **Load Tunnel Config**. Changing the Tunnel ID loads that tunnel's current remote configuration.
+5. Use **Add published application** to create public hostname routes similar to Cloudflare Zero Trust:
+   - Subdomain + Domain
+   - Optional Path
+   - Service Type (`HTTP`, `HTTPS`, `SSH`, `RDP`, `TCP`, `UNIX socket`, `HTTP status`, or custom)
+   - URL/service target
+   - Optional origin settings such as HTTP Host Header, Origin Server Name, and TLS verification
+
+For least privilege, create a Cloudflare API token scoped to the target account and Cloudflare Tunnel configuration permissions instead of using a global API key.
+
 ## Getting a Tunnel Token
 
 1. Go to [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)
@@ -190,6 +228,12 @@ The application stores its configuration in the `data` directory:
 - `POST /api/config` - Update configuration
 - `POST /api/control` - Control tunnel (start/stop)
 - `GET /api/i18n/:lang` - Get translations
+- `GET /api/tunnel-manager/settings` - Get effective remote tunnel manager settings
+- `POST /api/tunnel-manager/settings` - Update remote tunnel manager settings
+- `GET /api/tunnel-manager/config` - Fetch selected remote tunnel configuration
+- `POST /api/tunnel-manager/entries` - Add a public hostname/ingress rule
+- `PUT /api/tunnel-manager/entries/:index` - Update a public hostname/ingress rule
+- `DELETE /api/tunnel-manager/entries/:index` - Delete a public hostname/ingress rule
 
 ## Development
 
@@ -197,9 +241,10 @@ The application stores its configuration in the `data` directory:
 
 ```
 cloudflared-ui/
-├── config/         # Configuration management
-├── server/         # HTTP server and API handlers
-├── service/        # Tunnel runner and management
+├── internal/config/      # Configuration management
+├── internal/server/      # HTTP server and API handlers
+├── internal/service/     # Local cloudflared runner
+├── internal/tunnelmgr/   # Cloudflare API-backed remote tunnel manager
 ├── locales/        # Translation files
 ├── web/            # Frontend files
 │   └── dist/       # Built frontend assets

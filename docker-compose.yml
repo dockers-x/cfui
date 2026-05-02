@@ -21,6 +21,17 @@ services:
       - TZ=UTC
       # Optional: Set log level (debug, info, warn, error)
       # - LOG_LEVEL=info
+      # Optional: Enable remote Cloudflare Tunnel public hostname management.
+      # This is independent from the local cloudflared token runner and remains
+      # disabled unless explicitly enabled.
+      # - CFUI_TUNNEL_MGMT_ENABLED=true
+      # - CLOUDFLARE_ACCOUNT_ID=your-account-id
+      # - CLOUDFLARE_TUNNEL_ID=your-tunnel-id
+      # Recommended auth mode:
+      # - CLOUDFLARE_API_TOKEN=your-api-token
+      # Alternative global-key auth:
+      # - CLOUDFLARE_API_EMAIL=you@example.com
+      # - CLOUDFLARE_API_KEY=your-global-api-key
     healthcheck:
       test: ["CMD", "sh", "-c", "wget --no-verbose --tries=1 --spider http://localhost:$$PORT/ || exit 1"]
       interval: 30s
