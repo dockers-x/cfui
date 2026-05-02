@@ -12,7 +12,8 @@ const state = {
     isStreamConnected: false,
     tunnelManager: {
         settings: {},
-        config: null
+        config: null,
+        zones: []
     }
 };
 
@@ -52,6 +53,8 @@ const elements = {
     managerAPIToken: document.getElementById('manager-api-token'),
     managerAPIEmail: document.getElementById('manager-api-email'),
     managerAPIKey: document.getElementById('manager-api-key'),
+    managerAPIHelp: document.getElementById('manager-api-help'),
+    managerAPIHelpPanel: document.getElementById('manager-api-help-panel'),
     managerTokenState: document.getElementById('manager-token-state'),
     managerKeyState: document.getElementById('manager-key-state'),
     managerSaveSettings: document.getElementById('manager-save-settings'),
@@ -63,6 +66,8 @@ const elements = {
     managerEntryIndex: document.getElementById('manager-entry-index'),
     managerEntrySubdomain: document.getElementById('manager-entry-subdomain'),
     managerEntryDomain: document.getElementById('manager-entry-domain'),
+    managerEntryDomainSelect: document.getElementById('manager-entry-domain-select'),
+    managerRefreshZones: document.getElementById('manager-refresh-zones'),
     managerEntryPath: document.getElementById('manager-entry-path'),
     managerEntryServiceType: document.getElementById('manager-entry-service-type'),
     managerEntryService: document.getElementById('manager-entry-service'),
@@ -140,6 +145,21 @@ elements.noTLSVerifyToggle?.addEventListener('change', saveAllConfig);
 elements.localTab?.addEventListener('click', () => activateTab('local'));
 elements.managerTab?.addEventListener('click', () => activateTab('manager'));
 elements.managerAuthMode?.addEventListener('change', updateManagerAuthMode);
+elements.managerAPIHelp?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    toggleAPIHelp();
+});
+document.addEventListener('click', (event) => {
+    if (!elements.managerAPIHelpPanel || elements.managerAPIHelpPanel.hidden) return;
+    if (event.target === elements.managerAPIHelp || elements.managerAPIHelpPanel.contains(event.target)) return;
+    toggleAPIHelp(false);
+});
+elements.managerRefreshZones?.addEventListener('click', loadTunnelManagerZones);
+elements.managerEntryDomainSelect?.addEventListener('change', () => {
+    if (elements.managerEntryDomainSelect.value) {
+        elements.managerEntryDomain.value = elements.managerEntryDomainSelect.value;
+    }
+});
 elements.managerEntryServiceType?.addEventListener('change', updateServicePlaceholder);
 elements.managerSaveSettings?.addEventListener('click', () => saveTunnelManagerSettings(false));
 elements.managerLoadConfig?.addEventListener('click', async () => {
@@ -347,6 +367,13 @@ function updateManagerAuthMode() {
     if (elements.managerKeyFields) elements.managerKeyFields.hidden = !keyMode;
 }
 
+function toggleAPIHelp(force) {
+    if (!elements.managerAPIHelp || !elements.managerAPIHelpPanel) return;
+    const show = force !== undefined ? force : elements.managerAPIHelpPanel.hidden;
+    elements.managerAPIHelpPanel.hidden = !show;
+    elements.managerAPIHelp.setAttribute('aria-expanded', String(show));
+}
+
 function updateServicePlaceholder() {
     if (!elements.managerEntryService || !elements.managerEntryServiceType) return;
     const placeholders = {
@@ -393,9 +420,57 @@ async function saveTunnelManagerSettings(quiet = false) {
         if (!quiet) {
             addLog(t('manager_settings_saved'), 'system');
         }
+        if (data.enabled) {
+            await loadTunnelManagerZones(true);
+        }
     } catch (err) {
         setManagerStatus(err.message, 'error');
         addLog(`Tunnel manager settings failed: ${err.message}`, 'error');
+    }
+}
+
+async function loadTunnelManagerZones(quiet = false) {
+    if (!elements.managerEntryDomainSelect) return;
+    try {
+        if (!quiet) setManagerStatus(t('manager_status_loading_zones'), 'loading');
+        const res = await fetch(`${API_BASE}/tunnel-manager/zones`);
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.tunnelManager.zones = data.zones || [];
+        renderTunnelManagerZones();
+        if (!quiet) {
+            setManagerStatus(t('manager_status_zones_loaded'), 'ready');
+        }
+    } catch (err) {
+        if (!quiet) {
+            setManagerStatus(err.message, 'error');
+            addLog(`${t('zone_load_failed')}: ${err.message}`, 'error');
+        }
+    }
+}
+
+function renderTunnelManagerZones() {
+    const select = elements.managerEntryDomainSelect;
+    if (!select) return;
+    const current = elements.managerEntryDomain.value || select.value;
+    select.innerHTML = '';
+
+    const manual = document.createElement('option');
+    manual.value = '';
+    manual.textContent = t('manual_domain_option');
+    select.appendChild(manual);
+
+    for (const zone of state.tunnelManager.zones || []) {
+        const option = document.createElement('option');
+        option.value = zone.name;
+        option.textContent = zone.status ? `${zone.name} (${zone.status})` : zone.name;
+        select.appendChild(option);
+    }
+
+    if (current && Array.from(select.options).some(option => option.value === current)) {
+        select.value = current;
+    } else {
+        select.value = '';
     }
 }
 
@@ -841,6 +916,10 @@ function updateTunnelManagerText() {
     document.getElementById('manager-auth-help').textContent = t('auth_help');
     document.querySelector('label[for="manager-api-token"]').textContent = t('api_token');
     elements.managerAPIToken.placeholder = t('api_token_placeholder');
+    document.getElementById('manager-api-help-title').textContent = t('api_permissions_title');
+    document.getElementById('manager-api-help-tunnel').textContent = t('api_permission_tunnel');
+    document.getElementById('manager-api-help-zone').textContent = t('api_permission_zone');
+    document.getElementById('manager-api-help-note').textContent = t('api_permission_note');
     document.querySelector('label[for="manager-api-email"]').textContent = t('api_email');
     elements.managerAPIEmail.placeholder = t('api_email_placeholder');
     document.querySelector('label[for="manager-api-key"]').textContent = t('api_key');
@@ -857,6 +936,9 @@ function updateTunnelManagerText() {
     elements.managerEntrySubdomain.placeholder = t('subdomain_placeholder');
     document.querySelector('label[for="manager-entry-domain"]').textContent = t('domain');
     elements.managerEntryDomain.placeholder = t('domain_placeholder');
+    elements.managerRefreshZones.textContent = t('refresh_domains');
+    document.getElementById('manager-entry-domain-help').textContent = t('domain_select_help');
+    renderTunnelManagerZones();
     document.querySelector('label[for="manager-entry-path"]').textContent = t('path');
     elements.managerEntryPath.placeholder = t('path_placeholder');
     document.getElementById('manager-entry-path-help').textContent = t('path_help');

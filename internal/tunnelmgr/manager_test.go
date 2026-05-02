@@ -30,6 +30,13 @@ func (f *fakeCFClient) UpdateTunnelConfiguration(ctx context.Context, rc *cloudf
 	return f.config, nil
 }
 
+func (f *fakeCFClient) ListZonesContext(ctx context.Context, opts ...cloudflare.ReqOption) (cloudflare.ZonesResponse, error) {
+	return cloudflare.ZonesResponse{Result: []cloudflare.Zone{
+		{ID: "zone-1", Name: "example.com", Status: "active"},
+		{ID: "zone-2", Name: "example.net", Status: "pending"},
+	}}, nil
+}
+
 func tunnelToken(accountID, tunnelID string) string {
 	return base64.StdEncoding.EncodeToString([]byte(`{"a":"` + accountID + `","t":"` + tunnelID + `","s":"secret"}`))
 }
@@ -171,6 +178,19 @@ func TestFetchReturnsCurrentConfiguration(t *testing.T) {
 	}
 	if got := resp.Entries[0]; got.Hostname != "app.example.com" || got.Path != "/api/*" || got.Service != "https://localhost:8443" {
 		t.Fatalf("unexpected first entry: %#v", got)
+	}
+}
+
+func TestListZonesUsesCloudflareClient(t *testing.T) {
+	client := &fakeCFClient{}
+	mgr := newTestManager(t, client)
+
+	zones, err := mgr.ListZones(context.Background())
+	if err != nil {
+		t.Fatalf("ListZones: %v", err)
+	}
+	if len(zones) != 2 || zones[0].Name != "example.com" || zones[1].Status != "pending" {
+		t.Fatalf("unexpected zones: %#v", zones)
 	}
 }
 

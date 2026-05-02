@@ -405,3 +405,33 @@ other = "Tunnel Configuration"
 
 [remote_tunnel_tab]
 other = "Remote Tunnel Manager"
+
+[manual_domain_option]
+other = "Manual domain"
+
+[refresh_domains]
+other = "Refresh domains"
+
+[domain_select_help]
+other = "Select a Cloudflare zone or type a domain manually."
+
+[manager_status_loading_zones]
+other = "Loading domains..."
+
+[manager_status_zones_loaded]
+other = "Domains loaded"
+
+[zone_load_failed]
+other = "Failed to load domains"
+
+[api_permissions_title]
+other = "Required Cloudflare API permissions"
+
+[api_permission_tunnel]
+other = "Account · Cloudflare Tunnel · Edit"
+
+[api_permission_zone]
+other = "Zone · Zone · Read"
+
+[api_permission_note]
+other = "Use an account-scoped API Token when possible. Email + Global API Key is broader."

@@ -405,3 +405,33 @@ other = "トンネル設定"
 
 [remote_tunnel_tab]
 other = "リモートトンネル管理"
+
+[manual_domain_option]
+other = "ドメインを手入力"
+
+[refresh_domains]
+other = "ドメインを更新"
+
+[domain_select_help]
+other = "Cloudflare ゾーンを選択するか、ドメインを手入力します。"
+
+[manager_status_loading_zones]
+other = "ドメインを読み込み中..."
+
+[manager_status_zones_loaded]
+other = "ドメインを読み込みました"
+
+[zone_load_failed]
+other = "ドメインの読み込みに失敗しました"
+
+[api_permissions_title]
+other = "必要な Cloudflare API 権限"
+
+[api_permission_tunnel]
+other = "Account · Cloudflare Tunnel · Edit"
+
+[api_permission_zone]
+other = "Zone · Zone · Read"
+
+[api_permission_note]
+other = "可能ならアカウントスコープの API Token を使ってください。メール + Global API Key は権限が広めです。"

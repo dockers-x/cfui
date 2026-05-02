@@ -263,7 +263,18 @@
                                 <p class="help-text" id="manager-auth-help">API Token is recommended. Blank secret fields keep the saved value.</p>
                             </div>
                             <div class="form-group manager-token-field">
-                                <label for="manager-api-token">API Token</label>
+                                <div class="label-row">
+                                    <label for="manager-api-token">API Token</label>
+                                    <span class="help-popover">
+                                        <button type="button" id="manager-api-help" class="help-btn" aria-expanded="false" aria-controls="manager-api-help-panel">?</button>
+                                        <span id="manager-api-help-panel" class="help-menu" role="tooltip" hidden>
+                                            <strong id="manager-api-help-title">Required Cloudflare API permissions</strong>
+                                            <span id="manager-api-help-tunnel">Account · Cloudflare Tunnel · Edit</span>
+                                            <span id="manager-api-help-zone">Zone · Zone · Read</span>
+                                            <small id="manager-api-help-note">Use account-scoped API Token when possible.</small>
+                                        </span>
+                                    </span>
+                                </div>
                                 <input type="password" id="manager-api-token" placeholder="Leave blank to keep existing token" spellcheck="false">
                                 <p class="help-text" id="manager-token-state">No token saved.</p>
                             </div>
@@ -313,7 +324,14 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="manager-entry-domain">Domain</label>
+                                    <div class="domain-select-row">
+                                        <select id="manager-entry-domain-select" class="form-select">
+                                            <option value="">Manual domain</option>
+                                        </select>
+                                        <button type="button" id="manager-refresh-zones" class="btn btn-sm btn-secondary">Refresh domains</button>
+                                    </div>
                                     <input type="text" id="manager-entry-domain" placeholder="example.com" spellcheck="false">
+                                    <p class="help-text" id="manager-entry-domain-help">Select a Cloudflare zone or type a domain manually.</p>
                                 </div>
                             </div>
                             <div class="form-row form-row-wide">

@@ -20,6 +20,7 @@ var (
 type cloudflareClient interface {
 	GetTunnelConfiguration(ctx context.Context, rc *cloudflare.ResourceContainer, tunnelID string) (cloudflare.TunnelConfigurationResult, error)
 	UpdateTunnelConfiguration(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.TunnelConfigurationParams) (cloudflare.TunnelConfigurationResult, error)
+	ListZonesContext(ctx context.Context, opts ...cloudflare.ReqOption) (cloudflare.ZonesResponse, error)
 }
 
 type clientFactory func(config.TunnelManagementConfig) (cloudflareClient, error)
@@ -58,6 +59,12 @@ type ConfigurationResponse struct {
 	Version            int           `json:"version"`
 	WarpRoutingEnabled bool          `json:"warp_routing_enabled"`
 	Entries            []IngressRule `json:"entries"`
+}
+
+type ZoneResponse struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
 }
 
 type IngressRule struct {
@@ -126,6 +133,31 @@ func (m *Manager) Fetch(ctx context.Context) (ConfigurationResponse, error) {
 		return ConfigurationResponse{}, err
 	}
 	return toConfigurationResponse(result), nil
+}
+
+func (m *Manager) ListZones(ctx context.Context) ([]ZoneResponse, error) {
+	cfg, client, err := m.accountClient()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	resp, err := client.ListZonesContext(ctx, cloudflare.WithZoneFilters("", cfg.AccountID, ""))
+	if err != nil {
+		return nil, err
+	}
+
+	zones := make([]ZoneResponse, 0, len(resp.Result))
+	for _, zone := range resp.Result {
+		zones = append(zones, ZoneResponse{
+			ID:     zone.ID,
+			Name:   zone.Name,
+			Status: zone.Status,
+		})
+	}
+	return zones, nil
 }
 
 func (m *Manager) AddEntry(ctx context.Context, entry IngressRule) (ConfigurationResponse, error) {
@@ -200,6 +232,17 @@ func (m *Manager) mutate(ctx context.Context, mutate func(*cloudflare.TunnelConf
 }
 
 func (m *Manager) client() (config.TunnelManagementConfig, cloudflareClient, error) {
+	cfg, client, err := m.accountClient()
+	if err != nil {
+		return cfg, nil, err
+	}
+	if strings.TrimSpace(cfg.TunnelID) == "" {
+		return cfg, nil, fmt.Errorf("tunnel id is required")
+	}
+	return cfg, client, nil
+}
+
+func (m *Manager) accountClient() (config.TunnelManagementConfig, cloudflareClient, error) {
 	appCfg := m.cfgMgr.Get()
 	cfg, _, _ := effectiveWithTokenIdentity(appCfg)
 	if !cfg.Enabled {
@@ -207,9 +250,6 @@ func (m *Manager) client() (config.TunnelManagementConfig, cloudflareClient, err
 	}
 	if strings.TrimSpace(cfg.AccountID) == "" {
 		return cfg, nil, fmt.Errorf("account id is required")
-	}
-	if strings.TrimSpace(cfg.TunnelID) == "" {
-		return cfg, nil, fmt.Errorf("tunnel id is required")
 	}
 	if strings.TrimSpace(cfg.APIToken) == "" && (strings.TrimSpace(cfg.APIEmail) == "" || strings.TrimSpace(cfg.APIKey) == "") {
 		return cfg, nil, fmt.Errorf("api token or api email + api key is required")

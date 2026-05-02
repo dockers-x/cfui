@@ -120,6 +120,7 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/logs/recent", s.handleRecentLogs)
 	mux.HandleFunc("/api/tunnel-manager/settings", s.handleTunnelManagerSettings)
 	mux.HandleFunc("/api/tunnel-manager/config", s.handleTunnelManagerConfig)
+	mux.HandleFunc("/api/tunnel-manager/zones", s.handleTunnelManagerZones)
 	mux.HandleFunc("/api/tunnel-manager/entries", s.handleTunnelManagerEntries)
 	mux.HandleFunc("/api/tunnel-manager/entries/", s.handleTunnelManagerEntry)
 
@@ -154,6 +155,19 @@ func (s *Server) handleTunnelManagerSettings(w http.ResponseWriter, r *http.Requ
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func (s *Server) handleTunnelManagerZones(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	zones, err := s.tunnelMgr.ListZones(r.Context())
+	if err != nil {
+		writeTunnelManagerError(w, err)
+		return
+	}
+	writeJSON(w, map[string][]tunnelmgr.ZoneResponse{"zones": zones})
 }
 
 func (s *Server) handleTunnelManagerConfig(w http.ResponseWriter, r *http.Request) {
