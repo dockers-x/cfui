@@ -836,6 +836,40 @@ input:checked+.slider:before {
     border-bottom: 1px solid var(--border-color);
 }
 
+.manager-settings-toggle {
+    cursor: pointer;
+    padding: 14px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--advanced-toggle-bg);
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 0.92rem;
+    list-style: none;
+}
+
+.manager-settings-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.manager-settings-toggle::before {
+    content: "›";
+    display: inline-block;
+    margin-right: 10px;
+    color: var(--cf-orange);
+    font-size: 1.2rem;
+    line-height: 1;
+    transition: transform 0.2s;
+}
+
+.manager-settings[open] .manager-settings-toggle::before {
+    transform: rotate(90deg);
+}
+
+.manager-settings-content {
+    padding-top: 24px;
+}
+
 .manager-enable-row {
     margin-bottom: 24px;
 }

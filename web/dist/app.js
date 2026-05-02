@@ -44,6 +44,8 @@ const elements = {
     edgeBindAddressInput: document.getElementById('edge-bind-address-input'),
     noTLSVerifyToggle: document.getElementById('no-tls-verify-toggle'),
     managerStatus: document.getElementById('manager-status'),
+    managerSettingsSection: document.getElementById('manager-settings-section'),
+    managerSettingsToggle: document.getElementById('manager-settings-toggle'),
     managerEnableToggle: document.getElementById('manager-enable-toggle'),
     managerAccountId: document.getElementById('manager-account-id'),
     managerTunnelId: document.getElementById('manager-tunnel-id'),
@@ -358,7 +360,15 @@ function renderTunnelManagerSettings(settings) {
     elements.managerKeyState.textContent = settings.api_key_set ? t('api_key_configured') : t('api_key_not_saved');
     updateManagerAuthMode();
     setManagerStatus(settings.enabled ? t('manager_status_ready') : t('manager_status_disabled'), settings.enabled ? 'ready' : 'disabled');
+    updateManagerSettingsDisclosure(settings);
     updateTunnelManagerText();
+}
+
+function updateManagerSettingsDisclosure(settings) {
+    if (!elements.managerSettingsSection) return;
+    const hasIdentity = !!(settings.account_id && settings.tunnel_id);
+    const hasAuth = !!(settings.api_token_set || settings.api_key_set);
+    elements.managerSettingsSection.open = !(settings.enabled && hasIdentity && hasAuth);
 }
 
 function updateManagerAuthMode() {
@@ -903,6 +913,7 @@ function updateTunnelManagerText() {
 
     managerTitle.textContent = t('remote_tunnel_manager');
     document.getElementById('manager-subtitle').textContent = t('remote_tunnel_manager_subtitle');
+    if (elements.managerSettingsToggle) elements.managerSettingsToggle.textContent = t('remote_manager_config');
     document.getElementById('manager-enable-label').textContent = t('manager_enable');
     document.querySelector('label[for="manager-account-id"]').textContent = t('account_id');
     elements.managerAccountId.placeholder = t('account_id_placeholder');

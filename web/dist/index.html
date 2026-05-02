@@ -231,7 +231,9 @@
                 </div>
 
                 <div class="card-body">
-                    <div class="manager-settings">
+                    <details class="manager-settings" id="manager-settings-section" open>
+                        <summary class="manager-settings-toggle" id="manager-settings-toggle">Remote manager configuration</summary>
+                        <div class="manager-settings-content">
                         <div class="toggle-container manager-enable-row">
                             <label class="switch">
                                 <input type="checkbox" id="manager-enable-toggle">
@@ -296,7 +298,8 @@
                             <button id="manager-save-settings" class="btn btn-secondary">Save Manager Settings</button>
                             <button id="manager-load-config" class="btn btn-primary">Load Tunnel Config</button>
                         </div>
-                    </div>
+                        </div>
+                    </details>
 
                     <div class="manager-config-panel" id="manager-config-panel" hidden>
                         <div class="section-heading">

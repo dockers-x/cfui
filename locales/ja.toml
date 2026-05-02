@@ -435,3 +435,6 @@ other = "Zone · Zone · Read"
 
 [api_permission_note]
 other = "可能ならアカウントスコープの API Token を使ってください。メール + Global API Key は権限が広めです。"
+
+[remote_manager_config]
+other = "リモート管理設定"

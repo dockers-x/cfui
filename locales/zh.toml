@@ -435,3 +435,6 @@ other = "Zone · Zone · Read"
 
 [api_permission_note]
 other = "建议使用限定账号范围的 API Token。邮箱 + Global API Key 权限更大。"
+
+[remote_manager_config]
+other = "远程管理配置"
