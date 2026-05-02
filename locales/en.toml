@@ -399,3 +399,9 @@ other = "Automatically decoded from the local Tunnel Token. You can override it 
 
 [token_identity_parse_failed]
 other = "Could not decode Account ID/Tunnel ID from the local Tunnel Token; enter it manually or via environment variables."
+
+[local_tunnel_tab]
+other = "Tunnel Configuration"
+
+[remote_tunnel_tab]
+other = "Remote Tunnel Manager"

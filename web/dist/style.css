@@ -308,6 +308,52 @@ h1 {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
 }
 
+.app-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding: 6px;
+    background: var(--card-bg);
+    backdrop-filter: var(--card-backdrop);
+    -webkit-backdrop-filter: var(--card-backdrop);
+    border: var(--card-border);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+}
+
+.tab-button {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-weight: 700;
+    transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+    color: var(--text-primary);
+    background: var(--advanced-toggle-hover);
+}
+
+.tab-button.active {
+    color: white;
+    background: linear-gradient(135deg, var(--cf-orange) 0%, #F36B05 100%);
+    box-shadow: 0 4px 12px rgba(246, 130, 31, 0.25);
+}
+
+.tab-button:focus-visible {
+    outline: none;
+    border-color: var(--cf-orange);
+    box-shadow: var(--input-focus-shadow);
+}
+
+.tab-panel[hidden] {
+    display: none;
+}
+
 .card-header {
     padding: 24px;
     border-bottom: 1px solid var(--border-color);
@@ -666,6 +712,10 @@ input:checked+.slider:before {
     .header-controls {
         width: 100%;
         justify-content: space-between;
+    }
+
+    .app-tabs {
+        flex-direction: column;
     }
 
     .form-row {

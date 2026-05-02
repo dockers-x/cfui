@@ -60,7 +60,13 @@
         </header>
 
         <main class="main-content">
-            <div class="card">
+            <nav class="app-tabs" role="tablist" aria-label="Configuration sections">
+                <button id="local-tab" class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="local-panel">Tunnel Configuration</button>
+                <button id="manager-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="manager-panel">Remote Tunnel Manager</button>
+            </nav>
+
+            <section id="local-panel" class="tab-panel active" role="tabpanel" aria-labelledby="local-tab">
+            <div class="card tunnel-config-card">
                 <div class="card-header">
                     <h2>Tunnel Configuration</h2>
                     <p class="subtitle">Manage your Cloudflare Tunnel connection</p>
@@ -199,7 +205,22 @@
                 </div>
             </div>
 
+            <div class="card logs-card">
+                <div class="card-header">
+                    <h2>System Logs</h2>
+                    <div class="logs-controls">
+                        <button id="toggle-stream" class="btn btn-sm btn-secondary">Enable Real-time Logs</button>
+                        <button id="clear-logs" class="btn btn-sm btn-ghost">Clear</button>
+                    </div>
+                </div>
+                <div class="logs-container" id="logs-container">
+                    <div class="log-entry system">System ready. Waiting for configuration...
+                    </div>
+                </div>
+            </div>
+            </section>
 
+            <section id="manager-panel" class="tab-panel" role="tabpanel" aria-labelledby="manager-tab" hidden>
             <div class="card manager-card">
                 <div class="card-header stacked-header">
                     <div>
@@ -354,20 +375,7 @@
                     </div>
                 </div>
             </div>
-
-            <div class="card logs-card">
-                <div class="card-header">
-                    <h2>System Logs</h2>
-                    <div class="logs-controls">
-                        <button id="toggle-stream" class="btn btn-sm btn-secondary">Enable Real-time Logs</button>
-                        <button id="clear-logs" class="btn btn-sm btn-ghost">Clear</button>
-                    </div>
-                </div>
-                <div class="logs-container" id="logs-container">
-                    <div class="log-entry system">System ready. Waiting for configuration...
-                    </div>
-                </div>
-            </div>
+            </section>
         </main>
     </div>
     <script src="app.js"></script>

@@ -399,3 +399,9 @@ other = "ローカル Tunnel Token から自動的にデコードしました。
 
 [token_identity_parse_failed]
 other = "ローカル Tunnel Token からアカウント ID/トンネル ID をデコードできませんでした。手動または環境変数で指定してください。"
+
+[local_tunnel_tab]
+other = "トンネル設定"
+
+[remote_tunnel_tab]
+other = "リモートトンネル管理"

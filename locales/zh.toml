@@ -399,3 +399,9 @@ other = "已从本地 Tunnel Token 自动解码。你也可以在这里或通过
 
 [token_identity_parse_failed]
 other = "无法从本地 Tunnel Token 解码账户 ID/隧道 ID；请手动填写或通过环境变量提供。"
+
+[local_tunnel_tab]
+other = "隧道配置"
+
+[remote_tunnel_tab]
+other = "远程隧道管理"

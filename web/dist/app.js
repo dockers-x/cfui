@@ -70,7 +70,11 @@ const elements = {
     managerEntryOriginServerName: document.getElementById('manager-entry-origin-server-name'),
     managerEntryNoTLS: document.getElementById('manager-entry-no-tls'),
     managerEntrySubmit: document.getElementById('manager-entry-submit'),
-    managerEntryCancel: document.getElementById('manager-entry-cancel')
+    managerEntryCancel: document.getElementById('manager-entry-cancel'),
+    localTab: document.getElementById('local-tab'),
+    managerTab: document.getElementById('manager-tab'),
+    localPanel: document.getElementById('local-panel'),
+    managerPanel: document.getElementById('manager-panel')
 };
 
 // Theme Management
@@ -133,6 +137,8 @@ elements.metricsPortInput?.addEventListener('change', saveAllConfig);
 elements.edgeBindAddressInput?.addEventListener('change', saveAllConfig);
 elements.noTLSVerifyToggle?.addEventListener('change', saveAllConfig);
 
+elements.localTab?.addEventListener('click', () => activateTab('local'));
+elements.managerTab?.addEventListener('click', () => activateTab('manager'));
 elements.managerAuthMode?.addEventListener('change', updateManagerAuthMode);
 elements.managerEntryServiceType?.addEventListener('change', updateServicePlaceholder);
 elements.managerSaveSettings?.addEventListener('click', () => saveTunnelManagerSettings(false));
@@ -204,6 +210,23 @@ elements.langSelect.addEventListener('change', async (e) => {
     localStorage.setItem('lang', newLang);
     updateUIText();
 });
+
+function activateTab(tab) {
+    const managerActive = tab === 'manager';
+    elements.localTab?.classList.toggle('active', !managerActive);
+    elements.managerTab?.classList.toggle('active', managerActive);
+    elements.localTab?.setAttribute('aria-selected', String(!managerActive));
+    elements.managerTab?.setAttribute('aria-selected', String(managerActive));
+
+    if (elements.localPanel) {
+        elements.localPanel.hidden = managerActive;
+        elements.localPanel.classList.toggle('active', !managerActive);
+    }
+    if (elements.managerPanel) {
+        elements.managerPanel.hidden = !managerActive;
+        elements.managerPanel.classList.toggle('active', managerActive);
+    }
+}
 
 // API Calls
 async function fetchVersion() {
@@ -701,6 +724,8 @@ function t(key) {
 function updateUIText() {
     // Update title
     document.querySelector('h1').textContent = t('app_title');
+    if (elements.localTab) elements.localTab.textContent = t('local_tunnel_tab');
+    if (elements.managerTab) elements.managerTab.textContent = t('remote_tunnel_tab');
 
     // Update status text
     if (state.isRunning) {
@@ -719,8 +744,8 @@ function updateUIText() {
     }
 
     // Update main configuration section
-    document.querySelector('.card-header h2').textContent = t('tunnel_config');
-    document.querySelector('.card-header .subtitle').textContent = t('tunnel_config_subtitle');
+    document.querySelector('.tunnel-config-card .card-header h2').textContent = t('tunnel_config');
+    document.querySelector('.tunnel-config-card .card-header .subtitle').textContent = t('tunnel_config_subtitle');
 
     // Token section
     document.querySelector('label[for="token-input"]').textContent = t('tunnel_token');
