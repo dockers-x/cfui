@@ -333,3 +333,69 @@ other = "其他应用设置"
 
 [disable_origin_tls_verify]
 other = "禁用源站 TLS 验证"
+
+[account_id_placeholder]
+other = "Cloudflare 账户 ID"
+
+[account_id_help]
+other = "也可以通过 CLOUDFLARE_ACCOUNT_ID 或 CLOUDFLARE_APP_ID 提供。"
+
+[tunnel_id_placeholder]
+other = "隧道 UUID"
+
+[tunnel_id_help]
+other = "修改此字段后会加载所选隧道配置。"
+
+[auth_help]
+other = "推荐使用 API Token。密钥字段留空会保留已保存的值。"
+
+[api_token_placeholder]
+other = "留空以保留现有 Token"
+
+[api_email_placeholder]
+other = "you@example.com"
+
+[api_key_placeholder]
+other = "留空以保留现有 Key"
+
+[no_remote_config_loaded]
+other = "尚未加载远程配置。"
+
+[subdomain_placeholder]
+other = "app"
+
+[domain_placeholder]
+other = "example.com"
+
+[path_placeholder]
+other = "/api/*"
+
+[path_help]
+other = "可选路径匹配。留空则发布整个主机名。"
+
+[service_help]
+other = "HTTP/HTTPS/TCP/SSH/RDP 使用 host:port，UNIX 使用 socket 路径，或填写状态码。"
+
+[service_type_unix]
+other = "UNIX 套接字"
+
+[service_type_http_status]
+other = "HTTP 状态码"
+
+[service_type_raw]
+other = "自定义"
+
+[origin_hostname_placeholder]
+other = "origin.example.com"
+
+[origin_tls]
+other = "源站 TLS"
+
+[account_id_derived_from_token]
+other = "已从本地 Tunnel Token 自动解码。你也可以在这里或通过环境变量覆盖。"
+
+[tunnel_id_derived_from_token]
+other = "已从本地 Tunnel Token 自动解码。你也可以在这里或通过环境变量覆盖。"
+
+[token_identity_parse_failed]
+other = "无法从本地 Tunnel Token 解码账户 ID/隧道 ID；请手动填写或通过环境变量提供。"

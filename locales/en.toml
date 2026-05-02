@@ -333,3 +333,69 @@ other = "Additional application settings"
 
 [disable_origin_tls_verify]
 other = "Disable origin TLS verification"
+
+[account_id_placeholder]
+other = "Cloudflare account id"
+
+[account_id_help]
+other = "Can also be provided by CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_APP_ID."
+
+[tunnel_id_placeholder]
+other = "Tunnel UUID"
+
+[tunnel_id_help]
+other = "Changing this field loads the selected tunnel configuration."
+
+[auth_help]
+other = "API Token is recommended. Blank secret fields keep the saved value."
+
+[api_token_placeholder]
+other = "Leave blank to keep existing token"
+
+[api_email_placeholder]
+other = "you@example.com"
+
+[api_key_placeholder]
+other = "Leave blank to keep existing key"
+
+[no_remote_config_loaded]
+other = "No remote config loaded."
+
+[subdomain_placeholder]
+other = "app"
+
+[domain_placeholder]
+other = "example.com"
+
+[path_placeholder]
+other = "/api/*"
+
+[path_help]
+other = "Optional path matcher. Leave empty to publish the whole hostname."
+
+[service_help]
+other = "Use host:port for HTTP/HTTPS/TCP/SSH/RDP, a socket path for UNIX, or a status code."
+
+[service_type_unix]
+other = "UNIX socket"
+
+[service_type_http_status]
+other = "HTTP status"
+
+[service_type_raw]
+other = "Custom"
+
+[origin_hostname_placeholder]
+other = "origin.example.com"
+
+[origin_tls]
+other = "Origin TLS"
+
+[account_id_derived_from_token]
+other = "Automatically decoded from the local Tunnel Token. You can override it here or with environment variables."
+
+[tunnel_id_derived_from_token]
+other = "Automatically decoded from the local Tunnel Token. You can override it here or with environment variables."
+
+[token_identity_parse_failed]
+other = "Could not decode Account ID/Tunnel ID from the local Tunnel Token; enter it manually or via environment variables."

@@ -4,6 +4,7 @@ import (
 	"cfui/internal/config"
 	"cfui/internal/logger"
 	"context"
+	"encoding/base64"
 	"os"
 	"sync"
 	"testing"
@@ -29,7 +30,82 @@ func (f *fakeCFClient) UpdateTunnelConfiguration(ctx context.Context, rc *cloudf
 	return f.config, nil
 }
 
+func tunnelToken(accountID, tunnelID string) string {
+	return base64.StdEncoding.EncodeToString([]byte(`{"a":"` + accountID + `","t":"` + tunnelID + `","s":"secret"}`))
+}
+
+func rawTunnelToken(accountID, tunnelID string) string {
+	return base64.RawStdEncoding.EncodeToString([]byte(`{"a":"` + accountID + `","t":"` + tunnelID + `","s":"secret"}`))
+}
+
+func TestSettingsDerivesAccountAndTunnelFromRunnerToken(t *testing.T) {
+	cfgMgr := newConfigManager(t)
+	cfg := cfgMgr.Get()
+	cfg.Token = tunnelToken("account-from-token", "11111111-1111-1111-1111-111111111111")
+	cfg.TunnelManagement = config.TunnelManagementConfig{
+		Enabled:  true,
+		APIToken: "api-token",
+	}
+	if err := cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	settings := NewManager(cfgMgr).Settings()
+	if !settings.DerivedFromToken {
+		t.Fatal("expected settings to be marked as derived from token")
+	}
+	if settings.AccountID != "account-from-token" || settings.TunnelID != "11111111-1111-1111-1111-111111111111" {
+		t.Fatalf("unexpected derived settings: %#v", settings)
+	}
+}
+
+func TestSaveSettingsPersistsTokenDerivedIdentityWhenFieldsAreBlank(t *testing.T) {
+	cfgMgr := newConfigManager(t)
+	cfg := cfgMgr.Get()
+	cfg.Token = tunnelToken("account-from-token", "22222222-2222-2222-2222-222222222222")
+	if err := cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	mgr := NewManager(cfgMgr)
+	if err := mgr.SaveSettings(SettingsRequest{Enabled: true, APIToken: "api-token"}); err != nil {
+		t.Fatalf("SaveSettings: %v", err)
+	}
+	saved := cfgMgr.Get().TunnelManagement
+	if saved.AccountID != "account-from-token" || saved.TunnelID != "22222222-2222-2222-2222-222222222222" {
+		t.Fatalf("expected token-derived identity to be persisted, got %#v", saved)
+	}
+}
+
+func TestParseTunnelTokenAcceptsUnpaddedBase64(t *testing.T) {
+	identity, err := parseTunnelToken(rawTunnelToken("raw-account", "33333333-3333-3333-3333-333333333333"))
+	if err != nil {
+		t.Fatalf("parseTunnelToken: %v", err)
+	}
+	if identity.AccountID != "raw-account" || identity.TunnelID != "33333333-3333-3333-3333-333333333333" {
+		t.Fatalf("unexpected identity: %#v", identity)
+	}
+}
+
 func newTestManager(t *testing.T, client *fakeCFClient) *Manager {
+	t.Helper()
+	cfgMgr := newConfigManager(t)
+	cfg := cfgMgr.Get()
+	cfg.TunnelManagement = config.TunnelManagementConfig{
+		Enabled:   true,
+		AccountID: "account-1",
+		TunnelID:  "tunnel-1",
+		APIToken:  "token-1",
+	}
+	if err := cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+	return NewManagerWithClient(cfgMgr, func(config.TunnelManagementConfig) (cloudflareClient, error) {
+		return client, nil
+	})
+}
+
+func newConfigManager(t *testing.T) *config.Manager {
 	t.Helper()
 	initLoggerOnce.Do(func() {
 		logDir, err := os.MkdirTemp("", "cfui-test-logs-*")
@@ -44,19 +120,7 @@ func newTestManager(t *testing.T, client *fakeCFClient) *Manager {
 	if err != nil {
 		t.Fatalf("NewManager: %v", err)
 	}
-	cfg := cfgMgr.Get()
-	cfg.TunnelManagement = config.TunnelManagementConfig{
-		Enabled:   true,
-		AccountID: "account-1",
-		TunnelID:  "tunnel-1",
-		APIToken:  "token-1",
-	}
-	if err := cfgMgr.Save(cfg); err != nil {
-		t.Fatalf("Save config: %v", err)
-	}
-	return NewManagerWithClient(cfgMgr, func(config.TunnelManagementConfig) (cloudflareClient, error) {
-		return client, nil
-	})
+	return cfgMgr
 }
 
 func TestAddEntryInsertsBeforeCatchAll(t *testing.T) {

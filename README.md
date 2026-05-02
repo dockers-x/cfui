@@ -200,7 +200,7 @@ The remote tunnel manager is independent from the local token-based cloudflared 
 Use it when you want cfui to manage Cloudflare-hosted tunnel ingress configuration for published applications:
 
 1. Enable **Remote Tunnel Manager** in the UI, or set `CFUI_TUNNEL_MGMT_ENABLED=true`.
-2. Provide **Account ID/App ID** and **Tunnel ID** in the UI or via environment variables.
+2. Provide **Account ID/App ID** and **Tunnel ID** in the UI or via environment variables. If these fields are left blank, cfui tries to decode them from the configured Cloudflare Tunnel Token (`a` = account tag, `t` = tunnel id).
 3. Authenticate with either:
    - API Token (recommended): `CLOUDFLARE_API_TOKEN`
    - Email + Global API Key: `CLOUDFLARE_API_EMAIL` and `CLOUDFLARE_API_KEY`

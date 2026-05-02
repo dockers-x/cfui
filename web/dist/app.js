@@ -805,29 +805,51 @@ function updateTunnelManagerText() {
     document.getElementById('manager-subtitle').textContent = t('remote_tunnel_manager_subtitle');
     document.getElementById('manager-enable-label').textContent = t('manager_enable');
     document.querySelector('label[for="manager-account-id"]').textContent = t('account_id');
+    elements.managerAccountId.placeholder = t('account_id_placeholder');
+    document.getElementById('manager-account-help').textContent = t('account_id_help');
     document.querySelector('label[for="manager-tunnel-id"]').textContent = t('managed_tunnel_id');
+    elements.managerTunnelId.placeholder = t('tunnel_id_placeholder');
+    document.getElementById('manager-tunnel-help').textContent = t('tunnel_id_help');
     document.querySelector('label[for="manager-auth-mode"]').textContent = t('authentication');
     document.querySelector('#manager-auth-mode option[value="token"]').textContent = t('api_token');
     document.querySelector('#manager-auth-mode option[value="key"]').textContent = t('email_api_key');
+    document.getElementById('manager-auth-help').textContent = t('auth_help');
     document.querySelector('label[for="manager-api-token"]').textContent = t('api_token');
+    elements.managerAPIToken.placeholder = t('api_token_placeholder');
     document.querySelector('label[for="manager-api-email"]').textContent = t('api_email');
+    elements.managerAPIEmail.placeholder = t('api_email_placeholder');
     document.querySelector('label[for="manager-api-key"]').textContent = t('api_key');
+    elements.managerAPIKey.placeholder = t('api_key_placeholder');
     elements.managerSaveSettings.textContent = t('save_manager_settings');
     elements.managerLoadConfig.textContent = t('load_tunnel_config');
-    document.querySelector('.section-heading h3').textContent = t('ingress_rules');
+    document.querySelector('.manager-config-panel .section-heading h3').textContent = t('ingress_rules');
+    if (!state.tunnelManager.config) {
+        elements.managerConfigMeta.textContent = t('no_remote_config_loaded');
+    }
     document.getElementById('published-app-title').textContent = t('published_app_title');
     document.getElementById('published-app-help').textContent = t('published_app_help');
     document.querySelector('label[for="manager-entry-subdomain"]').textContent = t('subdomain');
+    elements.managerEntrySubdomain.placeholder = t('subdomain_placeholder');
     document.querySelector('label[for="manager-entry-domain"]').textContent = t('domain');
+    elements.managerEntryDomain.placeholder = t('domain_placeholder');
     document.querySelector('label[for="manager-entry-path"]').textContent = t('path');
+    elements.managerEntryPath.placeholder = t('path_placeholder');
+    document.getElementById('manager-entry-path-help').textContent = t('path_help');
     document.querySelector('label[for="manager-entry-service-type"]').textContent = t('service_type');
+    document.querySelector('#manager-entry-service-type option[value="unix"]').textContent = t('service_type_unix');
+    document.querySelector('#manager-entry-service-type option[value="http_status"]').textContent = t('service_type_http_status');
+    document.querySelector('#manager-entry-service-type option[value="raw"]').textContent = t('service_type_raw');
     document.querySelector('label[for="manager-entry-service"]').textContent = t('service');
+    document.getElementById('manager-entry-service-help').textContent = t('service_help');
     document.querySelector('label[for="manager-entry-http-host-header"]').textContent = t('http_host_header');
+    elements.managerEntryHTTPHostHeader.placeholder = t('origin_hostname_placeholder');
     document.querySelector('label[for="manager-entry-origin-server-name"]').textContent = t('origin_server_name');
+    elements.managerEntryOriginServerName.placeholder = t('origin_hostname_placeholder');
     const formSectionLabels = document.querySelectorAll('.public-hostname-form .form-section-label');
     formSectionLabels[0].textContent = t('public_hostname_section');
     formSectionLabels[1].textContent = t('service_section');
     document.querySelector('.public-hostname-advanced .advanced-toggle').textContent = t('additional_app_settings');
+    document.getElementById('manager-entry-origin-tls-label').textContent = t('origin_tls');
     document.querySelector('.public-hostname-advanced .label-text').textContent = t('disable_origin_tls_verify');
     elements.managerEntryCancel.textContent = t('cancel_edit');
     elements.managerEntrySubmit.textContent = elements.managerEntryIndex.value === '' ? t('add_rule') : t('update_rule');
@@ -845,6 +867,18 @@ function updateTunnelManagerText() {
 
     if (state.tunnelManager.config) {
         renderTunnelManagerConfig(state.tunnelManager.config);
+    }
+
+    updateManagerDerivedIdentityText(settings);
+}
+
+function updateManagerDerivedIdentityText(settings) {
+    if (settings.derived_from_token) {
+        document.getElementById('manager-account-help').textContent = t('account_id_derived_from_token');
+        document.getElementById('manager-tunnel-help').textContent = t('tunnel_id_derived_from_token');
+    } else if (settings.derive_token_failed) {
+        document.getElementById('manager-account-help').textContent = t('token_identity_parse_failed');
+        document.getElementById('manager-tunnel-help').textContent = t('token_identity_parse_failed');
     }
 }
 

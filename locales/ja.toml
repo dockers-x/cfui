@@ -333,3 +333,69 @@ other = "追加アプリケーション設定"
 
 [disable_origin_tls_verify]
 other = "オリジン TLS 検証を無効化"
+
+[account_id_placeholder]
+other = "Cloudflare アカウント ID"
+
+[account_id_help]
+other = "CLOUDFLARE_ACCOUNT_ID または CLOUDFLARE_APP_ID でも指定できます。"
+
+[tunnel_id_placeholder]
+other = "トンネル UUID"
+
+[tunnel_id_help]
+other = "この項目を変更すると、選択したトンネル設定を読み込みます。"
+
+[auth_help]
+other = "API Token を推奨します。シークレット欄を空にすると保存済みの値を保持します。"
+
+[api_token_placeholder]
+other = "空欄なら既存 Token を保持"
+
+[api_email_placeholder]
+other = "you@example.com"
+
+[api_key_placeholder]
+other = "空欄なら既存 Key を保持"
+
+[no_remote_config_loaded]
+other = "リモート設定はまだ読み込まれていません。"
+
+[subdomain_placeholder]
+other = "app"
+
+[domain_placeholder]
+other = "example.com"
+
+[path_placeholder]
+other = "/api/*"
+
+[path_help]
+other = "任意のパスマッチャーです。空欄ならホスト名全体を公開します。"
+
+[service_help]
+other = "HTTP/HTTPS/TCP/SSH/RDP は host:port、UNIX はソケットパス、またはステータスコードを指定します。"
+
+[service_type_unix]
+other = "UNIX ソケット"
+
+[service_type_http_status]
+other = "HTTP ステータス"
+
+[service_type_raw]
+other = "カスタム"
+
+[origin_hostname_placeholder]
+other = "origin.example.com"
+
+[origin_tls]
+other = "オリジン TLS"
+
+[account_id_derived_from_token]
+other = "ローカル Tunnel Token から自動的にデコードしました。ここまたは環境変数で上書きできます。"
+
+[tunnel_id_derived_from_token]
+other = "ローカル Tunnel Token から自動的にデコードしました。ここまたは環境変数で上書きできます。"
+
+[token_identity_parse_failed]
+other = "ローカル Tunnel Token からアカウント ID/トンネル ID をデコードできませんでした。手動または環境変数で指定してください。"

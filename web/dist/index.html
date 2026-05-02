@@ -223,12 +223,12 @@
                             <div class="form-group">
                                 <label for="manager-account-id">Account ID / App ID</label>
                                 <input type="text" id="manager-account-id" placeholder="Cloudflare account id" spellcheck="false">
-                                <p class="help-text">Can also be provided by CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_APP_ID.</p>
+                                <p class="help-text" id="manager-account-help">Can also be provided by CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_APP_ID.</p>
                             </div>
                             <div class="form-group">
                                 <label for="manager-tunnel-id">Tunnel ID</label>
                                 <input type="text" id="manager-tunnel-id" placeholder="Tunnel UUID" spellcheck="false">
-                                <p class="help-text">Changing this field loads the selected tunnel configuration.</p>
+                                <p class="help-text" id="manager-tunnel-help">Changing this field loads the selected tunnel configuration.</p>
                             </div>
                         </div>
 
@@ -239,7 +239,7 @@
                                     <option value="token">API Token</option>
                                     <option value="key">Email + API Key</option>
                                 </select>
-                                <p class="help-text">API Token is recommended. Blank secret fields keep the saved value.</p>
+                                <p class="help-text" id="manager-auth-help">API Token is recommended. Blank secret fields keep the saved value.</p>
                             </div>
                             <div class="form-group manager-token-field">
                                 <label for="manager-api-token">API Token</label>
@@ -299,7 +299,7 @@
                                 <div class="form-group">
                                     <label for="manager-entry-path">Path</label>
                                     <input type="text" id="manager-entry-path" placeholder="/api/*" spellcheck="false">
-                                    <p class="help-text">Optional path matcher. Leave empty to publish the whole hostname.</p>
+                                    <p class="help-text" id="manager-entry-path-help">Optional path matcher. Leave empty to publish the whole hostname.</p>
                                 </div>
                             </div>
                             <div class="form-section-label">Service</div>
@@ -320,7 +320,7 @@
                                 <div class="form-group">
                                     <label for="manager-entry-service">URL</label>
                                     <input type="text" id="manager-entry-service" placeholder="localhost:8080" spellcheck="false" required>
-                                    <p class="help-text">Use host:port for HTTP/HTTPS/TCP/SSH/RDP, a socket path for UNIX, or a status code.</p>
+                                    <p class="help-text" id="manager-entry-service-help">Use host:port for HTTP/HTTPS/TCP/SSH/RDP, a socket path for UNIX, or a status code.</p>
                                 </div>
                             </div>
                             <details class="advanced-section public-hostname-advanced">
@@ -336,7 +336,7 @@
                                             <input type="text" id="manager-entry-origin-server-name" placeholder="origin.example.com" spellcheck="false">
                                         </div>
                                     </div>
-                                    <label>Origin TLS</label>
+                                    <label id="manager-entry-origin-tls-label">Origin TLS</label>
                                     <div class="toggle-container">
                                         <label class="switch">
                                             <input type="checkbox" id="manager-entry-no-tls">

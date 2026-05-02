@@ -3,6 +3,8 @@ package tunnelmgr
 import (
 	"cfui/internal/config"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -39,14 +41,16 @@ type SettingsRequest struct {
 }
 
 type SettingsResponse struct {
-	Enabled     bool     `json:"enabled"`
-	AccountID   string   `json:"account_id"`
-	TunnelID    string   `json:"tunnel_id"`
-	AuthMode    string   `json:"auth_mode"`
-	APIEmail    string   `json:"api_email,omitempty"`
-	APITokenSet bool     `json:"api_token_set"`
-	APIKeySet   bool     `json:"api_key_set"`
-	EnvKeys     []string `json:"env_keys,omitempty"`
+	Enabled           bool     `json:"enabled"`
+	AccountID         string   `json:"account_id"`
+	TunnelID          string   `json:"tunnel_id"`
+	AuthMode          string   `json:"auth_mode"`
+	APIEmail          string   `json:"api_email,omitempty"`
+	APITokenSet       bool     `json:"api_token_set"`
+	APIKeySet         bool     `json:"api_key_set"`
+	DerivedFromToken  bool     `json:"derived_from_token"`
+	DeriveTokenFailed bool     `json:"derive_token_failed"`
+	EnvKeys           []string `json:"env_keys,omitempty"`
 }
 
 type ConfigurationResponse struct {
@@ -75,9 +79,10 @@ func NewManagerWithClient(cfgMgr *config.Manager, factory clientFactory) *Manage
 }
 
 func (m *Manager) Settings() SettingsResponse {
-	persisted := m.cfgMgr.Get().TunnelManagement
-	effective := m.cfgMgr.Get().EffectiveTunnelManagement()
-	return settingsResponse(effective, persisted)
+	cfg := m.cfgMgr.Get()
+	persisted := cfg.TunnelManagement
+	effective, derived, deriveFailed := effectiveWithTokenIdentity(cfg)
+	return settingsResponse(effective, persisted, derived, deriveFailed)
 }
 
 func (m *Manager) SaveSettings(req SettingsRequest) error {
@@ -86,6 +91,16 @@ func (m *Manager) SaveSettings(req SettingsRequest) error {
 	current.Enabled = req.Enabled
 	current.AccountID = strings.TrimSpace(req.AccountID)
 	current.TunnelID = strings.TrimSpace(req.TunnelID)
+	if current.AccountID == "" || current.TunnelID == "" {
+		if identity, err := parseTunnelToken(cfg.Token); err == nil {
+			if current.AccountID == "" {
+				current.AccountID = identity.AccountID
+			}
+			if current.TunnelID == "" {
+				current.TunnelID = identity.TunnelID
+			}
+		}
+	}
 	current.APIEmail = strings.TrimSpace(req.APIEmail)
 	if strings.TrimSpace(req.APIToken) != "" {
 		current.APIToken = strings.TrimSpace(req.APIToken)
@@ -185,7 +200,8 @@ func (m *Manager) mutate(ctx context.Context, mutate func(*cloudflare.TunnelConf
 }
 
 func (m *Manager) client() (config.TunnelManagementConfig, cloudflareClient, error) {
-	cfg := m.cfgMgr.Get().EffectiveTunnelManagement()
+	appCfg := m.cfgMgr.Get()
+	cfg, _, _ := effectiveWithTokenIdentity(appCfg)
 	if !cfg.Enabled {
 		return cfg, nil, ErrDisabled
 	}
@@ -210,7 +226,7 @@ func newSDKClient(cfg config.TunnelManagementConfig) (cloudflareClient, error) {
 	return cloudflare.New(strings.TrimSpace(cfg.APIKey), strings.TrimSpace(cfg.APIEmail))
 }
 
-func settingsResponse(effective, persisted config.TunnelManagementConfig) SettingsResponse {
+func settingsResponse(effective, persisted config.TunnelManagementConfig, derived, deriveFailed bool) SettingsResponse {
 	authMode := "none"
 	if effective.APIToken != "" {
 		authMode = "token"
@@ -219,15 +235,82 @@ func settingsResponse(effective, persisted config.TunnelManagementConfig) Settin
 	}
 
 	return SettingsResponse{
-		Enabled:     effective.Enabled,
-		AccountID:   effective.AccountID,
-		TunnelID:    effective.TunnelID,
-		AuthMode:    authMode,
-		APIEmail:    effective.APIEmail,
-		APITokenSet: effective.APIToken != "",
-		APIKeySet:   effective.APIKey != "",
-		EnvKeys:     envOverrideKeys(effective, persisted),
+		Enabled:           effective.Enabled,
+		AccountID:         effective.AccountID,
+		TunnelID:          effective.TunnelID,
+		AuthMode:          authMode,
+		APIEmail:          effective.APIEmail,
+		APITokenSet:       effective.APIToken != "",
+		APIKeySet:         effective.APIKey != "",
+		DerivedFromToken:  derived,
+		DeriveTokenFailed: deriveFailed,
+		EnvKeys:           envOverrideKeys(effective, persisted),
 	}
+}
+
+type tokenIdentity struct {
+	AccountID string
+	TunnelID  string
+}
+
+type encodedTunnelToken struct {
+	AccountTag string `json:"a"`
+	TunnelID   string `json:"t"`
+}
+
+func effectiveWithTokenIdentity(cfg config.Config) (config.TunnelManagementConfig, bool, bool) {
+	effective := cfg.EffectiveTunnelManagement()
+	if effective.AccountID != "" && effective.TunnelID != "" {
+		return effective, false, false
+	}
+
+	identity, err := parseTunnelToken(cfg.Token)
+	if err != nil {
+		return effective, false, cfg.Token != ""
+	}
+
+	derived := false
+	if effective.AccountID == "" {
+		effective.AccountID = identity.AccountID
+		derived = true
+	}
+	if effective.TunnelID == "" {
+		effective.TunnelID = identity.TunnelID
+		derived = true
+	}
+	return effective, derived, false
+}
+
+func parseTunnelToken(token string) (tokenIdentity, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return tokenIdentity{}, errors.New("tunnel token is empty")
+	}
+
+	content, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		content, err = base64.RawStdEncoding.DecodeString(token)
+		if err != nil {
+			content, err = base64.RawURLEncoding.DecodeString(token)
+			if err != nil {
+				return tokenIdentity{}, err
+			}
+		}
+	}
+
+	var encoded encodedTunnelToken
+	if err := json.Unmarshal(content, &encoded); err != nil {
+		return tokenIdentity{}, err
+	}
+
+	if strings.TrimSpace(encoded.AccountTag) == "" || strings.TrimSpace(encoded.TunnelID) == "" {
+		return tokenIdentity{}, errors.New("tunnel token does not contain account and tunnel identifiers")
+	}
+
+	return tokenIdentity{
+		AccountID: strings.TrimSpace(encoded.AccountTag),
+		TunnelID:  strings.TrimSpace(encoded.TunnelID),
+	}, nil
 }
 
 func envOverrideKeys(effective, persisted config.TunnelManagementConfig) []string {
