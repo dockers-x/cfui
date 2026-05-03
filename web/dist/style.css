@@ -37,6 +37,9 @@
 
     --font-family: "LXGW WenKai Screen", 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", "微软雅黑", sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, "LXGW WenKai Screen Mono", monospace;
+    --field-label-height: 32px;
+    --touch-target: 44px;
+    --icon-control-size: 24px;
 }
 
 [data-theme="dark"] {
@@ -197,8 +200,8 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: var(--touch-target);
+    height: var(--touch-target);
     padding: 0;
 }
 
@@ -401,15 +404,22 @@ label {
     color: var(--text-primary);
 }
 
+.form-group > label:not(.switch):not(.label-text),
 .label-row {
+    min-height: var(--field-label-height);
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
+    line-height: 1.35;
+}
+
+.label-row {
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 8px;
 }
 
 .label-row label {
+    min-height: auto;
     margin-bottom: 0;
 }
 
@@ -419,8 +429,14 @@ label {
 }
 
 .help-btn {
-    width: 44px;
-    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 var(--icon-control-size);
+    width: var(--icon-control-size);
+    height: var(--icon-control-size);
+    position: relative;
+    padding: 0;
     border: 1px solid var(--border-color);
     border-radius: 999px;
     background: var(--input-bg);
@@ -429,6 +445,12 @@ label {
     font-size: 0.78rem;
     font-weight: 800;
     line-height: 1;
+}
+
+.help-btn::before {
+    content: "";
+    position: absolute;
+    inset: -10px;
 }
 
 .help-btn:hover,
