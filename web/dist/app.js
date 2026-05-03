@@ -41,6 +41,7 @@ const elements = {
     regionSelect: document.getElementById('region-select'),
     retriesInput: document.getElementById('retries-input'),
     metricsEnableToggle: document.getElementById('metrics-enable-toggle'),
+    metricsPortField: document.getElementById('metrics-port-field'),
     metricsPortInput: document.getElementById('metrics-port-input'),
     edgeBindAddressInput: document.getElementById('edge-bind-address-input'),
     noTLSVerifyToggle: document.getElementById('no-tls-verify-toggle'),
@@ -118,6 +119,7 @@ async function init() {
         await loadTunnelManagerConfig();
     }
     await fetchStatus();
+    syncReleasedRows();
     setInterval(fetchStatus, 2000);
 
     // DO NOT auto-connect log stream - user must manually enable it
@@ -130,6 +132,9 @@ elements.themeToggle.addEventListener('click', toggleTheme);
 elements.toggleVisibilityBtn.addEventListener('click', () => {
     const type = elements.tokenInput.type === 'password' ? 'text' : 'password';
     elements.tokenInput.type = type;
+    const visible = type === 'text';
+    elements.toggleVisibilityBtn.setAttribute('aria-pressed', String(visible));
+    elements.toggleVisibilityBtn.setAttribute('aria-label', visible ? 'Hide tunnel token' : 'Show tunnel token');
 });
 
 elements.tokenInput.addEventListener('change', saveAllConfig);
@@ -141,7 +146,10 @@ elements.protocolSelect?.addEventListener('change', saveAllConfig);
 elements.gracePeriodInput?.addEventListener('change', saveAllConfig);
 elements.regionSelect?.addEventListener('change', saveAllConfig);
 elements.retriesInput?.addEventListener('change', saveAllConfig);
-elements.metricsEnableToggle?.addEventListener('change', saveAllConfig);
+elements.metricsEnableToggle?.addEventListener('change', () => {
+    updateMetricsVisibility();
+    saveAllConfig();
+});
 elements.metricsPortInput?.addEventListener('change', saveAllConfig);
 elements.edgeBindAddressInput?.addEventListener('change', saveAllConfig);
 elements.noTLSVerifyToggle?.addEventListener('change', saveAllConfig);
@@ -302,6 +310,7 @@ async function fetchConfig() {
         if (elements.metricsPortInput) elements.metricsPortInput.value = data.metrics_port || 60123;
         if (elements.edgeBindAddressInput) elements.edgeBindAddressInput.value = data.edge_bind_address || '';
         if (elements.noTLSVerifyToggle) elements.noTLSVerifyToggle.checked = data.no_tls_verify || false;
+        updateMetricsVisibility();
     } catch (err) {
         addLog('Failed to load config', 'error');
     }
@@ -374,10 +383,27 @@ function updateManagerSettingsDisclosure(settings) {
     elements.managerSettingsSection.open = !(settings.enabled && hasIdentity && hasAuth);
 }
 
+function syncReleasedRows() {
+    document.querySelectorAll('.form-row').forEach(row => {
+        const visibleChildren = Array.from(row.children).filter(child => !child.hidden);
+        row.classList.toggle('single-column', visibleChildren.length === 1);
+    });
+}
+
+function updateMetricsVisibility() {
+    if (!elements.metricsPortField || !elements.metricsPortInput || !elements.metricsEnableToggle) return;
+    const visible = elements.metricsEnableToggle.checked;
+    elements.metricsPortField.hidden = !visible;
+    elements.metricsPortInput.disabled = !visible;
+    elements.metricsPortInput.setAttribute('aria-hidden', String(!visible));
+    syncReleasedRows();
+}
+
 function updateManagerAuthMode() {
     const keyMode = elements.managerAuthMode?.value === 'key';
     if (elements.managerTokenField) elements.managerTokenField.hidden = keyMode;
     if (elements.managerKeyFields) elements.managerKeyFields.hidden = !keyMode;
+    syncReleasedRows();
 }
 
 function toggleAPIHelp(force) {
@@ -496,6 +522,9 @@ function updateDomainInputMode(options = {}) {
 
     const manual = !select.value;
     input.hidden = !manual;
+    input.disabled = !manual;
+    input.setAttribute('aria-hidden', String(!manual));
+    syncReleasedRows();
 
     if (!manual) {
         input.value = select.value;
@@ -895,63 +924,65 @@ function updateUIText() {
     document.querySelectorAll('.help-text')[0].textContent = t('token_help');
 
     // Advanced configuration
-    document.querySelector('.advanced-toggle').textContent = t('advanced_config');
+    document.querySelector('.tunnel-config-card .advanced-toggle').textContent = t('advanced_config');
 
-    const advancedLabels = document.querySelectorAll('.advanced-content label:not(.switch)');
+    const tunnelAdvancedContent = document.querySelector('.tunnel-config-card .advanced-content');
+    const advancedLabels = tunnelAdvancedContent.querySelectorAll('.form-group > label:not(.switch):not(.label-text)');
+    const advancedHelpTexts = tunnelAdvancedContent.querySelectorAll('.help-text');
 
     // Tunnel identifier
     advancedLabels[0].textContent = t('tunnel_identifier');
-    document.querySelectorAll('.advanced-content .help-text')[0].textContent = t('tunnel_identifier_help');
+    advancedHelpTexts[0].textContent = t('tunnel_identifier_help');
 
     // Software name
     advancedLabels[1].textContent = t('software_name');
-    document.querySelectorAll('.advanced-content .help-text')[1].textContent = t('software_name_help');
+    advancedHelpTexts[1].textContent = t('software_name_help');
 
     // Protocol
     advancedLabels[2].textContent = t('protocol');
     document.querySelector('#protocol-select option[value="auto"]').textContent = t('protocol_auto');
-    document.querySelectorAll('.advanced-content .help-text')[2].textContent = t('protocol_help');
+    advancedHelpTexts[2].textContent = t('protocol_help');
 
     // Grace period
     advancedLabels[3].textContent = t('grace_period');
-    document.querySelectorAll('.advanced-content .help-text')[3].textContent = t('grace_period_help');
+    advancedHelpTexts[3].textContent = t('grace_period_help');
 
     // Region
     advancedLabels[4].textContent = t('region');
     document.querySelector('#region-select option[value=""]').textContent = t('region_global');
     document.querySelector('#region-select option[value="us"]').textContent = t('region_us');
-    document.querySelectorAll('.advanced-content .help-text')[4].textContent = t('region_help');
+    advancedHelpTexts[4].textContent = t('region_help');
 
     // Max retries
     advancedLabels[5].textContent = t('max_retries');
-    document.querySelectorAll('.advanced-content .help-text')[5].textContent = t('max_retries_help');
+    advancedHelpTexts[5].textContent = t('max_retries_help');
 
     // Metrics Server Title
     advancedLabels[6].textContent = t('metrics_server_title');
 
     // Metrics enable
-    document.querySelectorAll('.label-text')[0].textContent = t('metrics_enable');
+    document.querySelector('label[for="metrics-enable-toggle"]').textContent = t('metrics_enable');
 
     // Metrics port
     advancedLabels[7].textContent = t('metrics_port');
-    document.querySelectorAll('.advanced-content .help-text')[6].textContent = t('metrics_port_help');
+    advancedHelpTexts[6].textContent = t('metrics_port_help');
 
     // Edge Bind IP Address
     advancedLabels[8].textContent = t('edge_bind_address');
-    document.querySelectorAll('.advanced-content .help-text')[7].textContent = t('edge_bind_address_help');
+    advancedHelpTexts[7].textContent = t('edge_bind_address_help');
 
     // Backend TLS Verification Title
     advancedLabels[9].textContent = t('backend_tls_title');
 
     // No TLS Verify
-    document.querySelectorAll('.label-text')[1].textContent = t('no_tls_verify');
-    document.querySelectorAll('.advanced-content .help-text')[8].textContent = t('no_tls_verify_help');
+    document.querySelector('label[for="no-tls-verify-toggle"]').textContent = t('no_tls_verify');
+    advancedHelpTexts[8].textContent = t('no_tls_verify_help');
 
     // Autostart
-    document.querySelectorAll('.label-text')[2].textContent = t('autostart');
+    document.querySelector('label[for="autostart-toggle"]').textContent = t('autostart');
 
     // Autorestart
-    document.querySelectorAll('.label-text')[3].textContent = t('autorestart');
+    document.querySelector('label[for="autorestart-toggle"]').textContent = t('autorestart');
 
     // Logs section
     document.querySelector('.logs-card .card-header h2').textContent = t('system_logs');
@@ -1026,7 +1057,7 @@ function updateTunnelManagerText() {
     formSectionLabels[1].textContent = t('service_section');
     document.querySelector('.public-hostname-advanced .advanced-toggle').textContent = t('additional_app_settings');
     document.getElementById('manager-entry-origin-tls-label').textContent = t('origin_tls');
-    document.querySelector('.public-hostname-advanced .label-text').textContent = t('disable_origin_tls_verify');
+    document.getElementById('manager-entry-no-tls-label').textContent = t('disable_origin_tls_verify');
     elements.managerEntryCancel.textContent = t('cancel_edit');
     elements.managerEntrySubmit.textContent = elements.managerEntryIndex.value === '' ? t('add_rule') : t('update_rule');
 

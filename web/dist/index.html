@@ -30,7 +30,7 @@
                 <h1>CloudFlared UI</h1>
             </div>
             <div class="header-controls">
-                <button id="theme-toggle" class="theme-toggle" title="Toggle Theme">
+                <button id="theme-toggle" class="theme-toggle" type="button" title="Toggle Theme" aria-label="Toggle theme">
                     <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="5"></circle>
                         <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -46,16 +46,18 @@
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
                 </button>
-                <select id="lang-select" class="lang-select">
+                <select id="lang-select" class="lang-select" aria-label="Language">
                     <option value="en">English</option>
                     <option value="zh">中文</option>
                     <option value="ja">日本語</option>
                 </select>
             </div>
-            <span class="version-info" id="version-info" title="Version information">Loading...</span>
-            <div class="status-badge" id="status-badge">
-                <span class="status-dot"></span>
-                <span class="status-text">Checking...</span>
+            <div class="header-meta">
+                <span class="version-info" id="version-info" title="Version information">Loading...</span>
+                <div class="status-badge" id="status-badge" role="status" aria-live="polite">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Checking...</span>
+                </div>
             </div>
         </header>
 
@@ -77,7 +79,7 @@
                         <label for="token-input">Tunnel Token</label>
                         <div class="input-wrapper">
                             <input type="password" id="token-input" placeholder="eyJhIjoi..." spellcheck="false">
-                            <button id="toggle-visibility" class="icon-btn" title="Toggle Visibility">
+                            <button id="toggle-visibility" class="icon-btn" type="button" title="Toggle Visibility" aria-label="Show tunnel token" aria-pressed="false">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                     stroke-width="2">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -147,14 +149,14 @@
                                     <label>Metrics Server</label>
                                     <div class="toggle-container">
                                         <label class="switch">
-                                            <input type="checkbox" id="metrics-enable-toggle">
+                                            <input type="checkbox" id="metrics-enable-toggle" aria-label="Enable metrics server">
                                             <span class="slider round"></span>
                                         </label>
-                                        <span class="label-text">Enable Metrics Server</span>
+                                        <label class="label-text" for="metrics-enable-toggle">Enable Metrics Server</label>
                                     </div>
                                 </div>
 
-                                <div class="form-group">
+                                <div class="form-group" id="metrics-port-field">
                                     <label for="metrics-port-input">Metrics Port</label>
                                     <input type="number" id="metrics-port-input" min="1024" max="65535" value="60123">
                                     <p class="help-text">Port for metrics server</p>
@@ -172,10 +174,10 @@
                                     <label>Backend TLS Verification</label>
                                     <div class="toggle-container">
                                         <label class="switch">
-                                            <input type="checkbox" id="no-tls-verify-toggle">
+                                            <input type="checkbox" id="no-tls-verify-toggle" aria-label="Disable backend TLS verification">
                                             <span class="slider round"></span>
                                         </label>
-                                        <span class="label-text">Disable Backend TLS Verification</span>
+                                        <label class="label-text" for="no-tls-verify-toggle">Disable Backend TLS Verification</label>
                                     </div>
                                     <p class="help-text">Disable TLS certificate verification for backend services (not recommended for production)</p>
                                 </div>
@@ -186,18 +188,18 @@
                     <div class="control-row">
                         <div class="toggle-container">
                             <label class="switch">
-                                <input type="checkbox" id="autostart-toggle">
+                                <input type="checkbox" id="autostart-toggle" aria-label="Auto-start on launch">
                                 <span class="slider round"></span>
                             </label>
-                            <span class="label-text">Auto-start on launch</span>
+                            <label class="label-text" for="autostart-toggle">Auto-start on launch</label>
                         </div>
 
                         <div class="toggle-container">
                             <label class="switch">
-                                <input type="checkbox" id="autorestart-toggle">
+                                <input type="checkbox" id="autorestart-toggle" aria-label="Auto-restart on failure">
                                 <span class="slider round"></span>
                             </label>
-                            <span class="label-text">Auto-restart on failure</span>
+                            <label class="label-text" for="autorestart-toggle">Auto-restart on failure</label>
                         </div>
 
                         <button id="action-btn" class="btn btn-primary">Start Tunnel</button>
@@ -236,10 +238,10 @@
                         <div class="manager-settings-content">
                         <div class="toggle-container manager-enable-row">
                             <label class="switch">
-                                <input type="checkbox" id="manager-enable-toggle">
+                                <input type="checkbox" id="manager-enable-toggle" aria-label="Enable remote management">
                                 <span class="slider round"></span>
                             </label>
-                            <span class="label-text" id="manager-enable-label">Enable remote management</span>
+                            <label class="label-text" id="manager-enable-label" for="manager-enable-toggle">Enable remote management</label>
                         </div>
 
                         <div class="form-row">
@@ -268,7 +270,7 @@
                                 <div class="label-row">
                                     <label for="manager-api-token">API Token</label>
                                     <span class="help-popover">
-                                        <button type="button" id="manager-api-help" class="help-btn" aria-expanded="false" aria-controls="manager-api-help-panel">?</button>
+                                        <button type="button" id="manager-api-help" class="help-btn" aria-label="Cloudflare API permission help" aria-expanded="false" aria-controls="manager-api-help-panel">?</button>
                                         <span id="manager-api-help-panel" class="help-menu" role="tooltip" hidden>
                                             <strong id="manager-api-help-title">Required Cloudflare API permissions</strong>
                                             <span id="manager-api-help-tunnel">Account · Cloudflare Tunnel · Edit</span>
@@ -381,10 +383,10 @@
                                     <label id="manager-entry-origin-tls-label">Origin TLS</label>
                                     <div class="toggle-container">
                                         <label class="switch">
-                                            <input type="checkbox" id="manager-entry-no-tls">
+                                            <input type="checkbox" id="manager-entry-no-tls" aria-label="Disable origin TLS verification">
                                             <span class="slider round"></span>
                                         </label>
-                                        <span class="label-text">Disable origin TLS verification</span>
+                                        <label class="label-text" id="manager-entry-no-tls-label" for="manager-entry-no-tls">Disable origin TLS verification</label>
                                     </div>
                                 </div>
                             </details>
