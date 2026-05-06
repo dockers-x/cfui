@@ -3,6 +3,7 @@ package server
 import (
 	"cfui/internal/config"
 	"cfui/internal/logger"
+	"cfui/internal/mcpbridge"
 	"cfui/internal/pool"
 	"cfui/internal/service"
 	"cfui/internal/tunnelmgr"
@@ -92,15 +93,19 @@ type Server struct {
 	cfgMgr    *config.Manager
 	runner    *service.Runner
 	tunnelMgr *tunnelmgr.Manager
+	mcpSvc    *mcpbridge.Service
 	assets    embed.FS
 	locales   embed.FS
 }
 
 func NewServer(cfgMgr *config.Manager, runner *service.Runner, assets embed.FS, locales embed.FS) *Server {
+	tunnelMgr := tunnelmgr.NewManager(cfgMgr)
+	tokenStore := mcpbridge.NewTokenStore(cfgMgr.Dir())
 	return &Server{
 		cfgMgr:    cfgMgr,
 		runner:    runner,
-		tunnelMgr: tunnelmgr.NewManager(cfgMgr),
+		tunnelMgr: tunnelMgr,
+		mcpSvc:    mcpbridge.NewService(cfgMgr, runner, tunnelMgr, tokenStore),
 		assets:    assets,
 		locales:   locales,
 	}
@@ -123,6 +128,11 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/tunnel-manager/zones", s.handleTunnelManagerZones)
 	mux.HandleFunc("/api/tunnel-manager/entries", s.handleTunnelManagerEntries)
 	mux.HandleFunc("/api/tunnel-manager/entries/", s.handleTunnelManagerEntry)
+	mux.HandleFunc("/api/mcp/status", s.handleMCPStatus)
+	mux.HandleFunc("/api/mcp/tokens", s.handleMCPTokens)
+	mux.HandleFunc("/api/mcp/tokens/", s.handleMCPToken)
+	mux.Handle("/mcp", s.mcpSvc.Handler())
+	mux.Handle("/mcp/", s.mcpSvc.Handler())
 
 	// Static Files
 	// The assets are in "web/dist", so we need to strip that prefix
@@ -135,6 +145,61 @@ func (s *Server) GetHandler() http.Handler {
 
 	// Apply middleware chain: logging -> panic recovery -> handler
 	return ChainMiddleware(mux, LoggingMiddleware, PanicRecoveryMiddleware)
+}
+
+func (s *Server) handleMCPStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	status, err := s.mcpSvc.Status("/mcp")
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, status)
+}
+
+func (s *Server) handleMCPTokens(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		tokens, err := s.mcpSvc.Status("/mcp")
+		if err != nil {
+			writeAPIError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, map[string][]mcpbridge.TokenSummary{"tokens": tokens.Tokens})
+	case http.MethodPost:
+		var req struct {
+			Name  string `json:"name"`
+			Token string `json:"token"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		created, err := s.mcpSvc.CreateToken(req.Name, req.Token)
+		if err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		writeJSON(w, created)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleMCPToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	id := strings.TrimPrefix(r.URL.Path, "/api/mcp/tokens/")
+	if err := s.mcpSvc.DeleteToken(id); err != nil {
+		writeAPIError(w, http.StatusNotFound, err)
+		return
+	}
+	writeJSON(w, map[string]bool{"deleted": true})
 }
 
 func (s *Server) handleTunnelManagerSettings(w http.ResponseWriter, r *http.Request) {

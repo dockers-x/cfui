@@ -15,6 +15,10 @@ const state = {
         config: null,
         zones: [],
         zonesLoaded: false
+    },
+    mcp: {
+        status: null,
+        tokens: []
     }
 };
 
@@ -82,8 +86,21 @@ const elements = {
     managerEntryCancel: document.getElementById('manager-entry-cancel'),
     localTab: document.getElementById('local-tab'),
     managerTab: document.getElementById('manager-tab'),
+    mcpTab: document.getElementById('mcp-tab'),
     localPanel: document.getElementById('local-panel'),
-    managerPanel: document.getElementById('manager-panel')
+    managerPanel: document.getElementById('manager-panel'),
+    mcpPanel: document.getElementById('mcp-panel'),
+    mcpStatus: document.getElementById('mcp-status'),
+    mcpHelpToggle: document.getElementById('mcp-help-toggle'),
+    mcpHelpPanel: document.getElementById('mcp-help-panel'),
+    mcpEndpoint: document.getElementById('mcp-endpoint'),
+    mcpTokenForm: document.getElementById('mcp-token-form'),
+    mcpTokenName: document.getElementById('mcp-token-name'),
+    mcpTokenInput: document.getElementById('mcp-token-input'),
+    mcpTokenCreate: document.getElementById('mcp-token-create'),
+    mcpCreatedToken: document.getElementById('mcp-created-token'),
+    mcpCreatedValue: document.getElementById('mcp-created-value'),
+    mcpTokenList: document.getElementById('mcp-token-list')
 };
 
 // Theme Management
@@ -114,6 +131,7 @@ async function init() {
     await fetchVersion();
     await fetchConfig();
     await fetchTunnelManagerSettings();
+    await fetchMCPStatus();
     await maybeLoadTunnelManagerZones(true);
     if (state.tunnelManager.settings?.enabled && state.tunnelManager.settings?.account_id && state.tunnelManager.settings?.tunnel_id) {
         await loadTunnelManagerConfig();
@@ -159,6 +177,12 @@ elements.managerTab?.addEventListener('click', async () => {
     activateTab('manager');
     await maybeLoadTunnelManagerZones(true);
 });
+elements.mcpTab?.addEventListener('click', async () => {
+    activateTab('mcp');
+    await fetchMCPStatus();
+});
+elements.mcpHelpToggle?.addEventListener('click', () => toggleMCPHelp());
+elements.mcpTokenForm?.addEventListener('submit', createMCPToken);
 elements.managerAuthMode?.addEventListener('change', updateManagerAuthMode);
 elements.managerAPIHelp?.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -246,18 +270,26 @@ elements.langSelect.addEventListener('change', async (e) => {
 
 function activateTab(tab) {
     const managerActive = tab === 'manager';
-    elements.localTab?.classList.toggle('active', !managerActive);
+    const mcpActive = tab === 'mcp';
+    const localActive = !managerActive && !mcpActive;
+    elements.localTab?.classList.toggle('active', localActive);
     elements.managerTab?.classList.toggle('active', managerActive);
-    elements.localTab?.setAttribute('aria-selected', String(!managerActive));
+    elements.mcpTab?.classList.toggle('active', mcpActive);
+    elements.localTab?.setAttribute('aria-selected', String(localActive));
     elements.managerTab?.setAttribute('aria-selected', String(managerActive));
+    elements.mcpTab?.setAttribute('aria-selected', String(mcpActive));
 
     if (elements.localPanel) {
-        elements.localPanel.hidden = managerActive;
-        elements.localPanel.classList.toggle('active', !managerActive);
+        elements.localPanel.hidden = !localActive;
+        elements.localPanel.classList.toggle('active', localActive);
     }
     if (elements.managerPanel) {
         elements.managerPanel.hidden = !managerActive;
         elements.managerPanel.classList.toggle('active', managerActive);
+    }
+    if (elements.mcpPanel) {
+        elements.mcpPanel.hidden = !mcpActive;
+        elements.mcpPanel.classList.toggle('active', mcpActive);
     }
 }
 
@@ -344,6 +376,143 @@ async function saveAllConfig() {
     } catch (err) {
         addLog('Failed to save config', 'error');
     }
+}
+
+async function fetchMCPStatus() {
+    if (!elements.mcpStatus) return;
+    try {
+        const res = await fetch(`${API_BASE}/mcp/status`);
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.mcp.status = data;
+        state.mcp.tokens = data.tokens || [];
+        renderMCPStatus(data);
+        renderMCPTokens();
+    } catch (err) {
+        setMCPStatus(err.message, 'error');
+        addLog(`MCP status failed: ${err.message}`, 'error');
+    }
+}
+
+async function createMCPToken(event) {
+    event.preventDefault();
+    const payload = {
+        name: elements.mcpTokenName.value.trim(),
+        token: elements.mcpTokenInput.value.trim()
+    };
+    try {
+        elements.mcpTokenCreate.disabled = true;
+        const res = await fetch(`${API_BASE}/mcp/tokens`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        elements.mcpTokenName.value = '';
+        elements.mcpTokenInput.value = '';
+        showCreatedMCPToken(data.token);
+        await fetchMCPStatus();
+        addLog(t('mcp_token_created'), 'system');
+    } catch (err) {
+        setMCPStatus(err.message, 'error');
+        addLog(`MCP token create failed: ${err.message}`, 'error');
+    } finally {
+        elements.mcpTokenCreate.disabled = false;
+    }
+}
+
+async function deleteMCPToken(id) {
+    try {
+        const res = await fetch(`${API_BASE}/mcp/tokens/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(await responseError(res));
+        await fetchMCPStatus();
+        addLog(t('mcp_token_deleted'), 'system');
+    } catch (err) {
+        setMCPStatus(err.message, 'error');
+        addLog(`MCP token delete failed: ${err.message}`, 'error');
+    }
+}
+
+function renderMCPStatus(status) {
+    const endpoint = status.endpoint || '/mcp';
+    const absolute = `${window.location.origin}${endpoint}`;
+    elements.mcpEndpoint.value = absolute;
+    updateMCPConfigExample(absolute);
+    setMCPStatus(status.enabled ? t('mcp_status_enabled') : t('mcp_status_disabled'), status.enabled ? 'ready' : 'disabled');
+}
+
+function renderMCPTokens() {
+    if (!elements.mcpTokenList) return;
+    elements.mcpTokenList.innerHTML = '';
+    const tokens = state.mcp.tokens || [];
+    if (tokens.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = t('mcp_no_tokens');
+        elements.mcpTokenList.appendChild(empty);
+        return;
+    }
+
+    tokens.forEach(token => {
+        const row = document.createElement('div');
+        row.className = 'rule-row';
+        const content = document.createElement('div');
+        content.className = 'rule-content';
+        const title = document.createElement('div');
+        title.className = 'rule-title';
+        title.textContent = token.name || t('mcp_token');
+        const detail = document.createElement('div');
+        detail.className = 'rule-detail';
+        const createdAt = token.created_at ? new Date(token.created_at).toLocaleString() : '';
+        detail.textContent = createdAt ? `${token.masked} · ${createdAt}` : token.masked;
+        content.append(title, detail);
+
+        const actions = document.createElement('div');
+        actions.className = 'rule-actions';
+        const del = document.createElement('button');
+        del.className = 'btn btn-sm btn-ghost';
+        del.type = 'button';
+        del.textContent = t('delete');
+        del.addEventListener('click', () => deleteMCPToken(token.id));
+        actions.append(del);
+        row.append(content, actions);
+        elements.mcpTokenList.appendChild(row);
+    });
+}
+
+function showCreatedMCPToken(token) {
+    if (!elements.mcpCreatedToken || !elements.mcpCreatedValue) return;
+    elements.mcpCreatedValue.textContent = token || '';
+    elements.mcpCreatedToken.hidden = !token;
+}
+
+function setMCPStatus(message, type = 'disabled') {
+    if (!elements.mcpStatus) return;
+    elements.mcpStatus.textContent = message;
+    elements.mcpStatus.className = `manager-status ${type}`;
+}
+
+function toggleMCPHelp(force) {
+    if (!elements.mcpHelpToggle || !elements.mcpHelpPanel) return;
+    const show = force !== undefined ? force : elements.mcpHelpPanel.hidden;
+    elements.mcpHelpPanel.hidden = !show;
+    elements.mcpHelpToggle.setAttribute('aria-expanded', String(show));
+}
+
+function updateMCPConfigExample(endpoint) {
+    const example = document.getElementById('mcp-config-example');
+    if (!example) return;
+    example.textContent = `{
+  "mcpServers": {
+    "cfui": {
+      "url": "${endpoint}",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN"
+      }
+    }
+  }
+}`;
 }
 
 async function fetchTunnelManagerSettings() {
@@ -898,6 +1067,7 @@ function updateUIText() {
     document.querySelector('h1').textContent = t('app_title');
     if (elements.localTab) elements.localTab.textContent = t('local_tunnel_tab');
     if (elements.managerTab) elements.managerTab.textContent = t('remote_tunnel_tab');
+    if (elements.mcpTab) elements.mcpTab.textContent = t('mcp_tab');
 
     // Update status text
     if (state.isRunning) {
@@ -991,9 +1161,35 @@ function updateUIText() {
     // Update stream button text
     updateStreamButtonState();
     updateTunnelManagerText();
+    updateMCPText();
 
     // Re-render all logs with new language
     rerenderAllLogs();
+}
+
+function updateMCPText() {
+    if (!elements.mcpPanel) return;
+    document.getElementById('mcp-title').textContent = t('mcp_access');
+    document.getElementById('mcp-subtitle').textContent = t('mcp_subtitle');
+    document.getElementById('mcp-token-title').textContent = t('mcp_token_title');
+    document.getElementById('mcp-token-help').textContent = t('mcp_token_help');
+    elements.mcpHelpToggle.textContent = t('help');
+    document.getElementById('mcp-help-title').textContent = t('mcp_help_title');
+    document.getElementById('mcp-help-summary').textContent = t('mcp_help_summary');
+    document.getElementById('mcp-help-tools').textContent = t('mcp_help_tools');
+    document.querySelector('label[for="mcp-endpoint"]').textContent = t('mcp_endpoint');
+    document.querySelector('label[for="mcp-token-name"]').textContent = t('mcp_token_name');
+    elements.mcpTokenName.placeholder = t('mcp_token_name_placeholder');
+    document.querySelector('label[for="mcp-token-input"]').textContent = t('mcp_token_value');
+    elements.mcpTokenInput.placeholder = t('mcp_token_value_placeholder');
+    document.getElementById('mcp-token-input-help').textContent = t('mcp_token_input_help');
+    elements.mcpTokenCreate.textContent = t('mcp_create_token');
+    document.getElementById('mcp-created-title').textContent = t('mcp_created_title');
+    document.getElementById('mcp-created-warning').textContent = t('mcp_created_warning');
+    if (state.mcp.status) {
+        renderMCPStatus(state.mcp.status);
+    }
+    renderMCPTokens();
 }
 
 function updateTunnelManagerText() {

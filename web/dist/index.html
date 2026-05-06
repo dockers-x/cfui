@@ -65,6 +65,7 @@
             <nav class="app-tabs" role="tablist" aria-label="Configuration sections">
                 <button id="local-tab" class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="local-panel">Tunnel Configuration</button>
                 <button id="manager-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="manager-panel">Remote Tunnel Manager</button>
+                <button id="mcp-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="mcp-panel">MCP</button>
             </nav>
 
             <section id="local-panel" class="tab-panel active" role="tabpanel" aria-labelledby="local-tab">
@@ -396,6 +397,74 @@
                             </div>
                         </form>
                     </div>
+                </div>
+            </div>
+            </section>
+            <section id="mcp-panel" class="tab-panel" role="tabpanel" aria-labelledby="mcp-tab" hidden>
+            <div class="card mcp-card">
+                <div class="card-header stacked-header">
+                    <div>
+                        <h2 id="mcp-title">MCP Access</h2>
+                        <p class="subtitle" id="mcp-subtitle">Let AI clients operate cfui through the Model Context Protocol.</p>
+                    </div>
+                    <span class="manager-status" id="mcp-status">Disabled</span>
+                </div>
+                <div class="card-body">
+                    <div class="section-heading">
+                        <div>
+                            <h3 id="mcp-token-title">Access tokens</h3>
+                            <p class="help-text" id="mcp-token-help">Tokens are shown once when created. The list only shows masked values.</p>
+                        </div>
+                        <button id="mcp-help-toggle" class="btn btn-secondary" type="button" aria-expanded="false" aria-controls="mcp-help-panel">Help</button>
+                    </div>
+
+                    <div id="mcp-help-panel" class="mcp-help-panel" hidden>
+                        <h3 id="mcp-help-title">MCP configuration</h3>
+                        <p id="mcp-help-summary">Connect an MCP client to the endpoint below and use a bearer token generated here.</p>
+                        <pre id="mcp-config-example">{
+  "mcpServers": {
+    "cfui": {
+      "url": "http://localhost:14333/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN"
+      }
+    }
+  }
+}</pre>
+                        <p id="mcp-help-tools">Available tools include status, config update, tunnel start/stop, recent logs, and remote tunnel ingress rule management.</p>
+                    </div>
+
+                    <div class="mcp-endpoint-row">
+                        <div class="form-group">
+                            <label for="mcp-endpoint">Endpoint</label>
+                            <input type="text" id="mcp-endpoint" readonly value="/mcp">
+                        </div>
+                    </div>
+
+                    <form id="mcp-token-form" class="entry-form mcp-token-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="mcp-token-name">Name</label>
+                                <input type="text" id="mcp-token-name" placeholder="Claude Desktop" spellcheck="false">
+                            </div>
+                            <div class="form-group">
+                                <label for="mcp-token-input">Token</label>
+                                <input type="password" id="mcp-token-input" placeholder="Leave blank to generate" spellcheck="false">
+                                <p class="help-text" id="mcp-token-input-help">Paste your own token or leave blank to generate a strong token.</p>
+                            </div>
+                        </div>
+                        <div class="manager-actions">
+                            <button type="submit" id="mcp-token-create" class="btn btn-primary">Create Token</button>
+                        </div>
+                    </form>
+
+                    <div id="mcp-created-token" class="created-token" hidden>
+                        <strong id="mcp-created-title">Copy this token now</strong>
+                        <p id="mcp-created-warning">It will not be shown again after you leave this page.</p>
+                        <code id="mcp-created-value"></code>
+                    </div>
+
+                    <div class="rules-list mcp-token-list" id="mcp-token-list"></div>
                 </div>
             </div>
             </section>

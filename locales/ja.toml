@@ -438,3 +438,75 @@ other = "可能ならアカウントスコープの API Token を使ってくだ
 
 [remote_manager_config]
 other = "リモート管理設定"
+
+[mcp_tab]
+other = "MCP"
+
+[mcp_access]
+other = "MCP アクセス"
+
+[mcp_subtitle]
+other = "AI クライアントが Model Context Protocol 経由で cfui を操作できるようにします。"
+
+[mcp_token_title]
+other = "アクセストークン"
+
+[mcp_token_help]
+other = "トークンは作成時に一度だけ表示され、一覧では先頭と末尾のみ表示されます。"
+
+[help]
+other = "ヘルプ"
+
+[mcp_help_title]
+other = "MCP 設定"
+
+[mcp_help_summary]
+other = "MCP クライアントを下記エンドポイントに接続し、ここで生成した Bearer Token を使います。"
+
+[mcp_help_tools]
+other = "利用可能なツールには、状態確認、設定更新、トンネル開始/停止、最近のログ、リモートトンネル ingress ルール管理があります。"
+
+[mcp_endpoint]
+other = "エンドポイント"
+
+[mcp_token_name]
+other = "名前"
+
+[mcp_token_name_placeholder]
+other = "Claude Desktop"
+
+[mcp_token_value]
+other = "Token"
+
+[mcp_token_value_placeholder]
+other = "空なら自動生成"
+
+[mcp_token_input_help]
+other = "任意の Token を貼り付けるか、空のまま強い Token を生成します。"
+
+[mcp_create_token]
+other = "Token 作成"
+
+[mcp_created_title]
+other = "今すぐこの Token をコピー"
+
+[mcp_created_warning]
+other = "このページを離れると再表示されません。"
+
+[mcp_status_enabled]
+other = "有効"
+
+[mcp_status_disabled]
+other = "無効"
+
+[mcp_no_tokens]
+other = "MCP Token はまだありません。AI クライアント接続前に作成してください。"
+
+[mcp_token]
+other = "MCP Token"
+
+[mcp_token_created]
+other = "MCP Token を作成しました"
+
+[mcp_token_deleted]
+other = "MCP Token を削除しました"

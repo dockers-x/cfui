@@ -196,3 +196,7 @@ func (m *Manager) Get() Config {
 	defer m.mu.RUnlock()
 	return m.cfg
 }
+
+func (m *Manager) Dir() string {
+	return filepath.Dir(m.path)
+}

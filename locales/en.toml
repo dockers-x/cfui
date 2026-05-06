@@ -438,3 +438,75 @@ other = "Use an account-scoped API Token when possible. Email + Global API Key i
 
 [remote_manager_config]
 other = "Remote manager configuration"
+
+[mcp_tab]
+other = "MCP"
+
+[mcp_access]
+other = "MCP Access"
+
+[mcp_subtitle]
+other = "Let AI clients operate cfui through the Model Context Protocol."
+
+[mcp_token_title]
+other = "Access tokens"
+
+[mcp_token_help]
+other = "Tokens are shown once when created. The list only shows masked values."
+
+[help]
+other = "Help"
+
+[mcp_help_title]
+other = "MCP configuration"
+
+[mcp_help_summary]
+other = "Connect an MCP client to the endpoint below and use a bearer token generated here."
+
+[mcp_help_tools]
+other = "Available tools include status, config update, tunnel start/stop, recent logs, and remote tunnel ingress rule management."
+
+[mcp_endpoint]
+other = "Endpoint"
+
+[mcp_token_name]
+other = "Name"
+
+[mcp_token_name_placeholder]
+other = "Claude Desktop"
+
+[mcp_token_value]
+other = "Token"
+
+[mcp_token_value_placeholder]
+other = "Leave blank to generate"
+
+[mcp_token_input_help]
+other = "Paste your own token or leave blank to generate a strong token."
+
+[mcp_create_token]
+other = "Create Token"
+
+[mcp_created_title]
+other = "Copy this token now"
+
+[mcp_created_warning]
+other = "It will not be shown again after you leave this page."
+
+[mcp_status_enabled]
+other = "Enabled"
+
+[mcp_status_disabled]
+other = "Disabled"
+
+[mcp_no_tokens]
+other = "No MCP tokens yet. Create one before connecting an AI client."
+
+[mcp_token]
+other = "MCP Token"
+
+[mcp_token_created]
+other = "MCP token created"
+
+[mcp_token_deleted]
+other = "MCP token deleted"

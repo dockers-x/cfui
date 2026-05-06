@@ -1195,6 +1195,60 @@ input:checked+.slider:before {
     text-align: center;
 }
 
+.mcp-help-panel,
+.created-token {
+    margin-bottom: 20px;
+    padding: 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--advanced-bg);
+}
+
+.mcp-help-panel h3,
+.created-token strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.mcp-help-panel pre {
+    margin: 12px 0;
+    padding: 14px;
+    border-radius: 10px;
+    background: var(--logs-bg);
+    color: var(--logs-text);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    overflow-x: auto;
+}
+
+.mcp-endpoint-row {
+    margin-bottom: 18px;
+}
+
+.mcp-token-form {
+    margin-bottom: 20px;
+}
+
+.created-token {
+    border-color: rgba(5, 150, 105, 0.45);
+}
+
+.created-token code {
+    display: block;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--logs-bg);
+    color: var(--logs-text);
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+}
+
+.mcp-token-list {
+    max-height: 260px;
+    margin-bottom: 0;
+}
+
 @media (max-width: 768px) {
     .logs-card .card-header,
     .logs-controls,
