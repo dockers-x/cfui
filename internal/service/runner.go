@@ -12,6 +12,7 @@ import (
 
 	"cfui/version"
 
+	"github.com/cloudflare/backoff"
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/cliutil"
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/tunnel"
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/updater"
@@ -58,6 +59,13 @@ var (
 		"invalid configuration",
 		"missing required",
 	}
+)
+
+const (
+	restartBackoffBaseDelay  = 5 * time.Second
+	restartBackoffMaxDelay   = 60 * time.Second
+	restartBackoffResetAfter = 5 * time.Minute
+	maxRestartAttempts       = 10
 )
 
 // safeRegisterer wraps a Prometheus registry and gracefully handles duplicate registrations
@@ -108,6 +116,7 @@ type Runner struct {
 	lastError         error
 	restartCount      int
 	lastRestart       time.Time
+	restartBackoff    *backoff.Backoff
 	configFile        string // Track temporary config file for cleanup
 	gracefulShutdownC chan struct{}
 	initOnce          sync.Once            // Ensure tunnel.Init() is called only once
@@ -125,9 +134,27 @@ func NewRunner(cfgMgr *config.Manager) *Runner {
 		cfgMgr:            cfgMgr,
 		gracefulShutdownC: make(chan struct{}),
 		protocolFailures:  make(map[string]int),
+		restartBackoff:    newRestartBackoff(),
 		currentProtocol:   "auto", // Start with auto
 	}
 	return r
+}
+
+func newBackoff(interval, max, decay time.Duration, noJitter bool) *backoff.Backoff {
+	var b *backoff.Backoff
+	if noJitter {
+		b = backoff.NewWithoutJitter(max, interval)
+	} else {
+		b = backoff.New(max, interval)
+	}
+	if decay > 0 {
+		b.SetDecay(decay)
+	}
+	return b
+}
+
+func newRestartBackoff() *backoff.Backoff {
+	return newBackoff(restartBackoffBaseDelay, restartBackoffMaxDelay, restartBackoffResetAfter, true)
 }
 
 // initTunnel initializes the cloudflared tunnel package with required build info
@@ -349,6 +376,9 @@ func (r *Runner) recordProtocolSuccess() {
 
 		// Also reset restart count on successful connection
 		r.restartCount = 0
+		if r.restartBackoff != nil {
+			r.restartBackoff.Reset()
+		}
 
 		// If we've had a successful connection for a while (implied by clean exit),
 		// clear all protocol failure history to give other protocols a fresh chance
@@ -646,24 +676,25 @@ func (r *Runner) checkAutoRestart() {
 	}
 
 	r.mu.Lock()
-	// Reset restart count if last restart was more than 5 minutes ago
-	if time.Since(r.lastRestart) > 5*time.Minute {
-		r.restartCount = 0
+	if r.restartBackoff == nil {
+		r.restartBackoff = newRestartBackoff()
 	}
 
-	// Exponential backoff: 5s, 10s, 20s, 40s, max 60s
-	delay := time.Duration(5*(1<<r.restartCount)) * time.Second
-	if delay > 60*time.Second {
-		delay = 60 * time.Second
+	// Reset restart state if the last retry was long enough ago to consider
+	// the next failure a fresh incident.
+	if time.Since(r.lastRestart) > restartBackoffResetAfter {
+		r.restartCount = 0
+		r.restartBackoff.Reset()
 	}
 
 	// Limit maximum restart attempts
-	if r.restartCount >= 10 {
+	if r.restartCount >= maxRestartAttempts {
 		logger.Sugar.Warnf("Maximum restart attempts reached (%d), stopping auto-restart", r.restartCount)
 		r.mu.Unlock()
 		return
 	}
 
+	delay := r.restartBackoff.Duration()
 	r.restartCount++
 	r.lastRestart = time.Now()
 	attemptNum := r.restartCount

@@ -12,7 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudflare/backoff"
 	cloudflare "github.com/cloudflare/cloudflare-go"
+)
+
+const (
+	ipSourceRetryBaseDelay = 1 * time.Second
+	ipSourceRetryMaxDelay  = 10 * time.Second
 )
 
 // Service manages periodic IP detection and DNS record synchronization.
@@ -32,25 +38,25 @@ type Service struct {
 
 // SyncResult records the outcome of a single DNS sync operation.
 type SyncResult struct {
-	Time      time.Time `json:"time"`
-	Hostname  string    `json:"hostname"`
-	Type      string    `json:"type"`
-	IP        string    `json:"ip"`
-	Success   bool      `json:"success"`
-	Message   string    `json:"message"`
+	Time     time.Time `json:"time"`
+	Hostname string    `json:"hostname"`
+	Type     string    `json:"type"`
+	IP       string    `json:"ip"`
+	Success  bool      `json:"success"`
+	Message  string    `json:"message"`
 }
 
 // StatusResponse is the public status of the DDNS service.
 type StatusResponse struct {
-	Enabled    bool         `json:"enabled"`
-	Running    bool         `json:"running"`
-	CurrentV4  string       `json:"current_v4"`
-	CurrentV6  string       `json:"current_v6"`
-	LastCheck  string       `json:"last_check"`
-	LastError  string       `json:"last_error,omitempty"`
-	Results    []SyncResult `json:"results"`
-	NextCheck  string       `json:"next_check,omitempty"`
-	Records    int          `json:"records"`
+	Enabled   bool         `json:"enabled"`
+	Running   bool         `json:"running"`
+	CurrentV4 string       `json:"current_v4"`
+	CurrentV6 string       `json:"current_v6"`
+	LastCheck string       `json:"last_check"`
+	LastError string       `json:"last_error,omitempty"`
+	Results   []SyncResult `json:"results"`
+	NextCheck string       `json:"next_check,omitempty"`
+	Records   int          `json:"records"`
 }
 
 // ConfigResponse wraps DDNS config for the frontend.
@@ -61,12 +67,12 @@ type ConfigResponse struct {
 
 // SaveRequest is the request body for updating DDNS config.
 type SaveRequest struct {
-	Enabled      bool             `json:"enabled"`
-	IPSources    []config.IPSource `json:"ip_sources"`
+	Enabled      bool                `json:"enabled"`
+	IPSources    []config.IPSource   `json:"ip_sources"`
 	Records      []config.DDNSRecord `json:"records"`
-	IntervalMins int              `json:"interval_mins"`
-	OnlyOnChange bool             `json:"only_on_change"`
-	MaxRetries   int              `json:"max_retries"`
+	IntervalMins int                 `json:"interval_mins"`
+	OnlyOnChange bool                `json:"only_on_change"`
+	MaxRetries   int                 `json:"max_retries"`
 }
 
 // AddRecordRequest is the request body for adding DDNS records.
@@ -75,8 +81,8 @@ type AddRecordRequest struct {
 	Subdomain string `json:"subdomain"` // e.g., "home"
 	ZoneID    string `json:"zone_id"`
 	ZoneName  string `json:"zone_name"`
-	IPv4      bool   `json:"ipv4"`    // create A record
-	IPv6      bool   `json:"ipv6"`    // create AAAA record
+	IPv4      bool   `json:"ipv4"` // create A record
+	IPv6      bool   `json:"ipv6"` // create AAAA record
 	Proxied   bool   `json:"proxied"`
 	TTL       int    `json:"ttl"`
 }
@@ -173,12 +179,12 @@ func (s *Service) DetectIPs(ctx context.Context) (v4, v6 string, err error) {
 
 	go func() {
 		defer wg.Done()
-		v4, v4Err = s.detectIP(ctx, sources, "ipv4", "auto")
+		v4, v4Err = s.detectIP(ctx, sources, "ipv4")
 	}()
 
 	go func() {
 		defer wg.Done()
-		v6, v6Err = s.detectIP(ctx, sources, "ipv6", "auto")
+		v6, v6Err = s.detectIP(ctx, sources, "ipv6")
 	}()
 
 	wg.Wait()
@@ -190,13 +196,51 @@ func (s *Service) DetectIPs(ctx context.Context) (v4, v6 string, err error) {
 	return v4, v6, nil
 }
 
-func (s *Service) detectIP(ctx context.Context, sources []config.IPSource, targetType, fallback string) (string, error) {
+func newIPSourceRetryBackoff() *backoff.Backoff {
+	return backoff.NewWithoutJitter(ipSourceRetryMaxDelay, ipSourceRetryBaseDelay)
+}
+
+func waitForRetry(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+func validateDetectedIP(ip, targetType string) (string, error) {
+	ip = strings.TrimSpace(ip)
+	if ip == "" {
+		return "", fmt.Errorf("empty IP response")
+	}
+
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return "", fmt.Errorf("invalid IP response: %q", ip)
+	}
+
+	if targetType == "ipv4" && parsed.To4() == nil {
+		return "", fmt.Errorf("expected IPv4 response, got %q", ip)
+	}
+	if targetType == "ipv6" && parsed.To4() != nil {
+		return "", fmt.Errorf("expected IPv6 response, got %q", ip)
+	}
+
+	return ip, nil
+}
+
+func (s *Service) detectIP(ctx context.Context, sources []config.IPSource, targetType string) (string, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	maxRetries := s.cfgMgr.Get().DDNS.MaxRetries
 	if maxRetries <= 0 {
 		maxRetries = 3
 	}
 
+	var lastErr error
 	for _, src := range sources {
 		srcType := src.IPType
 		if srcType == "" {
@@ -206,27 +250,32 @@ func (s *Service) detectIP(ctx context.Context, sources []config.IPSource, targe
 			continue
 		}
 
+		retryBackoff := newIPSourceRetryBackoff()
 		for attempt := 0; attempt < maxRetries; attempt++ {
 			ip, err := s.fetchIP(ctx, client, src.URL)
-			if err != nil {
-				continue
+			if err == nil {
+				ip, err = validateDetectedIP(ip, targetType)
+				if err == nil {
+					return ip, nil
+				}
 			}
-			ip = strings.TrimSpace(ip)
-			if ip == "" {
-				continue
+
+			lastErr = err
+			if attempt == maxRetries-1 {
+				break
 			}
-			parsed := net.ParseIP(ip)
-			if parsed == nil {
-				continue
+
+			if waitErr := waitForRetry(ctx, retryBackoff.Duration()); waitErr != nil {
+				return "", waitErr
 			}
-			if targetType == "ipv4" && parsed.To4() == nil {
-				continue
-			}
-			if targetType == "ipv6" && parsed.To4() != nil {
-				continue
-			}
-			return ip, nil
 		}
+
+		if lastErr != nil {
+			logger.Sugar.Debugf("DDNS %s source %s exhausted after %d attempts: %v", targetType, src.URL, maxRetries, lastErr)
+		}
+	}
+	if lastErr != nil {
+		return "", fmt.Errorf("no %s address found from %d sources: %w", targetType, len(sources), lastErr)
 	}
 	return "", fmt.Errorf("no %s address found from %d sources", targetType, len(sources))
 }
@@ -470,7 +519,7 @@ func (s *Service) GetConfig() ConfigResponse {
 	cfg := s.cfgMgr.Get()
 	effective := cfg.EffectiveTunnelManagement()
 	return ConfigResponse{
-		DDNSConfig:    cfg.DDNS,
+		DDNSConfig:     cfg.DDNS,
 		HasCredentials: effective.APIToken != "" || (effective.APIEmail != "" && effective.APIKey != ""),
 	}
 }
