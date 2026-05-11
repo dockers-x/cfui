@@ -2,6 +2,10 @@ package config
 
 import (
 	"cfui/internal/logger"
+	"cfui/internal/persist"
+	"cfui/internal/persist/ent"
+	"cfui/internal/persist/ent/appconfig"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -67,6 +71,7 @@ type DDNSRecord struct {
 	ZoneID   string `json:"zone_id"`   // Cloudflare zone ID
 	ZoneName string `json:"zone_name"` // zone name for display
 	Type     string `json:"type"`      // "A" or "AAAA"
+	Value    string `json:"value"`     // "{IPV4}"/"{IPV6}" placeholder or a fixed IP
 	Proxied  bool   `json:"proxied"`
 	TTL      int    `json:"ttl"` // 1 = Auto
 }
@@ -185,33 +190,34 @@ func parseBool(v string) bool {
 }
 
 type Manager struct {
-	path string
-	mu   sync.RWMutex
-	cfg  Config
+	dir    string
+	client *ent.Client
+	mu     sync.RWMutex
+	cfg    Config
 }
 
 func NewManager(dir string) (*Manager, error) {
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	client, err := persist.OpenClient(dir)
+	if err != nil {
 		return nil, err
 	}
 
-	path := filepath.Join(dir, "config.json")
 	m := &Manager{
-		path: path,
-		cfg:  DefaultConfig(),
+		dir:    dir,
+		client: client,
+		cfg:    DefaultConfig(),
 	}
 
 	if err := m.Load(); err != nil {
-		if os.IsNotExist(err) {
-			logger.Sugar.Infof("Config file not found, creating default config at %s", path)
-			if saveErr := m.Save(m.cfg); saveErr != nil {
-				logger.Sugar.Errorf("Failed to save default config: %v", saveErr)
-			}
-		} else {
+		if logger.Sugar != nil {
 			logger.Sugar.Errorf("Failed to load config: %v", err)
 		}
-	} else {
-		logger.Sugar.Infof("Loaded configuration from %s", path)
+		_ = client.Close()
+		return nil, err
+	}
+
+	if logger.Sugar != nil {
+		logger.Sugar.Infof("Loaded configuration from %s", persist.DBPath(dir))
 	}
 
 	return m, nil
@@ -221,33 +227,30 @@ func (m *Manager) Load() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	data, err := os.ReadFile(m.path)
+	cfg, err := m.loadLocked(context.Background())
 	if err != nil {
 		return err
 	}
 
-	m.cfg = DefaultConfig()
-	return json.Unmarshal(data, &m.cfg)
+	m.cfg = cfg
+	return nil
 }
 
 func (m *Manager) Save(cfg Config) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if err := m.saveLocked(context.Background(), cfg); err != nil {
+		if logger.Sugar != nil {
+			logger.Sugar.Errorf("Failed to write config: %v", err)
+		}
+		return err
+	}
+
 	m.cfg = cfg
-
-	data, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		logger.Sugar.Errorf("Failed to marshal config: %v", err)
-		return err
+	if logger.Sugar != nil {
+		logger.Sugar.Debugf("Configuration saved successfully to %s", persist.DBPath(m.dir))
 	}
-
-	if err := os.WriteFile(m.path, data, 0644); err != nil {
-		logger.Sugar.Errorf("Failed to write config file: %v", err)
-		return err
-	}
-
-	logger.Sugar.Debugf("Configuration saved successfully to %s", m.path)
 	return nil
 }
 
@@ -258,5 +261,94 @@ func (m *Manager) Get() Config {
 }
 
 func (m *Manager) Dir() string {
-	return filepath.Dir(m.path)
+	return m.dir
+}
+
+const defaultConfigKey = "default"
+
+func (m *Manager) loadLocked(ctx context.Context) (Config, error) {
+	row, err := m.client.AppConfig.Query().Where(appconfig.Key(defaultConfigKey)).Only(ctx)
+	if err == nil {
+		return decodeConfig(row.Payload)
+	}
+	if !ent.IsNotFound(err) {
+		return Config{}, err
+	}
+
+	legacyPath := filepath.Join(m.dir, "config.json")
+	cfg, migrated, err := loadLegacyConfig(legacyPath)
+	if err != nil {
+		return Config{}, err
+	}
+	if migrated {
+		if err := m.saveLocked(ctx, cfg); err != nil {
+			return Config{}, err
+		}
+		if err := persist.MarkLegacyMigrated(legacyPath); err != nil && !os.IsNotExist(err) {
+			if logger.Sugar != nil {
+				logger.Sugar.Warnf("Failed to rename migrated legacy config %s: %v", legacyPath, err)
+			}
+		}
+		if logger.Sugar != nil {
+			logger.Sugar.Infof("Migrated legacy config from %s to %s", legacyPath, persist.DBPath(m.dir))
+		}
+		return cfg, nil
+	}
+
+	cfg = DefaultConfig()
+	if err := m.saveLocked(ctx, cfg); err != nil {
+		return Config{}, err
+	}
+	if logger.Sugar != nil {
+		logger.Sugar.Infof("Initialized default configuration in %s", persist.DBPath(m.dir))
+	}
+	return cfg, nil
+}
+
+func (m *Manager) saveLocked(ctx context.Context, cfg Config) error {
+	payload, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	row, err := m.client.AppConfig.Query().Where(appconfig.Key(defaultConfigKey)).Only(ctx)
+	if ent.IsNotFound(err) {
+		_, err = m.client.AppConfig.Create().
+			SetKey(defaultConfigKey).
+			SetPayload(payload).
+			Save(ctx)
+		return err
+	}
+	if err != nil {
+		return err
+	}
+
+	_, err = m.client.AppConfig.UpdateOneID(row.ID).
+		SetPayload(payload).
+		Save(ctx)
+	return err
+}
+
+func loadLegacyConfig(path string) (Config, bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return Config{}, false, nil
+		}
+		return Config{}, false, err
+	}
+
+	cfg := DefaultConfig()
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return Config{}, false, err
+	}
+	return cfg, true, nil
+}
+
+func decodeConfig(payload []byte) (Config, error) {
+	cfg := DefaultConfig()
+	if err := json.Unmarshal(payload, &cfg); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
 }

@@ -821,18 +821,32 @@ func (s *Server) handleDDNSRecords(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	if req.ZoneName == "" {
+		writeAPIError(w, http.StatusBadRequest, errors.New("zone_name is required"))
+		return
+	}
 
 	hostname := req.Subdomain + "." + req.ZoneName
 	if req.IPv4 {
+		value, err := ddns.ValidateRecordValue("A", req.IPv4Value)
+		if err != nil {
+			writeAPIError(w, http.StatusBadRequest, fmt.Errorf("ipv4_value: %w", err))
+			return
+		}
 		cfg.DDNS.Records = append(cfg.DDNS.Records, config.DDNSRecord{
 			Name: hostname, ZoneID: req.ZoneID, ZoneName: req.ZoneName,
-			Type: "A", Proxied: req.Proxied, TTL: req.TTL,
+			Type: "A", Value: value, Proxied: req.Proxied, TTL: req.TTL,
 		})
 	}
 	if req.IPv6 {
+		value, err := ddns.ValidateRecordValue("AAAA", req.IPv6Value)
+		if err != nil {
+			writeAPIError(w, http.StatusBadRequest, fmt.Errorf("ipv6_value: %w", err))
+			return
+		}
 		cfg.DDNS.Records = append(cfg.DDNS.Records, config.DDNSRecord{
 			Name: hostname, ZoneID: req.ZoneID, ZoneName: req.ZoneName,
-			Type: "AAAA", Proxied: req.Proxied, TTL: req.TTL,
+			Type: "AAAA", Value: value, Proxied: req.Proxied, TTL: req.TTL,
 		})
 	}
 	if err := s.cfgMgr.Save(cfg); err != nil {
@@ -865,13 +879,32 @@ func (s *Server) handleDDNSRecord(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		rec := &cfg.DDNS.Records[index]
-		if req.ZoneName == "" {
-			req.ZoneName = rec.ZoneName
+		subdomain := strings.TrimSpace(req.Subdomain)
+		if subdomain == "" {
+			subdomain = ddnsRecordSubdomain(rec.Name, rec.ZoneName)
 		}
-		hostname := strings.TrimSpace(req.Subdomain) + "." + strings.TrimSpace(req.ZoneName)
+		zoneID := strings.TrimSpace(req.ZoneID)
+		if zoneID == "" {
+			zoneID = rec.ZoneID
+		}
+		zoneName := strings.TrimSpace(req.ZoneName)
+		if zoneName == "" {
+			zoneName = rec.ZoneName
+		}
+		if zoneName == "" || zoneID == "" {
+			writeAPIError(w, http.StatusBadRequest, errors.New("zone_id and zone_name are required"))
+			return
+		}
+		hostname := subdomain + "." + zoneName
+		value, err := ddns.ValidateRecordValue(rec.Type, req.Value)
+		if err != nil {
+			writeAPIError(w, http.StatusBadRequest, fmt.Errorf("value: %w", err))
+			return
+		}
 		rec.Name = hostname
-		rec.ZoneID = strings.TrimSpace(req.ZoneID)
-		rec.ZoneName = strings.TrimSpace(req.ZoneName)
+		rec.ZoneID = zoneID
+		rec.ZoneName = zoneName
+		rec.Value = value
 		rec.Proxied = req.Proxied
 		rec.TTL = req.TTL
 		if rec.TTL <= 0 {
@@ -881,6 +914,7 @@ func (s *Server) handleDDNSRecord(w http.ResponseWriter, r *http.Request) {
 			writeAPIError(w, http.StatusInternalServerError, err)
 			return
 		}
+		s.ddnsSvc.Restart()
 		writeJSON(w, s.ddnsSvc.GetConfig())
 	case http.MethodDelete:
 		cfg.DDNS.Records = append(cfg.DDNS.Records[:index], cfg.DDNS.Records[index+1:]...)
@@ -893,4 +927,18 @@ func (s *Server) handleDDNSRecord(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func ddnsRecordSubdomain(hostname, zoneName string) string {
+	hostname = strings.TrimSpace(hostname)
+	zoneName = strings.TrimSpace(zoneName)
+	if hostname == "" || zoneName == "" {
+		return hostname
+	}
+
+	suffix := "." + zoneName
+	if strings.HasSuffix(hostname, suffix) {
+		return strings.TrimSuffix(hostname, suffix)
+	}
+	return hostname
 }

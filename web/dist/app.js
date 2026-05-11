@@ -152,6 +152,10 @@ const elements = {
     ddnsRecordZoneSelect: document.getElementById('ddns-record-zone-select'),
     ddnsRecordIPv4: document.getElementById('ddns-record-ipv4'),
     ddnsRecordIPv6: document.getElementById('ddns-record-ipv6'),
+    ddnsRecordIPv4ValueGroup: document.getElementById('ddns-record-ipv4-value-group'),
+    ddnsRecordIPv6ValueGroup: document.getElementById('ddns-record-ipv6-value-group'),
+    ddnsRecordIPv4Value: document.getElementById('ddns-record-ipv4-value'),
+    ddnsRecordIPv6Value: document.getElementById('ddns-record-ipv6-value'),
     ddnsRecordTTLSelect: document.getElementById('ddns-record-ttl-select'),
     ddnsRecordProxied: document.getElementById('ddns-record-proxied'),
     ddnsRecordSubmit: document.getElementById('ddns-record-submit'),
@@ -289,11 +293,18 @@ managerAPIKeyToggle?.addEventListener('click', () => toggleVisibility(elements.m
 
 elements.ddnsSyncNow?.addEventListener('click', ddnsSyncNow);
 elements.ddnsSaveSettings?.addEventListener('click', ddnsSaveSettings);
-elements.ddnsAddRecordBtn?.addEventListener('click', () => { elements.ddnsRecordForm.hidden = false; loadDDNSZones(); });
+elements.ddnsAddRecordBtn?.addEventListener('click', () => {
+    resetDDNSRecordForm();
+    elements.ddnsRecordForm.hidden = false;
+    loadDDNSZones();
+});
 elements.ddnsRecordForm?.addEventListener('submit', ddnsSubmitRecord);
-elements.ddnsRecordCancel?.addEventListener('click', () => { elements.ddnsRecordForm.hidden = true; });
+elements.ddnsRecordCancel?.addEventListener('click', resetDDNSRecordForm);
+elements.ddnsRecordIPv4?.addEventListener('change', syncDDNSRecordValueFields);
+elements.ddnsRecordIPv6?.addEventListener('change', syncDDNSRecordValueFields);
 document.getElementById('ddns-tab-sources')?.addEventListener('click', () => switchDDNSSubTab('sources'));
 document.getElementById('ddns-tab-auto')?.addEventListener('click', () => switchDDNSSubTab('auto'));
+syncDDNSRecordValueFields();
 
 elements.actionBtn.addEventListener('click', async () => {
     const action = state.isRunning ? 'stop' : 'start';
@@ -1684,6 +1695,53 @@ function renderDDNSStatus(data) {
     }
 }
 
+function defaultDDNSRecordValue(recordType) {
+    return recordType === 'AAAA' ? '{IPV6}' : '{IPV4}';
+}
+
+function normalizeDDNSRecordValue(recordType, value) {
+    const trimmed = (value || '').trim();
+    return trimmed || defaultDDNSRecordValue(recordType);
+}
+
+function formatDDNSRecordValue(rec) {
+    const normalized = normalizeDDNSRecordValue(rec.type, rec.value);
+    if (normalized === '{IPV4}') return `{IPV4} · ${t('ddns_record_value_auto_ipv4')}`;
+    if (normalized === '{IPV6}') return `{IPV6} · ${t('ddns_record_value_auto_ipv6')}`;
+    return normalized;
+}
+
+function syncDDNSRecordValueFields() {
+    if (!elements.ddnsRecordIPv4ValueGroup || !elements.ddnsRecordIPv6ValueGroup) return;
+
+    const editing = elements.ddnsRecordForm?.dataset.editIndex !== undefined;
+    const showIPv4 = !!elements.ddnsRecordIPv4?.checked;
+    const showIPv6 = !!elements.ddnsRecordIPv6?.checked;
+
+    elements.ddnsRecordIPv4ValueGroup.hidden = !showIPv4;
+    elements.ddnsRecordIPv6ValueGroup.hidden = !showIPv6;
+
+    if (elements.ddnsRecordIPv4Value) {
+        if (!elements.ddnsRecordIPv4Value.value.trim()) {
+            elements.ddnsRecordIPv4Value.value = defaultDDNSRecordValue('A');
+        }
+        elements.ddnsRecordIPv4Value.disabled = !showIPv4;
+    }
+    if (elements.ddnsRecordIPv6Value) {
+        if (!elements.ddnsRecordIPv6Value.value.trim()) {
+            elements.ddnsRecordIPv6Value.value = defaultDDNSRecordValue('AAAA');
+        }
+        elements.ddnsRecordIPv6Value.disabled = !showIPv6;
+    }
+
+    if (elements.ddnsRecordIPv4) {
+        elements.ddnsRecordIPv4.disabled = editing;
+    }
+    if (elements.ddnsRecordIPv6) {
+        elements.ddnsRecordIPv6.disabled = editing;
+    }
+}
+
 function renderDDNSRecords(records) {
     if (!elements.ddnsRecordsList) return;
     elements.ddnsRecordsList.innerHTML = '';
@@ -1706,7 +1764,7 @@ function renderDDNSRecords(records) {
         detail.className = 'rule-detail';
         const ttlText = rec.ttl === 1 ? t('ddns_ttl_auto') : rec.ttl + 's';
         const proxied = rec.proxied ? ` · ${t('ddns_record_proxied')}` : '';
-        detail.textContent = `${rec.type} · ${t('ddns_record_ttl')}: ${ttlText}${proxied}`;
+        detail.textContent = `${rec.type} · ${t('ddns_record_value')}: ${formatDDNSRecordValue(rec)} · ${t('ddns_record_ttl')}: ${ttlText}${proxied}`;
         content.append(title, detail);
 
         const actions = document.createElement('div');
@@ -1812,21 +1870,29 @@ function renderDDNSZones() {
 async function ddnsSubmitRecord(event) {
     event.preventDefault();
     const zoneName = elements.ddnsRecordZoneSelect.selectedOptions[0]?.textContent?.replace(/ \(.*\)/, '') || '';
+    const index = elements.ddnsRecordForm.dataset.editIndex;
+    const editing = index !== undefined && index !== '';
     const entry = {
         subdomain: elements.ddnsRecordSubdomain.value.trim(),
         zone_id: elements.ddnsRecordZoneSelect.value,
         zone_name: zoneName,
         ipv4: elements.ddnsRecordIPv4.checked,
         ipv6: elements.ddnsRecordIPv6.checked,
+        ipv4_value: normalizeDDNSRecordValue('A', elements.ddnsRecordIPv4Value?.value),
+        ipv6_value: normalizeDDNSRecordValue('AAAA', elements.ddnsRecordIPv6Value?.value),
         proxied: elements.ddnsRecordProxied.checked,
         ttl: parseInt(elements.ddnsRecordTTLSelect.value) || 1
     };
+    if (editing) {
+        entry.value = elements.ddnsRecordIPv4.checked ?
+            normalizeDDNSRecordValue('A', elements.ddnsRecordIPv4Value?.value) :
+            normalizeDDNSRecordValue('AAAA', elements.ddnsRecordIPv6Value?.value);
+    }
 
-    const index = elements.ddnsRecordForm.dataset.editIndex;
-    const url = index !== undefined && index !== '' ?
+    const url = editing ?
         `${API_BASE}/ddns/records/${index}` :
         `${API_BASE}/ddns/records`;
-    const method = index !== undefined && index !== '' ? 'PUT' : 'POST';
+    const method = editing ? 'PUT' : 'POST';
 
     try {
         const res = await fetch(url, {
@@ -1839,7 +1905,7 @@ async function ddnsSubmitRecord(event) {
         state.ddns.config = data;
         renderDDNSConfig(data);
         resetDDNSRecordForm();
-        addLog(index !== undefined ? t('ddns_record_updated') : t('ddns_record_added'), 'system');
+        addLog(editing ? t('ddns_record_updated') : t('ddns_record_added'), 'system');
     } catch (err) {
         setDDNSStatus(err.message, 'error');
     }
@@ -1848,19 +1914,28 @@ async function ddnsSubmitRecord(event) {
 function editDDNSRecord(index, rec) {
     elements.ddnsRecordForm.hidden = false;
     elements.ddnsRecordForm.dataset.editIndex = String(index);
-    const dotIdx = (rec.name || '').indexOf('.');
-    elements.ddnsRecordSubdomain.value = dotIdx > 0 ? rec.name.substring(0, dotIdx) : (rec.name || '');
+    const zoneName = rec.zone_name || '';
+    const suffix = zoneName ? `.${zoneName}` : '';
+    elements.ddnsRecordSubdomain.value = suffix && (rec.name || '').endsWith(suffix) ?
+        (rec.name || '').slice(0, -suffix.length) :
+        (rec.name || '');
     elements.ddnsRecordIPv4.checked = rec.type === 'A';
     elements.ddnsRecordIPv6.checked = rec.type === 'AAAA';
+    if (elements.ddnsRecordIPv4Value) {
+        elements.ddnsRecordIPv4Value.value = normalizeDDNSRecordValue('A', rec.type === 'A' ? rec.value : '');
+    }
+    if (elements.ddnsRecordIPv6Value) {
+        elements.ddnsRecordIPv6Value.value = normalizeDDNSRecordValue('AAAA', rec.type === 'AAAA' ? rec.value : '');
+    }
     elements.ddnsRecordTTLSelect.value = String(rec.ttl || 1);
     elements.ddnsRecordProxied.checked = rec.proxied !== false;
     elements.ddnsRecordSubmit.textContent = t('update_rule');
-    loadDDNSZones();
-    setTimeout(() => {
+    syncDDNSRecordValueFields();
+    loadDDNSZones().then(() => {
         if (rec.zone_id && elements.ddnsRecordZoneSelect) {
             elements.ddnsRecordZoneSelect.value = rec.zone_id;
         }
-    }, 500);
+    });
 }
 
 function resetDDNSRecordForm() {
@@ -1869,9 +1944,16 @@ function resetDDNSRecordForm() {
     elements.ddnsRecordSubdomain.value = '';
     elements.ddnsRecordIPv4.checked = true;
     elements.ddnsRecordIPv6.checked = true;
+    if (elements.ddnsRecordIPv4Value) {
+        elements.ddnsRecordIPv4Value.value = defaultDDNSRecordValue('A');
+    }
+    if (elements.ddnsRecordIPv6Value) {
+        elements.ddnsRecordIPv6Value.value = defaultDDNSRecordValue('AAAA');
+    }
     elements.ddnsRecordTTLSelect.value = '1';
     elements.ddnsRecordProxied.checked = true;
     elements.ddnsRecordSubmit.textContent = t('ddns_add_record');
+    syncDDNSRecordValueFields();
 }
 
 async function deleteDDNSRecord(index) {
@@ -1940,11 +2022,16 @@ function updateDDNSText() {
     document.getElementById('ddns-record-zone-label').textContent = t('domain');
     document.getElementById('ddns-record-ip-version-label').textContent = t('ddns_record_ip_version');
     document.getElementById('ddns-record-ttl-label').textContent = t('ddns_record_ttl');
+    document.getElementById('ddns-record-ipv4-value-label').textContent = t('ddns_record_ipv4_value');
+    document.getElementById('ddns-record-ipv6-value-label').textContent = t('ddns_record_ipv6_value');
+    document.getElementById('ddns-record-value-help').textContent = t('ddns_record_value_help');
     document.getElementById('ddns-record-proxied-label').textContent = t('ddns_record_proxied');
     const ipv4Label = document.getElementById('ddns-record-ipv4-label');
     if (ipv4Label) ipv4Label.textContent = t('ddns_record_a');
     const ipv6Label = document.getElementById('ddns-record-ipv6-label');
     if (ipv6Label) ipv6Label.textContent = t('ddns_record_aaaa');
+    if (elements.ddnsRecordIPv4Value) elements.ddnsRecordIPv4Value.placeholder = '{IPV4}';
+    if (elements.ddnsRecordIPv6Value) elements.ddnsRecordIPv6Value.placeholder = '{IPV6}';
     elements.ddnsRecordCancel.textContent = t('cancel_edit');
     elements.ddnsRecordSubmit.textContent = elements.ddnsRecordForm?.dataset.editIndex ? t('update_rule') : t('ddns_add_record');
     document.getElementById('ddns-sync-log-label').textContent = t('ddns_sync_log');
@@ -1964,6 +2051,7 @@ function updateDDNSText() {
 
     if (state.ddns.config) renderDDNSConfig(state.ddns.config);
     if (state.ddns.status) renderDDNSStatus(state.ddns.status);
+    syncDDNSRecordValueFields();
 }
 
 // Poll DDNS status periodically when tab is active

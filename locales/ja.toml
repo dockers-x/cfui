@@ -706,6 +706,24 @@ other = "IPv6 (AAAA)"
 [ddns_ttl_auto]
 other = "自動"
 
+[ddns_record_value]
+other = "値"
+
+[ddns_record_ipv4_value]
+other = "IPv4 値"
+
+[ddns_record_ipv6_value]
+other = "IPv6 値"
+
+[ddns_record_value_help]
+other = "{IPV4} / {IPV6} を使うと自動検出になります。固定のグローバル IP を直接入力することもできます。"
+
+[ddns_record_value_auto_ipv4]
+other = "IPv4 を自動検出"
+
+[ddns_record_value_auto_ipv6]
+other = "IPv6 を自動検出"
+
 [features_tab]
 other = "機能設定"
 

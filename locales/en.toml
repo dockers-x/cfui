@@ -706,6 +706,24 @@ other = "IPv6 (AAAA)"
 [ddns_ttl_auto]
 other = "Auto"
 
+[ddns_record_value]
+other = "Value"
+
+[ddns_record_ipv4_value]
+other = "IPv4 Value"
+
+[ddns_record_ipv6_value]
+other = "IPv6 Value"
+
+[ddns_record_value_help]
+other = "Use {IPV4} / {IPV6} for automatic detection, or enter a fixed public IP."
+
+[ddns_record_value_auto_ipv4]
+other = "Auto-detect IPv4"
+
+[ddns_record_value_auto_ipv6]
+other = "Auto-detect IPv6"
+
 [features_tab]
 other = "Features"
 

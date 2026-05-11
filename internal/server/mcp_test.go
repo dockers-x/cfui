@@ -18,7 +18,7 @@ import (
 var mcpServerTestLoggerOnce sync.Once
 
 func TestMCPTokensCreateListAndDelete(t *testing.T) {
-	s := newMCPTestServer(t)
+	s := newServerTestServer(t)
 
 	createReq := httptest.NewRequest(http.MethodPost, "/api/mcp/tokens", strings.NewReader(`{"name":"Agent","token":"cfui_mcp_visible_once"}`))
 	createReq.Header.Set("Content-Type", "application/json")
@@ -56,7 +56,7 @@ func TestMCPTokensCreateListAndDelete(t *testing.T) {
 	}
 }
 
-func newMCPTestServer(t *testing.T) *Server {
+func newServerTestServer(t *testing.T) *Server {
 	t.Helper()
 	mcpServerTestLoggerOnce.Do(func() {
 		logDir, err := os.MkdirTemp("", "cfui-server-test-logs-*")

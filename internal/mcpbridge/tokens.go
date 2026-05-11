@@ -1,9 +1,13 @@
 package mcpbridge
 
 import (
+	"cfui/internal/logger"
+	"cfui/internal/persist"
+	"cfui/internal/persist/ent"
+	"cfui/internal/persist/ent/mcptoken"
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -17,8 +21,11 @@ import (
 )
 
 type TokenStore struct {
-	path string
-	mu   sync.RWMutex
+	dir      string
+	client   *ent.Client
+	initOnce sync.Once
+	initErr  error
+	mu       sync.RWMutex
 }
 
 type TokenRecord struct {
@@ -41,18 +48,30 @@ type CreatedToken struct {
 }
 
 func NewTokenStore(dir string) *TokenStore {
-	return &TokenStore{path: filepath.Join(dir, "mcp_tokens.json")}
+	return &TokenStore{dir: dir}
 }
 
 func (s *TokenStore) List() ([]TokenSummary, error) {
-	records, err := s.load()
+	if err := s.ensureClient(); err != nil {
+		return nil, err
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	rows, err := s.client.MCPToken.Query().All(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	items := make([]TokenSummary, 0, len(records))
-	for _, record := range records {
-		items = append(items, summarize(record))
+	items := make([]TokenSummary, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, TokenSummary{
+			ID:        row.TokenID,
+			Name:      row.Name,
+			Masked:    row.Masked,
+			CreatedAt: row.CreatedAt,
+		})
 	}
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].CreatedAt.After(items[j].CreatedAt)
@@ -61,6 +80,10 @@ func (s *TokenStore) List() ([]TokenSummary, error) {
 }
 
 func (s *TokenStore) Create(name, token string) (CreatedToken, error) {
+	if err := s.ensureClient(); err != nil {
+		return CreatedToken{}, err
+	}
+
 	name = strings.TrimSpace(name)
 	if name == "" {
 		name = "MCP Token"
@@ -77,31 +100,37 @@ func (s *TokenStore) Create(name, token string) (CreatedToken, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	records, err := s.loadLocked()
-	if err != nil {
+	hash := tokenHash(token)
+	if _, err := s.client.MCPToken.Query().Where(mcptoken.TokenHash(hash)).Only(context.Background()); err == nil {
+		return CreatedToken{}, fmt.Errorf("mcp token already exists")
+	} else if !ent.IsNotFound(err) {
 		return CreatedToken{}, err
 	}
-	for _, record := range records {
-		if constantTokenEqual(record.Token, token) {
-			return CreatedToken{}, fmt.Errorf("mcp token already exists")
-		}
-	}
 
-	record := TokenRecord{
+	record := TokenSummary{
 		ID:        tokenID(token),
 		Name:      name,
-		Token:     token,
+		Masked:    MaskToken(token),
 		CreatedAt: time.Now().UTC(),
 	}
-	records = append(records, record)
-	if err := s.saveLocked(records); err != nil {
+	if _, err := s.client.MCPToken.Create().
+		SetTokenID(record.ID).
+		SetName(record.Name).
+		SetTokenHash(hash).
+		SetMasked(record.Masked).
+		SetCreatedAt(record.CreatedAt).
+		Save(context.Background()); err != nil {
 		return CreatedToken{}, err
 	}
 
-	return CreatedToken{TokenSummary: summarize(record), Token: token}, nil
+	return CreatedToken{TokenSummary: record, Token: token}, nil
 }
 
 func (s *TokenStore) Delete(id string) error {
+	if err := s.ensureClient(); err != nil {
+		return err
+	}
+
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return fmt.Errorf("token id is required")
@@ -110,81 +139,32 @@ func (s *TokenStore) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	records, err := s.loadLocked()
+	record, err := s.client.MCPToken.Query().Where(mcptoken.TokenID(id)).Only(context.Background())
+	if ent.IsNotFound(err) {
+		return fmt.Errorf("mcp token not found")
+	}
 	if err != nil {
 		return err
 	}
-	next := records[:0]
-	deleted := false
-	for _, record := range records {
-		if record.ID == id {
-			deleted = true
-			continue
-		}
-		next = append(next, record)
-	}
-	if !deleted {
-		return fmt.Errorf("mcp token not found")
-	}
-	return s.saveLocked(next)
+
+	return s.client.MCPToken.DeleteOneID(record.ID).Exec(context.Background())
 }
 
 func (s *TokenStore) Verify(token string) bool {
+	if err := s.ensureClient(); err != nil {
+		return false
+	}
+
 	token = strings.TrimSpace(token)
 	if token == "" {
 		return false
 	}
-	records, err := s.load()
-	if err != nil {
-		return false
-	}
-	for _, record := range records {
-		if constantTokenEqual(record.Token, token) {
-			return true
-		}
-	}
-	return false
-}
 
-func (s *TokenStore) load() ([]TokenRecord, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.loadLocked()
-}
 
-func (s *TokenStore) loadLocked() ([]TokenRecord, error) {
-	data, err := os.ReadFile(s.path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	var records []TokenRecord
-	if err := json.Unmarshal(data, &records); err != nil {
-		return nil, err
-	}
-	return records, nil
-}
-
-func (s *TokenStore) saveLocked(records []TokenRecord) error {
-	if err := os.MkdirAll(filepath.Dir(s.path), 0755); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(records, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(s.path, data, 0600)
-}
-
-func summarize(record TokenRecord) TokenSummary {
-	return TokenSummary{
-		ID:        record.ID,
-		Name:      record.Name,
-		Masked:    MaskToken(record.Token),
-		CreatedAt: record.CreatedAt,
-	}
+	_, err := s.client.MCPToken.Query().Where(mcptoken.TokenHash(tokenHash(token))).Only(context.Background())
+	return err == nil
 }
 
 func MaskToken(token string) string {
@@ -211,9 +191,110 @@ func tokenID(token string) string {
 	return hex.EncodeToString(sum[:])[:16]
 }
 
-func constantTokenEqual(a, b string) bool {
-	if len(a) != len(b) {
-		return false
+func tokenHash(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
+}
+
+func (s *TokenStore) ensureClient() error {
+	s.initOnce.Do(func() {
+		client, err := persist.OpenClient(s.dir)
+		if err != nil {
+			s.initErr = err
+			return
+		}
+
+		s.client = client
+		s.initErr = s.migrateLegacyTokens(context.Background())
+	})
+
+	return s.initErr
+}
+
+func (s *TokenStore) migrateLegacyTokens(ctx context.Context) error {
+	count, err := s.client.MCPToken.Query().Count(ctx)
+	if err != nil {
+		return err
 	}
-	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+	if count > 0 {
+		return nil
+	}
+
+	legacyPath := filepath.Join(s.dir, "mcp_tokens.json")
+	records, err := loadLegacyTokenRecords(legacyPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	seen := make(map[string]struct{}, len(records))
+	builders := make([]*ent.MCPTokenCreate, 0, len(records))
+	now := time.Now().UTC()
+	for _, record := range records {
+		token := strings.TrimSpace(record.Token)
+		if token == "" {
+			continue
+		}
+
+		hash := tokenHash(token)
+		if _, ok := seen[hash]; ok {
+			continue
+		}
+		seen[hash] = struct{}{}
+
+		name := strings.TrimSpace(record.Name)
+		if name == "" {
+			name = "MCP Token"
+		}
+
+		createdAt := record.CreatedAt.UTC()
+		if createdAt.IsZero() {
+			createdAt = now
+		}
+
+		id := strings.TrimSpace(record.ID)
+		if id == "" {
+			id = tokenID(token)
+		}
+
+		builders = append(builders, s.client.MCPToken.Create().
+			SetTokenID(id).
+			SetName(name).
+			SetTokenHash(hash).
+			SetMasked(MaskToken(token)).
+			SetCreatedAt(createdAt))
+	}
+
+	if len(builders) > 0 {
+		if err := s.client.MCPToken.CreateBulk(builders...).Exec(ctx); err != nil {
+			return err
+		}
+	}
+
+	if err := persist.MarkLegacyMigrated(legacyPath); err != nil && !os.IsNotExist(err) {
+		if logger.Sugar != nil {
+			logger.Sugar.Warnf("Failed to rename migrated legacy token file %s: %v", legacyPath, err)
+		}
+	} else {
+		if logger.Sugar != nil {
+			logger.Sugar.Infof("Migrated legacy MCP tokens from %s to %s", legacyPath, persist.DBPath(s.dir))
+		}
+	}
+
+	return nil
+}
+
+func loadLegacyTokenRecords(path string) ([]TokenRecord, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var records []TokenRecord
+	if err := json.Unmarshal(data, &records); err != nil {
+		return nil, err
+	}
+	return records, nil
 }

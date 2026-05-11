@@ -706,6 +706,24 @@ other = "IPv6 (AAAA)"
 [ddns_ttl_auto]
 other = "自动"
 
+[ddns_record_value]
+other = "记录值"
+
+[ddns_record_ipv4_value]
+other = "IPv4 值"
+
+[ddns_record_ipv6_value]
+other = "IPv6 值"
+
+[ddns_record_value_help]
+other = "使用 {IPV4} / {IPV6} 表示自动获取公网 IP，也可以直接填写固定公网 IP。"
+
+[ddns_record_value_auto_ipv4]
+other = "自动获取 IPv4"
+
+[ddns_record_value_auto_ipv6]
+other = "自动获取 IPv6"
+
 [features_tab]
 other = "功能选项"
 

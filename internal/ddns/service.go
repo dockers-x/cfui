@@ -83,6 +83,9 @@ type AddRecordRequest struct {
 	ZoneName  string `json:"zone_name"`
 	IPv4      bool   `json:"ipv4"` // create A record
 	IPv6      bool   `json:"ipv6"` // create AAAA record
+	IPv4Value string `json:"ipv4_value"`
+	IPv6Value string `json:"ipv6_value"`
+	Value     string `json:"value"` // single-record edit value
 	Proxied   bool   `json:"proxied"`
 	TTL       int    `json:"ttl"`
 }
@@ -326,7 +329,9 @@ func (s *Service) checkAndSync() {
 	s.lastError = ""
 
 	changed := false
-	if cfg.DDNS.OnlyOnChange {
+	if hasFixedValueRecords(cfg.DDNS.Records) {
+		changed = true
+	} else if cfg.DDNS.OnlyOnChange {
 		if v4 != s.currentV4 || v6 != s.currentV6 {
 			changed = true
 		}
@@ -341,7 +346,7 @@ func (s *Service) checkAndSync() {
 
 	s.currentV4 = v4
 	s.currentV6 = v6
-	records := cfg.DDNS.Records
+	records := NormalizeRecords(cfg.DDNS.Records)
 	s.mu.Unlock()
 
 	s.syncAllRecords(ctx, records, v4, v6)
@@ -362,9 +367,18 @@ func (s *Service) SyncNow(ctx context.Context) (*StatusResponse, error) {
 	s.mu.Unlock()
 
 	cfg := s.cfgMgr.Get()
-	s.syncAllRecords(ctx, cfg.DDNS.Records, v4, v6)
+	s.syncAllRecords(ctx, NormalizeRecords(cfg.DDNS.Records), v4, v6)
 
 	return s.Status(), nil
+}
+
+func hasFixedValueRecords(records []config.DDNSRecord) bool {
+	for _, rec := range records {
+		if !UsesAutoValue(rec.Type, rec.Value) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) syncAllRecords(ctx context.Context, records []config.DDNSRecord, v4, v6 string) {
@@ -377,22 +391,19 @@ func (s *Service) syncAllRecords(ctx context.Context, records []config.DDNSRecor
 	}
 
 	for _, rec := range records {
-		ip := v4
-		if rec.Type == "AAAA" {
-			ip = v6
-		}
-		if ip == "" {
+		ip, err := ResolveRecordIP(rec, v4, v6)
+		if err != nil {
 			s.addResult(SyncResult{
 				Time:     time.Now(),
 				Hostname: rec.Name,
 				Type:     rec.Type,
 				Success:  false,
-				Message:  fmt.Sprintf("no %s address available", rec.Type),
+				Message:  err.Error(),
 			})
 			continue
 		}
 
-		err := s.syncDNSRecord(ctx, client, rec, ip)
+		err = s.syncDNSRecord(ctx, client, rec, ip)
 		if err != nil {
 			s.addResult(SyncResult{
 				Time:     time.Now(),
@@ -517,6 +528,7 @@ func (s *Service) Status() *StatusResponse {
 // GetConfig returns the current DDNS config.
 func (s *Service) GetConfig() ConfigResponse {
 	cfg := s.cfgMgr.Get()
+	cfg.DDNS.Records = NormalizeRecords(cfg.DDNS.Records)
 	effective := cfg.EffectiveTunnelManagement()
 	return ConfigResponse{
 		DDNSConfig:     cfg.DDNS,
@@ -536,7 +548,15 @@ func (s *Service) SaveConfig(req SaveRequest) error {
 		cfg.DDNS.IPSources = req.IPSources
 	}
 	if req.Records != nil {
-		cfg.DDNS.Records = req.Records
+		records := NormalizeRecords(req.Records)
+		for i := range records {
+			value, err := ValidateRecordValue(records[i].Type, records[i].Value)
+			if err != nil {
+				return fmt.Errorf("record %d: %w", i, err)
+			}
+			records[i].Value = value
+		}
+		cfg.DDNS.Records = records
 	}
 
 	if cfg.DDNS.IntervalMins < 1 {
