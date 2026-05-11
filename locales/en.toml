@@ -23,7 +23,10 @@ other = "Manage your Cloudflare Tunnel connection"
 other = "Tunnel Token"
 
 [token_help]
-other = "Enter the token provided by the Cloudflare Zero Trust dashboard."
+other = "Paste your tunnel token here. Find it at Cloudflare Zero Trust → Networks → Tunnels → select your tunnel → Configure → Copy token."
+
+[token_help_link]
+other = "Open Cloudflare Zero Trust"
 
 [tunnel_identifier]
 other = "Tunnel Identifier"
@@ -338,25 +341,34 @@ other = "Disable origin TLS verification"
 other = "Cloudflare account id"
 
 [account_id_help]
-other = "Can also be provided by CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_APP_ID."
+other = "Your Cloudflare Account ID. Find it in your dashboard URL (dash.cloudflare.com/<id>) or on any zone overview page. Can also be set via CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_APP_ID env vars."
 
 [tunnel_id_placeholder]
 other = "Tunnel UUID"
 
 [tunnel_id_help]
-other = "Changing this field loads the selected tunnel configuration."
+other = "Your tunnel's UUID. Find it at Cloudflare Zero Trust → Networks → Tunnels → click your tunnel name → Overview. Changing this field loads the selected tunnel configuration."
 
 [auth_help]
-other = "API Token is recommended. Blank secret fields keep the saved value."
+other = "API Token is recommended. Create one at Dashboard → My Profile → API Tokens. Requires Account:Cloudflare Tunnel:Edit and Zone:Zone:Read. Blank fields keep saved values."
+
+[api_token_help]
+other = "Create at Cloudflare Dashboard → My Profile → API Tokens → Create Token. Required permissions: Account · Cloudflare Tunnel · Edit, Zone · Zone · Read."
+
+[api_key_help]
+other = "Find your Global API Key at Cloudflare Dashboard → My Profile → API Keys. For security, prefer an API Token instead."
+
+[api_email_help]
+other = "Your Cloudflare account email address. Required only when using Email + API Key authentication."
 
 [api_token_placeholder]
-other = "Leave blank to keep existing token"
+other = "Paste your API token"
 
 [api_email_placeholder]
 other = "you@example.com"
 
 [api_key_placeholder]
-other = "Leave blank to keep existing key"
+other = "Paste your API key"
 
 [no_remote_config_loaded]
 other = "No remote config loaded."
@@ -432,6 +444,9 @@ other = "Account · Cloudflare Tunnel · Edit"
 
 [api_permission_zone]
 other = "Zone · Zone · Read"
+
+[api_permission_dns]
+other = "Zone · DNS · Edit"
 
 [api_permission_note]
 other = "Use an account-scoped API Token when possible. Email + Global API Key is broader."
@@ -510,3 +525,165 @@ other = "MCP token created"
 
 [mcp_token_deleted]
 other = "MCP token deleted"
+
+[verify_permissions]
+other = "Verify Permissions"
+
+[verify_checking]
+other = "Checking permissions..."
+
+[verify_enter_token]
+other = "Enter an API token to verify."
+
+[verify_enter_credentials]
+other = "Enter API credentials to verify."
+
+[verify_failed]
+other = "Verification failed. Check your credentials."
+
+[verify_token_status]
+other = "Token status"
+
+[verify_permission_tunnel_edit]
+other = "Tunnel:Edit"
+
+[verify_permission_zone_read]
+other = "Zone:Read"
+
+[verify_permission_dns_edit]
+other = "DNS:Edit"
+
+[ddns_tab]
+other = "DDNS"
+
+[ddns_title]
+other = "Dynamic DNS"
+
+[ddns_subtitle]
+other = "Automatically update DNS records when your public IP changes. Reuses Remote Tunnel Manager API credentials."
+
+[ddns_no_credentials]
+other = "Configure API credentials in Remote Tunnel Manager first."
+
+[ddns_settings]
+other = "DDNS Settings"
+
+[ddns_ip_sources]
+other = "IP Sources"
+
+[ddns_ip_sources_help]
+other = "Tried in order. First successful response wins."
+
+[ddns_ipv4_sources]
+other = "IPv4 Sources"
+
+[ddns_ipv6_sources]
+other = "IPv6 Sources"
+
+[ddns_batch_add_help]
+other = "One URL per line. Each line becomes a separate source."
+
+[ddns_add_single]
+other = "Single Add"
+
+[ddns_add_single_url]
+other = "URL"
+
+[ddns_add_single_type]
+other = "IP Type"
+
+[ddns_add_batch]
+other = "Batch Add"
+
+[ddns_auto_update]
+other = "Auto Update"
+
+[ddns_interval]
+other = "Check Interval"
+
+[ddns_only_on_change]
+other = "Only update on IP change"
+
+[ddns_max_retries]
+other = "Max Retries"
+
+[ddns_records]
+other = "DDNS Records"
+
+[ddns_add_record]
+other = "Add Record"
+
+[ddns_record_name]
+other = "Hostname"
+
+[ddns_record_name_placeholder]
+other = "home.example.com"
+
+[ddns_record_type]
+other = "Type"
+
+[ddns_record_zone]
+other = "Zone"
+
+[ddns_record_proxied]
+other = "Proxied"
+
+[ddns_record_ttl]
+other = "TTL"
+
+[ddns_save_settings]
+other = "Save DDNS Settings"
+
+[ddns_sync_now]
+other = "Sync Now"
+
+[ddns_current_ip]
+other = "Current Public IP"
+
+[ddns_ipv4]
+other = "IPv4"
+
+[ddns_ipv6]
+other = "IPv6"
+
+[ddns_unknown]
+other = "Unknown"
+
+[ddns_status_running]
+other = "Running"
+
+[ddns_status_disabled]
+other = "Disabled"
+
+[ddns_enable]
+other = "Enable DDNS"
+
+[ddns_sync_log]
+other = "Sync Log"
+
+[ddns_settings_saved]
+other = "DDNS settings saved"
+
+[ddns_synced]
+other = "Synced"
+
+[ddns_sync_failed]
+other = "Failed"
+
+[ddns_record_added]
+other = "DDNS record added"
+
+[ddns_record_updated]
+other = "DDNS record updated"
+
+[ddns_record_deleted]
+other = "DDNS record deleted"
+
+[ddns_sync_triggered]
+other = "DDNS sync triggered"
+
+[ddns_no_records]
+other = "No DDNS records. Add one below."
+
+[minutes]
+other = "min"

@@ -65,6 +65,7 @@
             <nav class="app-tabs" role="tablist" aria-label="Configuration sections">
                 <button id="local-tab" class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="local-panel">Tunnel Configuration</button>
                 <button id="manager-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="manager-panel">Remote Tunnel Manager</button>
+                <button id="ddns-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="ddns-panel">DDNS</button>
                 <button id="mcp-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="mcp-panel">MCP</button>
             </nav>
 
@@ -88,7 +89,10 @@
                                 </svg>
                             </button>
                         </div>
-                        <p class="help-text">Enter the token provided by the Cloudflare Zero Trust dashboard.</p>
+                        <div class="help-row">
+                            <p class="help-text" id="token-help-text">Enter the token provided by the Cloudflare Zero Trust dashboard.</p>
+                            <a href="https://one.dash.cloudflare.com/" target="_blank" rel="noopener noreferrer" class="help-link" id="token-help-link">Open Cloudflare Zero Trust</a>
+                        </div>
                     </div>
 
                     <!-- Advanced Configuration Section -->
@@ -276,12 +280,26 @@
                                             <strong id="manager-api-help-title">Required Cloudflare API permissions</strong>
                                             <span id="manager-api-help-tunnel">Account · Cloudflare Tunnel · Edit</span>
                                             <span id="manager-api-help-zone">Zone · Zone · Read</span>
+                                            <span id="manager-api-help-dns">Zone · DNS · Edit</span>
                                             <small id="manager-api-help-note">Use account-scoped API Token when possible.</small>
                                         </span>
                                     </span>
                                 </div>
-                                <input type="password" id="manager-api-token" placeholder="Leave blank to keep existing token" spellcheck="false">
+                                <div class="input-wrapper">
+                                    <input type="password" id="manager-api-token" placeholder="Paste your API token" spellcheck="false">
+                                    <button id="manager-api-token-toggle" class="icon-btn" type="button" title="Toggle Visibility" aria-label="Show API token" aria-pressed="false">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                    </button>
+                                </div>
                                 <p class="help-text" id="manager-token-state">No token saved.</p>
+                                <p class="help-text" id="manager-api-token-help">Create a scoped API token at Cloudflare Dashboard → My Profile → API Tokens.</p>
+                                <div class="verify-row">
+                                    <button type="button" id="manager-verify-permissions" class="btn btn-sm btn-secondary">Verify Permissions</button>
+                                    <div id="manager-verify-result" class="verify-result" hidden></div>
+                                </div>
                             </div>
                         </div>
 
@@ -289,11 +307,21 @@
                             <div class="form-group">
                                 <label for="manager-api-email">API Email</label>
                                 <input type="email" id="manager-api-email" placeholder="you@example.com" spellcheck="false">
+                                <p class="help-text" id="manager-api-email-help">Your Cloudflare account email address.</p>
                             </div>
                             <div class="form-group">
                                 <label for="manager-api-key">API Key</label>
-                                <input type="password" id="manager-api-key" placeholder="Leave blank to keep existing key" spellcheck="false">
+                                <div class="input-wrapper">
+                                    <input type="password" id="manager-api-key" placeholder="Paste your API key" spellcheck="false">
+                                    <button id="manager-api-key-toggle" class="icon-btn" type="button" title="Toggle Visibility" aria-label="Show API key" aria-pressed="false">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                    </button>
+                                </div>
                                 <p class="help-text" id="manager-key-state">No key saved.</p>
+                                <p class="help-text" id="manager-api-key-help">Find your Global API Key at Cloudflare Dashboard → My Profile → API Keys.</p>
                             </div>
                         </div>
 
@@ -396,6 +424,182 @@
                                 <button type="button" id="manager-entry-cancel" class="btn btn-ghost">Cancel Edit</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+            </section>
+            <section id="ddns-panel" class="tab-panel" role="tabpanel" aria-labelledby="ddns-tab" hidden>
+            <div class="card ddns-card">
+                <div class="card-header stacked-header">
+                    <div>
+                        <h2 id="ddns-title">Dynamic DNS</h2>
+                        <p class="subtitle" id="ddns-subtitle">Automatically update DNS records when your public IP changes.</p>
+                    </div>
+                    <span class="manager-status" id="ddns-status">Disabled</span>
+                </div>
+                <div class="card-body">
+                    <div id="ddns-no-creds" class="ddns-no-creds" hidden>
+                        <p id="ddns-no-credentials">Configure API credentials in Remote Tunnel Manager first.</p>
+                    </div>
+                    <div id="ddns-main" hidden>
+            <div class="card ddns-card">
+                <div class="card-header stacked-header">
+                    <div>
+                        <h2 id="ddns-title">Dynamic DNS</h2>
+                        <p class="subtitle" id="ddns-subtitle">Automatically update DNS records when your public IP changes.</p>
+                    </div>
+                    <span class="manager-status" id="ddns-status">Disabled</span>
+                </div>
+                <div class="card-body">
+                    <div id="ddns-no-creds" class="ddns-no-creds" hidden>
+                        <p id="ddns-no-credentials">Configure API credentials in Remote Tunnel Manager first.</p>
+                    </div>
+                    <div id="ddns-main" hidden>
+                        <div class="ddns-ip-banner" id="ddns-ip-banner">
+                            <span class="ddns-ip-label" id="ddns-current-ip-label">Current Public IP</span>
+                            <span class="ddns-ip-row"><strong id="ddns-ipv4-label">IPv4</strong>: <code id="ddns-ipv4-value">—</code></span>
+                            <span class="ddns-ip-row"><strong id="ddns-ipv6-label">IPv6</strong>: <code id="ddns-ipv6-value">—</code></span>
+                            <span class="ddns-ip-time" id="ddns-last-check">—</span>
+                            <button type="button" id="ddns-sync-now" class="btn btn-sm btn-primary">Sync Now</button>
+                        </div>
+
+                        <div class="ddns-grid">
+                            <div class="ddns-left">
+                                <details class="manager-settings" id="ddns-settings-section" open>
+                                    <summary class="manager-settings-toggle" id="ddns-settings-toggle">DDNS Settings</summary>
+                                    <div class="manager-settings-content">
+                                        <div class="toggle-container" style="margin-bottom:16px;">
+                                            <label class="switch">
+                                                <input type="checkbox" id="ddns-enable-toggle" aria-label="Enable DDNS">
+                                                <span class="slider round"></span>
+                                            </label>
+                                            <label class="label-text" id="ddns-enable-label" for="ddns-enable-toggle">Enable DDNS</label>
+                                        </div>
+
+                                        <div class="ddns-tabs" role="tablist">
+                                            <button type="button" class="ddns-subtab active" role="tab" id="ddns-tab-sources" aria-selected="true">IP Sources</button>
+                                            <button type="button" class="ddns-subtab" role="tab" id="ddns-tab-auto">Auto Update</button>
+                                        </div>
+
+                                        <div class="ddns-subpanel" id="ddns-panel-sources">
+                                            <div class="form-group">
+                                                <label id="ddns-ipv4-sources-label">IPv4 Sources</label>
+                                                <textarea id="ddns-ipv4-textarea" rows="6" placeholder="http://v4.66666.host:66/ip&#10;https://myip.ipip.net&#10;https://ipv4.ddnspod.com" spellcheck="false"></textarea>
+                                                <p class="help-text" id="ddns-batch-add-help">One URL per line.</p>
+                                            </div>
+                                            <div class="form-group">
+                                                <label id="ddns-ipv6-sources-label">IPv6 Sources</label>
+                                                <textarea id="ddns-ipv6-textarea" rows="6" placeholder="http://v6.66666.host:66/ip&#10;http://myip6.ipip.net&#10;https://6.ipw.cn" spellcheck="false"></textarea>
+                                            </div>
+                                        </div>
+
+                                        <div class="ddns-subpanel" id="ddns-panel-auto" hidden>
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label for="ddns-interval" id="ddns-interval-label">Check Interval</label>
+                                                    <select id="ddns-interval" class="form-select">
+                                                        <option value="1">1 min</option>
+                                                        <option value="5" selected>5 min</option>
+                                                        <option value="10">10 min</option>
+                                                        <option value="15">15 min</option>
+                                                        <option value="30">30 min</option>
+                                                        <option value="60">60 min</option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="ddns-max-retries" id="ddns-max-retries-label">Max Retries</label>
+                                                    <select id="ddns-max-retries" class="form-select">
+                                                        <option value="1">1</option>
+                                                        <option value="3" selected>3</option>
+                                                        <option value="5">5</option>
+                                                        <option value="10">10</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="toggle-container">
+                                                <label class="switch">
+                                                    <input type="checkbox" id="ddns-only-on-change" checked aria-label="Only update on IP change">
+                                                    <span class="slider round"></span>
+                                                </label>
+                                                <label class="label-text" id="ddns-only-on-change-label" for="ddns-only-on-change">Only update on IP change</label>
+                                            </div>
+                                        </div>
+
+                                        <div class="manager-actions" style="margin-top:16px;">
+                                            <button type="button" id="ddns-save-settings" class="btn btn-primary">Save DDNS Settings</button>
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+
+                            <div class="ddns-right">
+                                <div class="section-heading">
+                                    <h3 id="ddns-records-label">DDNS Records</h3>
+                                    <button type="button" id="ddns-add-record-btn" class="btn btn-sm btn-primary">Add Record</button>
+                                </div>
+                                <div class="rules-list" id="ddns-records-list"></div>
+
+                                <form id="ddns-record-form" class="entry-form" hidden>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="ddns-record-subdomain" id="ddns-record-subdomain-label">Subdomain</label>
+                                            <input type="text" id="ddns-record-subdomain" placeholder="home" spellcheck="false">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="ddns-record-zone-select" id="ddns-record-zone-label">Domain</label>
+                                            <select id="ddns-record-zone-select" class="form-select"></select>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label id="ddns-record-ip-version-label">IP Version</label>
+                                            <div class="toggle-container">
+                                                <label class="switch">
+                                                    <input type="checkbox" id="ddns-record-ipv4" checked aria-label="IPv4">
+                                                    <span class="slider round"></span>
+                                                </label>
+                                                <label class="label-text" for="ddns-record-ipv4">IPv4 (A)</label>
+                                            </div>
+                                            <div class="toggle-container">
+                                                <label class="switch">
+                                                    <input type="checkbox" id="ddns-record-ipv6" checked aria-label="IPv6">
+                                                    <span class="slider round"></span>
+                                                </label>
+                                                <label class="label-text" for="ddns-record-ipv6">IPv6 (AAAA)</label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="ddns-record-ttl-select" id="ddns-record-ttl-label">TTL</label>
+                                            <select id="ddns-record-ttl-select" class="form-select">
+                                                <option value="1" selected>Auto</option>
+                                                <option value="60">60s</option>
+                                                <option value="120">120s</option>
+                                                <option value="300">300s</option>
+                                                <option value="600">600s</option>
+                                                <option value="1800">1800s</option>
+                                                <option value="3600">3600s</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="toggle-container" style="margin-bottom:12px;">
+                                        <label class="switch">
+                                            <input type="checkbox" id="ddns-record-proxied" checked aria-label="Proxied">
+                                            <span class="slider round"></span>
+                                        </label>
+                                        <label class="label-text" id="ddns-record-proxied-label" for="ddns-record-proxied">Proxied</label>
+                                    </div>
+                                    <div class="manager-actions">
+                                        <button type="submit" id="ddns-record-submit" class="btn btn-primary">Add Record</button>
+                                        <button type="button" id="ddns-record-cancel" class="btn btn-ghost">Cancel</button>
+                                    </div>
+                                </form>
+
+                                <div class="ddns-sync-log">
+                                    <h3 id="ddns-sync-log-label">Sync Log</h3>
+                                    <div class="rules-list" id="ddns-sync-log-list"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

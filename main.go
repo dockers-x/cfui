@@ -91,6 +91,10 @@ func main() {
 
 	// Setup Server
 	srv := server.NewServer(cfgMgr, runner, assets, locales)
+
+	// Start DDNS service if enabled
+	srv.StartDDNS()
+	logger.Sugar.Info("DDNS service check complete")
 	// Bind Host
 	bindHost := os.Getenv("BIND_HOST")
 	if bindHost == "" {
@@ -143,6 +147,9 @@ func main() {
 			logger.Sugar.Errorf("HTTP server shutdown error: %v", err)
 			httpServer.Close()
 		}
+
+		// Stop DDNS service
+		srv.StopDDNS()
 
 		// Shutdown runner (stops tunnel if running)
 		if err := runner.Shutdown(); err != nil {

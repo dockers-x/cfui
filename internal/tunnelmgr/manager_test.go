@@ -15,8 +15,9 @@ import (
 var initLoggerOnce sync.Once
 
 type fakeCFClient struct {
-	config  cloudflare.TunnelConfigurationResult
-	updates []cloudflare.TunnelConfiguration
+	config     cloudflare.TunnelConfigurationResult
+	updates    []cloudflare.TunnelConfiguration
+	dnsRecords []cloudflare.DNSRecord
 }
 
 func (f *fakeCFClient) GetTunnelConfiguration(ctx context.Context, rc *cloudflare.ResourceContainer, tunnelID string) (cloudflare.TunnelConfigurationResult, error) {
@@ -35,6 +36,51 @@ func (f *fakeCFClient) ListZonesContext(ctx context.Context, opts ...cloudflare.
 		{ID: "zone-1", Name: "example.com", Status: "active"},
 		{ID: "zone-2", Name: "example.net", Status: "pending"},
 	}}, nil
+}
+
+func (f *fakeCFClient) VerifyAPIToken(ctx context.Context) (cloudflare.APITokenVerifyBody, error) {
+	return cloudflare.APITokenVerifyBody{ID: "test-token-id", Status: "active"}, nil
+}
+
+func (f *fakeCFClient) GetAPIToken(ctx context.Context, tokenID string) (cloudflare.APIToken, error) {
+	return cloudflare.APIToken{
+		ID:     tokenID,
+		Status: "active",
+		Policies: []cloudflare.APITokenPolicies{
+			{
+				Effect: "allow",
+				PermissionGroups: []cloudflare.APITokenPermissionGroups{
+					{Name: "Cloudflare Tunnel"},
+					{Name: "Zone"},
+					{Name: "DNS"},
+				},
+			},
+		},
+	}, nil
+}
+
+func (f *fakeCFClient) ListDNSRecords(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.ListDNSRecordsParams) ([]cloudflare.DNSRecord, *cloudflare.ResultInfo, error) {
+	var matching []cloudflare.DNSRecord
+	for _, r := range f.dnsRecords {
+		if r.Type == params.Type && r.Name == params.Name {
+			matching = append(matching, r)
+		}
+	}
+	return matching, &cloudflare.ResultInfo{}, nil
+}
+
+func (f *fakeCFClient) CreateDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.CreateDNSRecordParams) (cloudflare.DNSRecord, error) {
+	record := cloudflare.DNSRecord{ID: "dns-1", Type: params.Type, Name: params.Name, Content: params.Content}
+	f.dnsRecords = append(f.dnsRecords, record)
+	return record, nil
+}
+
+func (f *fakeCFClient) UpdateDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.UpdateDNSRecordParams) (cloudflare.DNSRecord, error) {
+	return cloudflare.DNSRecord{ID: params.ID, Type: params.Type, Name: params.Name, Content: params.Content}, nil
+}
+
+func (f *fakeCFClient) DeleteDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, recordID string) error {
+	return nil
 }
 
 func tunnelToken(accountID, tunnelID string) string {

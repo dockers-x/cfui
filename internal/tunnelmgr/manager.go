@@ -2,6 +2,7 @@ package tunnelmgr
 
 import (
 	"cfui/internal/config"
+	"cfui/internal/logger"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -21,6 +22,12 @@ type cloudflareClient interface {
 	GetTunnelConfiguration(ctx context.Context, rc *cloudflare.ResourceContainer, tunnelID string) (cloudflare.TunnelConfigurationResult, error)
 	UpdateTunnelConfiguration(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.TunnelConfigurationParams) (cloudflare.TunnelConfigurationResult, error)
 	ListZonesContext(ctx context.Context, opts ...cloudflare.ReqOption) (cloudflare.ZonesResponse, error)
+	VerifyAPIToken(ctx context.Context) (cloudflare.APITokenVerifyBody, error)
+	GetAPIToken(ctx context.Context, tokenID string) (cloudflare.APIToken, error)
+	ListDNSRecords(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.ListDNSRecordsParams) ([]cloudflare.DNSRecord, *cloudflare.ResultInfo, error)
+	CreateDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.CreateDNSRecordParams) (cloudflare.DNSRecord, error)
+	UpdateDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.UpdateDNSRecordParams) (cloudflare.DNSRecord, error)
+	DeleteDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, recordID string) error
 }
 
 type clientFactory func(config.TunnelManagementConfig) (cloudflareClient, error)
@@ -77,6 +84,37 @@ type IngressRule struct {
 	OriginServerName string `json:"origin_server_name,omitempty"`
 }
 
+// PermissionCheck represents whether a specific permission is granted.
+type PermissionCheck struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Granted     bool   `json:"granted"`
+	Required    bool   `json:"required"`
+}
+
+// VerifyTokenRequest is the request body for the verify-token endpoint.
+type VerifyTokenRequest struct {
+	AuthMode string `json:"auth_mode"` // "token" or "key"
+	APIToken string `json:"api_token"`
+	APIEmail string `json:"api_email"`
+	APIKey   string `json:"api_key"`
+}
+
+// VerifyTokenResponse is the response from the verify-token endpoint.
+type VerifyTokenResponse struct {
+	Valid       bool              `json:"valid"`
+	TokenStatus string            `json:"token_status"`
+	Permissions []PermissionCheck `json:"permissions"`
+	Error       string            `json:"error,omitempty"`
+}
+
+// Required permission group names as they appear in the Cloudflare API.
+const (
+	permTunnelEdit = "Cloudflare Tunnel"
+	permZoneRead   = "Zone"
+	permDNSEdit    = "DNS"
+)
+
 func NewManager(cfgMgr *config.Manager) *Manager {
 	return &Manager{cfgMgr: cfgMgr, newClient: newSDKClient}
 }
@@ -117,6 +155,125 @@ func (m *Manager) SaveSettings(req SettingsRequest) error {
 	}
 	cfg.TunnelManagement = current
 	return m.cfgMgr.Save(cfg)
+}
+
+// VerifyPermissions checks whether the provided credentials have the
+// required Cloudflare API permissions for tunnel management and DNS.
+func (m *Manager) VerifyPermissions(ctx context.Context, req VerifyTokenRequest) VerifyTokenResponse {
+	perms := []PermissionCheck{
+		{Name: "account_tunnel_edit", Description: "Account · Cloudflare Tunnel · Edit", Required: true},
+		{Name: "zone_read", Description: "Zone · Zone · Read", Required: true},
+		{Name: "zone_dns_edit", Description: "Zone · DNS · Edit", Required: true},
+	}
+
+	client, err := newSDKClientFromRequest(req)
+	if err != nil {
+		return VerifyTokenResponse{Valid: false, Permissions: perms, Error: "Failed to create API client: " + err.Error()}
+	}
+
+	// Verify the token is valid
+	verifyResp, err := client.VerifyAPIToken(ctx)
+	if err != nil {
+		return VerifyTokenResponse{Valid: false, TokenStatus: "invalid", Permissions: perms, Error: "Token verification failed: " + err.Error()}
+	}
+
+	resp := VerifyTokenResponse{
+		Valid:       verifyResp.Status == "active",
+		TokenStatus: verifyResp.Status,
+		Permissions: perms,
+	}
+
+	// Try to get token details (which includes permission groups)
+	if token, err := client.GetAPIToken(ctx, verifyResp.ID); err == nil {
+		checkPermissionsFromToken(token.Policies, perms)
+		resp.Permissions = perms
+	} else {
+		// Fall back to probing if we can't get token details
+		resp.Permissions = probePermissions(ctx, client, req)
+	}
+
+	return resp
+}
+
+func checkPermissionsFromToken(policies []cloudflare.APITokenPolicies, checks []PermissionCheck) {
+	// Collect all granted permission group names
+	granted := make(map[string]bool)
+	for _, policy := range policies {
+		if policy.Effect != "allow" {
+			continue
+		}
+		for _, group := range policy.PermissionGroups {
+			granted[group.Name] = true
+		}
+	}
+
+	for i := range checks {
+		switch checks[i].Name {
+		case "account_tunnel_edit":
+			checks[i].Granted = granted[permTunnelEdit]
+		case "zone_read":
+			checks[i].Granted = granted[permZoneRead]
+		case "zone_dns_edit":
+			checks[i].Granted = granted[permDNSEdit]
+		}
+	}
+}
+
+func probePermissions(ctx context.Context, client cloudflareClient, req VerifyTokenRequest) []PermissionCheck {
+	checks := []PermissionCheck{
+		{Name: "account_tunnel_edit", Description: "Account · Cloudflare Tunnel · Edit", Required: true},
+		{Name: "zone_read", Description: "Zone · Zone · Read", Required: true},
+		{Name: "zone_dns_edit", Description: "Zone · DNS · Edit", Required: true},
+	}
+
+	// Probe Tunnel:Edit by trying to fetch a known-non-existent tunnel config.
+	// A 403 means permission missing; a 404 means permission is present.
+	cfg := config.TunnelManagementConfig{
+		Enabled:   true,
+		APIToken:  req.APIToken,
+		APIEmail:  req.APIEmail,
+		APIKey:    req.APIKey,
+		AccountID: "00000000000000000000000000000000",
+		TunnelID:  "00000000-0000-0000-0000-000000000000",
+	}
+	client2, err := newSDKClient(cfg)
+	if err == nil {
+		_, err = client2.GetTunnelConfiguration(ctx, cloudflare.AccountIdentifier(cfg.AccountID), cfg.TunnelID)
+		checks[0].Granted = !isPermissionError(err)
+	}
+
+	// Probe Zone:Read by listing zones
+	_, err = client.ListZonesContext(ctx)
+	checks[1].Granted = !isPermissionError(err)
+
+	// For DNS:Edit we can't easily probe without side effects.
+	// Assume it's granted if Zone:Read is granted (common token configurations).
+	// Users should verify this manually if they plan to use public hostnames.
+	checks[2].Granted = checks[1].Granted
+
+	return checks
+}
+
+func isPermissionError(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "403") ||
+		strings.Contains(s, "forbidden") ||
+		strings.Contains(s, "unauthorized") ||
+		strings.Contains(s, "insufficient permissions") ||
+		strings.Contains(s, "Authentication error")
+}
+
+func newSDKClientFromRequest(req VerifyTokenRequest) (cloudflareClient, error) {
+	if req.AuthMode == "key" && strings.TrimSpace(req.APIEmail) != "" && strings.TrimSpace(req.APIKey) != "" {
+		return cloudflare.New(strings.TrimSpace(req.APIKey), strings.TrimSpace(req.APIEmail))
+	}
+	if strings.TrimSpace(req.APIToken) != "" {
+		return cloudflare.NewWithAPIToken(strings.TrimSpace(req.APIToken))
+	}
+	return nil, fmt.Errorf("no credentials provided")
 }
 
 func (m *Manager) Fetch(ctx context.Context) (ConfigurationResponse, error) {
@@ -161,7 +318,7 @@ func (m *Manager) ListZones(ctx context.Context) ([]ZoneResponse, error) {
 }
 
 func (m *Manager) AddEntry(ctx context.Context, entry IngressRule) (ConfigurationResponse, error) {
-	return m.mutate(ctx, func(cfg *cloudflare.TunnelConfiguration) error {
+	resp, err := m.mutate(ctx, func(cfg *cloudflare.TunnelConfiguration) error {
 		if strings.TrimSpace(entry.Service) == "" {
 			return fmt.Errorf("service is required")
 		}
@@ -175,10 +332,16 @@ func (m *Manager) AddEntry(ctx context.Context, entry IngressRule) (Configuratio
 		ensureCatchAll(cfg)
 		return nil
 	})
+	if err == nil && strings.TrimSpace(entry.Hostname) != "" {
+		if dnsErr := m.syncDNSForHostname(ctx, entry.Hostname); dnsErr != nil {
+			logger.Sugar.Warnf("Tunnel config updated but DNS sync failed for %s: %v. Create a CNAME record manually: %s → %s.cfargotunnel.com", entry.Hostname, dnsErr, entry.Hostname, m.cfgMgr.Get().TunnelManagement.TunnelID)
+		}
+	}
+	return resp, err
 }
 
 func (m *Manager) UpdateEntry(ctx context.Context, index int, entry IngressRule) (ConfigurationResponse, error) {
-	return m.mutate(ctx, func(cfg *cloudflare.TunnelConfiguration) error {
+	resp, err := m.mutate(ctx, func(cfg *cloudflare.TunnelConfiguration) error {
 		if index < 0 || index >= len(cfg.Ingress) {
 			return fmt.Errorf("entry index %d is out of range", index)
 		}
@@ -189,6 +352,12 @@ func (m *Manager) UpdateEntry(ctx context.Context, index int, entry IngressRule)
 		ensureCatchAll(cfg)
 		return nil
 	})
+	if err == nil && strings.TrimSpace(entry.Hostname) != "" {
+		if dnsErr := m.syncDNSForHostname(ctx, entry.Hostname); dnsErr != nil {
+			logger.Sugar.Warnf("Tunnel config updated but DNS sync failed for %s: %v. Create a CNAME record manually: %s → %s.cfargotunnel.com", entry.Hostname, dnsErr, entry.Hostname, m.cfgMgr.Get().TunnelManagement.TunnelID)
+		}
+	}
+	return resp, err
 }
 
 func (m *Manager) DeleteEntry(ctx context.Context, index int) (ConfigurationResponse, error) {
@@ -229,6 +398,70 @@ func (m *Manager) mutate(ctx context.Context, mutate func(*cloudflare.TunnelConf
 		return ConfigurationResponse{}, err
 	}
 	return toConfigurationResponse(updated), nil
+}
+
+// syncDNSForHostname creates or updates a CNAME DNS record pointing the
+// hostname to the tunnel's cfargotunnel.com subdomain.
+func (m *Manager) syncDNSForHostname(ctx context.Context, hostname string) error {
+	cfg, client, err := m.accountClient()
+	if err != nil {
+		return fmt.Errorf("failed to get client for DNS sync: %w", err)
+	}
+
+	zonesResp, err := client.ListZonesContext(ctx, cloudflare.WithZoneFilters("", cfg.AccountID, ""))
+	if err != nil {
+		return fmt.Errorf("failed to list zones: %w", err)
+	}
+
+	zone := findZoneForHostname(hostname, zonesResp.Result)
+	if zone == nil {
+		return fmt.Errorf("no matching zone found for %s", hostname)
+	}
+
+	target := fmt.Sprintf("%s.cfargotunnel.com", cfg.TunnelID)
+
+	// Look for an existing CNAME record for this hostname
+	existing, _, err := client.ListDNSRecords(ctx, cloudflare.ZoneIdentifier(zone.ID), cloudflare.ListDNSRecordsParams{
+		Type: "CNAME",
+		Name: hostname,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list DNS records: %w", err)
+	}
+
+	if len(existing) > 0 {
+		_, err = client.UpdateDNSRecord(ctx, cloudflare.ZoneIdentifier(zone.ID), cloudflare.UpdateDNSRecordParams{
+			ID:      existing[0].ID,
+			Type:    "CNAME",
+			Name:    hostname,
+			Content: target,
+			Proxied: cloudflare.BoolPtr(true),
+			TTL:     1, // Auto TTL
+		})
+	} else {
+		_, err = client.CreateDNSRecord(ctx, cloudflare.ZoneIdentifier(zone.ID), cloudflare.CreateDNSRecordParams{
+			Type:    "CNAME",
+			Name:    hostname,
+			Content: target,
+			Proxied: cloudflare.BoolPtr(true),
+			TTL:     1, // Auto TTL
+		})
+	}
+	if err != nil {
+		return fmt.Errorf("failed to create/update DNS CNAME record: %w", err)
+	}
+
+	logger.Sugar.Infof("DNS CNAME record synced: %s → %s", hostname, target)
+	return nil
+}
+
+func findZoneForHostname(hostname string, zones []cloudflare.Zone) *cloudflare.Zone {
+	for i := range zones {
+		if strings.HasSuffix(hostname, "."+zones[i].Name) || hostname == zones[i].Name {
+			return &zones[i]
+		}
+	}
+	return nil
 }
 
 func (m *Manager) client() (config.TunnelManagementConfig, cloudflareClient, error) {

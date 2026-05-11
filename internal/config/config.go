@@ -37,6 +37,62 @@ type Config struct {
 
 	// Optional Cloudflare API-backed tunnel configuration manager.
 	TunnelManagement TunnelManagementConfig `json:"tunnel_management"`
+
+	// DDNS configuration for automatic DNS record updating.
+	DDNS DDNSConfig `json:"ddns"`
+}
+
+// DDNSConfig stores settings for the built-in DDNS client.
+type DDNSConfig struct {
+	Enabled      bool         `json:"enabled"`
+	IPSources    []IPSource   `json:"ip_sources"`
+	Records      []DDNSRecord `json:"records"`
+	IntervalMins int          `json:"interval_mins"`  // check interval in minutes
+	OnlyOnChange bool         `json:"only_on_change"` // only update on IP change
+	MaxRetries   int          `json:"max_retries"`    // retries per source on failure
+}
+
+// IPSource defines a remote endpoint that returns the public IP address.
+type IPSource struct {
+	URL    string `json:"url"`
+	IPType string `json:"ip_type"` // "ipv4", "ipv6", "auto"
+}
+
+// DDNSRecord defines a DNS record managed by the DDNS client.
+type DDNSRecord struct {
+	Name     string `json:"name"`      // full hostname (e.g., home.example.com)
+	ZoneID   string `json:"zone_id"`   // Cloudflare zone ID
+	ZoneName string `json:"zone_name"` // zone name for display
+	Type     string `json:"type"`      // "A" or "AAAA"
+	Proxied  bool   `json:"proxied"`
+	TTL      int    `json:"ttl"` // 1 = Auto
+}
+
+// DefaultDDNSConfig returns sensible defaults.
+func DefaultDDNSConfig() DDNSConfig {
+	return DDNSConfig{
+		Enabled: false,
+		IPSources: []IPSource{
+			// IPv4
+			{URL: "https://api-ipv4.ip.sb/ip", IPType: "ipv4"},
+			{URL: "http://v4.66666.host:66/ip", IPType: "ipv4"},
+			{URL: "https://myip.ipip.net", IPType: "ipv4"},
+			{URL: "https://ipv4.ddnspod.com", IPType: "ipv4"},
+			{URL: "https://4.ipw.cn", IPType: "ipv4"},
+			{URL: "https://ip.3322.net", IPType: "ipv4"},
+			// IPv6
+			{URL: "https://api-ipv6.ip.sb/ip", IPType: "ipv6"},
+			{URL: "http://v6.66666.host:66/ip", IPType: "ipv6"},
+			{URL: "http://myip6.ipip.net", IPType: "ipv6"},
+			{URL: "https://6.ipw.cn", IPType: "ipv6"},
+			{URL: "https://ipv6.ddnspod.com", IPType: "ipv6"},
+			{URL: "https://v6.66666.host:66/ip", IPType: "ipv6"},
+		},
+		Records:      []DDNSRecord{},
+		IntervalMins: 5,
+		OnlyOnChange: true,
+		MaxRetries:   3,
+	}
 }
 
 // TunnelManagementConfig stores optional credentials and identifiers used to
@@ -75,6 +131,7 @@ func DefaultConfig() Config {
 		TunnelManagement: TunnelManagementConfig{
 			Enabled: false,
 		},
+		DDNS: DefaultDDNSConfig(),
 	}
 }
 

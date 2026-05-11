@@ -556,6 +556,46 @@ select:focus-visible {
     color: var(--text-secondary);
 }
 
+.help-row {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+}
+
+.help-row .help-text {
+    margin-top: 0;
+}
+
+.help-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--cf-orange);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+    white-space: nowrap;
+}
+
+.help-link:hover {
+    border-bottom-color: var(--cf-orange);
+}
+
+.help-link::after {
+    content: "↗";
+    font-size: 0.75rem;
+}
+
+.help-link:focus-visible {
+    outline: none;
+    border-radius: 4px;
+    box-shadow: var(--input-focus-shadow);
+}
+
 /* --- Advanced Section --- */
 .advanced-section {
     margin: 24px 0;
@@ -1032,6 +1072,53 @@ input:checked+.slider:before {
     padding-top: 24px;
 }
 
+/* --- Permission Verification --- */
+.verify-row {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.verify-result {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+}
+
+.verify-result .perm-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--advanced-toggle-bg);
+    border: 1px solid var(--border-color);
+}
+
+.verify-result .perm-granted {
+    color: var(--success-color);
+    font-weight: 700;
+}
+
+.verify-result .perm-denied {
+    color: var(--error-color);
+    font-weight: 700;
+}
+
+.verify-result .perm-loading {
+    color: var(--cf-orange);
+}
+
+.verify-result .perm-error {
+    color: var(--error-color);
+    font-size: 0.78rem;
+}
+
 .manager-enable-row {
     margin-bottom: 24px;
 }
@@ -1318,6 +1405,186 @@ input:checked+.slider:before {
 
     .entry-form {
         padding: 16px;
+    }
+}
+
+/* --- DDNS --- */
+.ddns-no-creds {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-secondary);
+}
+
+.ddns-ip-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    padding: 10px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--advanced-bg);
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+}
+
+.ddns-ip-label {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.ddns-ip-row {
+    color: var(--text-secondary);
+}
+
+.ddns-ip-row code {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--cf-orange);
+    background: transparent;
+}
+
+.ddns-ip-time {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.ddns-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.ddns-left,
+.ddns-right {
+    min-width: 0;
+}
+
+.ddns-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0;
+}
+
+.ddns-subtab {
+    padding: 8px 16px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+}
+
+.ddns-subtab:hover {
+    color: var(--text-primary);
+}
+
+.ddns-subtab.active {
+    color: var(--cf-orange);
+    border-bottom-color: var(--cf-orange);
+}
+
+.ddns-subpanel[hidden] {
+    display: none;
+}
+
+.ddns-sync-log {
+    margin-top: 20px;
+}
+
+.ddns-sync-log h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.ddns-sync-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ddns-sync-item:last-child {
+    border-bottom: none;
+}
+
+.ddns-sync-time {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    width: 42px;
+    flex-shrink: 0;
+}
+
+.ddns-sync-ok {
+    color: var(--success-color);
+    font-weight: 700;
+}
+
+.ddns-sync-err {
+    color: var(--error-color);
+    font-weight: 700;
+}
+
+.ddns-sync-host {
+    font-weight: 500;
+}
+
+.ddns-sync-ip {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.ddns-sync-msg {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+}
+
+textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px 14px;
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    resize: vertical;
+    transition: all 0.2s;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--cf-orange);
+    box-shadow: var(--input-focus-shadow);
+}
+
+@media (max-width: 768px) {
+    .ddns-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ddns-ip-banner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .ddns-ip-time {
+        margin-left: 0;
     }
 }
 

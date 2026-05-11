@@ -23,7 +23,10 @@ other = "管理您的 Cloudflare Tunnel 连接"
 other = "隧道 Token"
 
 [token_help]
-other = "输入 Cloudflare Zero Trust 仪表板提供的 Token。"
+other = "在此粘贴您的隧道 Token。获取路径：Cloudflare Zero Trust → 网络 → 隧道 → 选择您的隧道 → 配置 → 复制 Token。"
+
+[token_help_link]
+other = "打开 Cloudflare Zero Trust"
 
 [tunnel_identifier]
 other = "隧道标识符"
@@ -338,25 +341,34 @@ other = "禁用源站 TLS 验证"
 other = "Cloudflare 账户 ID"
 
 [account_id_help]
-other = "也可以通过 CLOUDFLARE_ACCOUNT_ID 或 CLOUDFLARE_APP_ID 提供。"
+other = "您的 Cloudflare 账户 ID。在仪表板 URL (dash.cloudflare.com/<id>) 或任意站点概览页面找到。也可通过 CLOUDFLARE_ACCOUNT_ID 或 CLOUDFLARE_APP_ID 环境变量设置。"
 
 [tunnel_id_placeholder]
 other = "隧道 UUID"
 
 [tunnel_id_help]
-other = "修改此字段后会加载所选隧道配置。"
+other = "您的隧道 UUID。获取路径：Cloudflare Zero Trust → 网络 → 隧道 → 点击隧道名称 → 概览。修改此字段后会加载所选隧道配置。"
 
 [auth_help]
-other = "推荐使用 API Token。密钥字段留空会保留已保存的值。"
+other = "推荐使用 API Token。创建路径：仪表板 → 我的个人资料 → API 令牌。需要 Account:Cloudflare Tunnel:Edit 和 Zone:Zone:Read 权限。留空则保留已保存的值。"
+
+[api_token_help]
+other = "在 Cloudflare 仪表板 → 我的个人资料 → API 令牌 → 创建令牌 中创建。所需权限：Account · Cloudflare Tunnel · Edit, Zone · Zone · Read。"
+
+[api_key_help]
+other = "在 Cloudflare 仪表板 → 我的个人资料 → API 密钥 中找到 Global API Key。为安全起见，建议使用 API Token 代替。"
+
+[api_email_help]
+other = "您的 Cloudflare 账户邮箱。仅在使用邮箱 + API Key 认证时需要。"
 
 [api_token_placeholder]
-other = "留空以保留现有 Token"
+other = "粘贴 API Token"
 
 [api_email_placeholder]
 other = "you@example.com"
 
 [api_key_placeholder]
-other = "留空以保留现有 Key"
+other = "粘贴 API Key"
 
 [no_remote_config_loaded]
 other = "尚未加载远程配置。"
@@ -432,6 +444,9 @@ other = "Account · Cloudflare Tunnel · Edit"
 
 [api_permission_zone]
 other = "Zone · Zone · Read"
+
+[api_permission_dns]
+other = "Zone · DNS · Edit"
 
 [api_permission_note]
 other = "建议使用限定账号范围的 API Token。邮箱 + Global API Key 权限更大。"
@@ -510,3 +525,165 @@ other = "MCP Token 已创建"
 
 [mcp_token_deleted]
 other = "MCP Token 已删除"
+
+[verify_permissions]
+other = "验证权限"
+
+[verify_checking]
+other = "正在检查权限..."
+
+[verify_enter_token]
+other = "请输入 API Token 进行验证。"
+
+[verify_enter_credentials]
+other = "请输入 API 凭据进行验证。"
+
+[verify_failed]
+other = "验证失败，请检查您的凭据。"
+
+[verify_token_status]
+other = "Token 状态"
+
+[verify_permission_tunnel_edit]
+other = "Tunnel:Edit"
+
+[verify_permission_zone_read]
+other = "Zone:Read"
+
+[verify_permission_dns_edit]
+other = "DNS:Edit"
+
+[ddns_tab]
+other = "DDNS"
+
+[ddns_title]
+other = "动态 DNS"
+
+[ddns_subtitle]
+other = "公网 IP 变化时自动更新 DNS 记录。复用远程隧道管理的 API 凭据。"
+
+[ddns_no_credentials]
+other = "请先在远程隧道管理中配置 API 凭据。"
+
+[ddns_settings]
+other = "DDNS 设置"
+
+[ddns_ip_sources]
+other = "IP 获取源"
+
+[ddns_ip_sources_help]
+other = "按顺序尝试，首个成功返回的地址生效。"
+
+[ddns_ipv4_sources]
+other = "IPv4 源"
+
+[ddns_ipv6_sources]
+other = "IPv6 源"
+
+[ddns_batch_add_help]
+other = "每行一个 URL，每行将作为一个独立源添加。"
+
+[ddns_add_single]
+other = "单个添加"
+
+[ddns_add_single_url]
+other = "URL"
+
+[ddns_add_single_type]
+other = "IP 类型"
+
+[ddns_add_batch]
+other = "批量添加"
+
+[ddns_auto_update]
+other = "自动更新"
+
+[ddns_interval]
+other = "检测频率"
+
+[ddns_only_on_change]
+other = "仅在 IP 变化时更新"
+
+[ddns_max_retries]
+other = "最大重试次数"
+
+[ddns_records]
+other = "DDNS 记录"
+
+[ddns_add_record]
+other = "添加记录"
+
+[ddns_record_name]
+other = "主机名"
+
+[ddns_record_name_placeholder]
+other = "home.example.com"
+
+[ddns_record_type]
+other = "类型"
+
+[ddns_record_zone]
+other = "区域"
+
+[ddns_record_proxied]
+other = "代理"
+
+[ddns_record_ttl]
+other = "TTL"
+
+[ddns_save_settings]
+other = "保存 DDNS 设置"
+
+[ddns_sync_now]
+other = "立即同步"
+
+[ddns_current_ip]
+other = "当前公网 IP"
+
+[ddns_ipv4]
+other = "IPv4"
+
+[ddns_ipv6]
+other = "IPv6"
+
+[ddns_unknown]
+other = "未知"
+
+[ddns_status_running]
+other = "运行中"
+
+[ddns_status_disabled]
+other = "已禁用"
+
+[ddns_enable]
+other = "启用 DDNS"
+
+[ddns_sync_log]
+other = "同步日志"
+
+[ddns_settings_saved]
+other = "DDNS 设置已保存"
+
+[ddns_synced]
+other = "已同步"
+
+[ddns_sync_failed]
+other = "失败"
+
+[ddns_record_added]
+other = "DDNS 记录已添加"
+
+[ddns_record_updated]
+other = "DDNS 记录已更新"
+
+[ddns_record_deleted]
+other = "DDNS 记录已删除"
+
+[ddns_sync_triggered]
+other = "DDNS 同步已触发"
+
+[ddns_no_records]
+other = "暂无 DDNS 记录，在下方添加。"
+
+[minutes]
+other = "分钟"

@@ -19,6 +19,12 @@ const state = {
     mcp: {
         status: null,
         tokens: []
+    },
+    ddns: {
+        config: null,
+        status: null,
+        zones: [],
+        zonesLoaded: false
     }
 };
 
@@ -49,6 +55,8 @@ const elements = {
     metricsPortInput: document.getElementById('metrics-port-input'),
     edgeBindAddressInput: document.getElementById('edge-bind-address-input'),
     noTLSVerifyToggle: document.getElementById('no-tls-verify-toggle'),
+    tokenHelpText: document.getElementById('token-help-text'),
+    tokenHelpLink: document.getElementById('token-help-link'),
     managerStatus: document.getElementById('manager-status'),
     managerSettingsSection: document.getElementById('manager-settings-section'),
     managerSettingsToggle: document.getElementById('manager-settings-toggle'),
@@ -62,9 +70,15 @@ const elements = {
     managerAPIEmail: document.getElementById('manager-api-email'),
     managerAPIKey: document.getElementById('manager-api-key'),
     managerAPIHelp: document.getElementById('manager-api-help'),
+    managerAPIHelpDns: document.getElementById('manager-api-help-dns'),
     managerAPIHelpPanel: document.getElementById('manager-api-help-panel'),
     managerTokenState: document.getElementById('manager-token-state'),
     managerKeyState: document.getElementById('manager-key-state'),
+    managerAPITokenHelp: document.getElementById('manager-api-token-help'),
+    managerAPIEmailHelp: document.getElementById('manager-api-email-help'),
+    managerAPIKeyHelp: document.getElementById('manager-api-key-help'),
+    managerVerifyPermissions: document.getElementById('manager-verify-permissions'),
+    managerVerifyResult: document.getElementById('manager-verify-result'),
     managerSaveSettings: document.getElementById('manager-save-settings'),
     managerLoadConfig: document.getElementById('manager-load-config'),
     managerConfigPanel: document.getElementById('manager-config-panel'),
@@ -100,7 +114,36 @@ const elements = {
     mcpTokenCreate: document.getElementById('mcp-token-create'),
     mcpCreatedToken: document.getElementById('mcp-created-token'),
     mcpCreatedValue: document.getElementById('mcp-created-value'),
-    mcpTokenList: document.getElementById('mcp-token-list')
+    mcpTokenList: document.getElementById('mcp-token-list'),
+    ddnsTab: document.getElementById('ddns-tab'),
+    ddnsPanel: document.getElementById('ddns-panel'),
+    ddnsStatus: document.getElementById('ddns-status'),
+    ddnsNoCreds: document.getElementById('ddns-no-creds'),
+    ddnsMain: document.getElementById('ddns-main'),
+    ddnsIPBanner: document.getElementById('ddns-ip-banner'),
+    ddnsIPv4Value: document.getElementById('ddns-ipv4-value'),
+    ddnsIPv6Value: document.getElementById('ddns-ipv6-value'),
+    ddnsLastCheck: document.getElementById('ddns-last-check'),
+    ddnsSyncNow: document.getElementById('ddns-sync-now'),
+    ddnsEnableToggle: document.getElementById('ddns-enable-toggle'),
+    ddnsIPv4Textarea: document.getElementById('ddns-ipv4-textarea'),
+    ddnsIPv6Textarea: document.getElementById('ddns-ipv6-textarea'),
+    ddnsInterval: document.getElementById('ddns-interval'),
+    ddnsMaxRetries: document.getElementById('ddns-max-retries'),
+    ddnsOnlyOnChange: document.getElementById('ddns-only-on-change'),
+    ddnsSaveSettings: document.getElementById('ddns-save-settings'),
+    ddnsRecordsList: document.getElementById('ddns-records-list'),
+    ddnsAddRecordBtn: document.getElementById('ddns-add-record-btn'),
+    ddnsRecordForm: document.getElementById('ddns-record-form'),
+    ddnsRecordSubdomain: document.getElementById('ddns-record-subdomain'),
+    ddnsRecordZoneSelect: document.getElementById('ddns-record-zone-select'),
+    ddnsRecordIPv4: document.getElementById('ddns-record-ipv4'),
+    ddnsRecordIPv6: document.getElementById('ddns-record-ipv6'),
+    ddnsRecordTTLSelect: document.getElementById('ddns-record-ttl-select'),
+    ddnsRecordProxied: document.getElementById('ddns-record-proxied'),
+    ddnsRecordSubmit: document.getElementById('ddns-record-submit'),
+    ddnsRecordCancel: document.getElementById('ddns-record-cancel'),
+    ddnsSyncLogList: document.getElementById('ddns-sync-log-list')
 };
 
 // Theme Management
@@ -147,13 +190,14 @@ async function init() {
 // Event Listeners
 elements.themeToggle.addEventListener('click', toggleTheme);
 
-elements.toggleVisibilityBtn.addEventListener('click', () => {
-    const type = elements.tokenInput.type === 'password' ? 'text' : 'password';
-    elements.tokenInput.type = type;
+function toggleVisibility(input, btn) {
+    const type = input.type === 'password' ? 'text' : 'password';
+    input.type = type;
     const visible = type === 'text';
-    elements.toggleVisibilityBtn.setAttribute('aria-pressed', String(visible));
-    elements.toggleVisibilityBtn.setAttribute('aria-label', visible ? 'Hide tunnel token' : 'Show tunnel token');
-});
+    btn.setAttribute('aria-pressed', String(visible));
+    btn.setAttribute('aria-label', visible ? 'Hide' : 'Show');
+}
+elements.toggleVisibilityBtn.addEventListener('click', () => toggleVisibility(elements.tokenInput, elements.toggleVisibilityBtn));
 
 elements.tokenInput.addEventListener('change', saveAllConfig);
 elements.customTagInput?.addEventListener('change', saveAllConfig);
@@ -177,6 +221,10 @@ elements.managerTab?.addEventListener('click', async () => {
     activateTab('manager');
     await maybeLoadTunnelManagerZones(true);
 });
+elements.ddnsTab?.addEventListener('click', async () => {
+    activateTab('ddns');
+    await refreshDDNS();
+});
 elements.mcpTab?.addEventListener('click', async () => {
     activateTab('mcp');
     await fetchMCPStatus();
@@ -193,6 +241,7 @@ document.addEventListener('click', (event) => {
     if (event.target === elements.managerAPIHelp || elements.managerAPIHelpPanel.contains(event.target)) return;
     toggleAPIHelp(false);
 });
+elements.managerVerifyPermissions?.addEventListener('click', verifyTokenPermissions);
 elements.managerRefreshZones?.addEventListener('click', () => loadTunnelManagerZones(false));
 elements.managerEntryDomainSelect?.addEventListener('change', () => {
     updateDomainInputMode({ clearSelectedZone: true });
@@ -210,6 +259,20 @@ elements.managerTunnelId?.addEventListener('change', async () => {
 });
 elements.managerEntryForm?.addEventListener('submit', submitTunnelManagerEntry);
 elements.managerEntryCancel?.addEventListener('click', resetTunnelEntryForm);
+
+// API token/key visibility toggles
+const managerAPITokenToggle = document.getElementById('manager-api-token-toggle');
+const managerAPIKeyToggle = document.getElementById('manager-api-key-toggle');
+managerAPITokenToggle?.addEventListener('click', () => toggleVisibility(elements.managerAPIToken, managerAPITokenToggle));
+managerAPIKeyToggle?.addEventListener('click', () => toggleVisibility(elements.managerAPIKey, managerAPIKeyToggle));
+
+elements.ddnsSyncNow?.addEventListener('click', ddnsSyncNow);
+elements.ddnsSaveSettings?.addEventListener('click', ddnsSaveSettings);
+elements.ddnsAddRecordBtn?.addEventListener('click', () => { elements.ddnsRecordForm.hidden = false; loadDDNSZones(); });
+elements.ddnsRecordForm?.addEventListener('submit', ddnsSubmitRecord);
+elements.ddnsRecordCancel?.addEventListener('click', () => { elements.ddnsRecordForm.hidden = true; });
+document.getElementById('ddns-tab-sources')?.addEventListener('click', () => switchDDNSSubTab('sources'));
+document.getElementById('ddns-tab-auto')?.addEventListener('click', () => switchDDNSSubTab('auto'));
 
 elements.actionBtn.addEventListener('click', async () => {
     const action = state.isRunning ? 'stop' : 'start';
@@ -271,12 +334,15 @@ elements.langSelect.addEventListener('change', async (e) => {
 function activateTab(tab) {
     const managerActive = tab === 'manager';
     const mcpActive = tab === 'mcp';
-    const localActive = !managerActive && !mcpActive;
+    const ddnsActive = tab === 'ddns';
+    const localActive = !managerActive && !mcpActive && !ddnsActive;
     elements.localTab?.classList.toggle('active', localActive);
     elements.managerTab?.classList.toggle('active', managerActive);
+    elements.ddnsTab?.classList.toggle('active', ddnsActive);
     elements.mcpTab?.classList.toggle('active', mcpActive);
     elements.localTab?.setAttribute('aria-selected', String(localActive));
     elements.managerTab?.setAttribute('aria-selected', String(managerActive));
+    elements.ddnsTab?.setAttribute('aria-selected', String(ddnsActive));
     elements.mcpTab?.setAttribute('aria-selected', String(mcpActive));
 
     if (elements.localPanel) {
@@ -286,6 +352,10 @@ function activateTab(tab) {
     if (elements.managerPanel) {
         elements.managerPanel.hidden = !managerActive;
         elements.managerPanel.classList.toggle('active', managerActive);
+    }
+    if (elements.ddnsPanel) {
+        elements.ddnsPanel.hidden = !ddnsActive;
+        elements.ddnsPanel.classList.toggle('active', ddnsActive);
     }
     if (elements.mcpPanel) {
         elements.mcpPanel.hidden = !mcpActive;
@@ -1091,7 +1161,8 @@ function updateUIText() {
 
     // Token section
     document.querySelector('label[for="token-input"]').textContent = t('tunnel_token');
-    document.querySelectorAll('.help-text')[0].textContent = t('token_help');
+    if (elements.tokenHelpText) elements.tokenHelpText.textContent = t('token_help');
+    if (elements.tokenHelpLink) elements.tokenHelpLink.textContent = t('token_help_link');
 
     // Advanced configuration
     document.querySelector('.tunnel-config-card .advanced-toggle').textContent = t('advanced_config');
@@ -1192,6 +1263,79 @@ function updateMCPText() {
     renderMCPTokens();
 }
 
+async function verifyTokenPermissions() {
+    const btn = elements.managerVerifyPermissions;
+    const result = elements.managerVerifyResult;
+    if (!btn || !result) return;
+
+    const authMode = elements.managerAuthMode?.value || 'token';
+    const payload = {
+        auth_mode: authMode,
+        api_token: authMode === 'token' ? elements.managerAPIToken?.value.trim() || '' : '',
+        api_email: authMode === 'key' ? elements.managerAPIEmail?.value.trim() || '' : '',
+        api_key: authMode === 'key' ? elements.managerAPIKey?.value.trim() || '' : ''
+    };
+
+    if (authMode === 'token' && !payload.api_token && !state.tunnelManager.settings?.api_token_set) {
+        result.hidden = false;
+        result.innerHTML = '<span class="perm-error">' + t('verify_enter_token') + '</span>';
+        return;
+    }
+    if (authMode === 'key' && !payload.api_email && !payload.api_key) {
+        result.hidden = false;
+        result.innerHTML = '<span class="perm-error">' + t('verify_enter_credentials') + '</span>';
+        return;
+    }
+
+    btn.disabled = true;
+    result.hidden = false;
+    result.innerHTML = '<span class="perm-loading">' + t('verify_checking') + '</span>';
+
+    try {
+        const res = await fetch(API_BASE + '/tunnel-manager/verify-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (!data.valid && data.error && !data.permissions) {
+            result.innerHTML = '<span class="perm-error">' + (data.error || t('verify_failed')) + '</span>';
+            return;
+        }
+
+        renderPermissionResult(data);
+    } catch (err) {
+        result.innerHTML = '<span class="perm-error">' + err.message + '</span>';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function renderPermissionResult(data) {
+    const result = elements.managerVerifyResult;
+    if (!result) return;
+
+    if (data.token_status === 'inactive' || data.token_status === 'revoked') {
+        result.innerHTML = '<span class="perm-error">Token status: ' + data.token_status + '</span>';
+        return;
+    }
+
+    const perms = data.permissions || [];
+    let html = '';
+    perms.forEach(p => {
+        const icon = p.granted ? '<span class="perm-granted">✔</span>' : (p.required ? '<span class="perm-denied">✘</span>' : '<span class="perm-granted">✔</span>');
+        html += '<span class="perm-item">' + icon + ' ' + escapeHtml(p.description) + '</span>';
+    });
+    result.innerHTML = html;
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 function updateTunnelManagerText() {
     const managerTitle = document.getElementById('manager-title');
     if (!managerTitle) return;
@@ -1215,11 +1359,16 @@ function updateTunnelManagerText() {
     document.getElementById('manager-api-help-title').textContent = t('api_permissions_title');
     document.getElementById('manager-api-help-tunnel').textContent = t('api_permission_tunnel');
     document.getElementById('manager-api-help-zone').textContent = t('api_permission_zone');
+    if (elements.managerAPIHelpDns) elements.managerAPIHelpDns.textContent = t('api_permission_dns');
     document.getElementById('manager-api-help-note').textContent = t('api_permission_note');
+    if (elements.managerVerifyPermissions) elements.managerVerifyPermissions.textContent = t('verify_permissions');
     document.querySelector('label[for="manager-api-email"]').textContent = t('api_email');
     elements.managerAPIEmail.placeholder = t('api_email_placeholder');
     document.querySelector('label[for="manager-api-key"]').textContent = t('api_key');
     elements.managerAPIKey.placeholder = t('api_key_placeholder');
+    if (elements.managerAPITokenHelp) elements.managerAPITokenHelp.textContent = t('api_token_help');
+    if (elements.managerAPIEmailHelp) elements.managerAPIEmailHelp.textContent = t('api_email_help');
+    if (elements.managerAPIKeyHelp) elements.managerAPIKeyHelp.textContent = t('api_key_help');
     elements.managerSaveSettings.textContent = t('save_manager_settings');
     elements.managerLoadConfig.textContent = t('load_tunnel_config');
     document.querySelector('.manager-config-panel .section-heading h3').textContent = t('ingress_rules');
@@ -1354,5 +1503,352 @@ function addStreamLog(line) {
 window.addEventListener('beforeunload', () => {
     disconnectLogStream();
 });
+
+// DDNS Functions
+
+async function refreshDDNS() {
+    await fetchDDNSConfig();
+    await fetchDDNSStatus();
+}
+
+async function fetchDDNSConfig() {
+    try {
+        const res = await fetch(`${API_BASE}/ddns/config`);
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.ddns.config = data;
+        renderDDNSConfig(data);
+    } catch (err) {
+        setDDNSStatus(err.message, 'error');
+    }
+}
+
+function renderDDNSConfig(cfg) {
+    if (!elements.ddnsMain) return;
+
+    if (!cfg.has_credentials) {
+        elements.ddnsNoCreds.hidden = false;
+        elements.ddnsMain.hidden = true;
+        setDDNSStatus(t('ddns_status_disabled'), 'disabled');
+        return;
+    }
+
+    elements.ddnsNoCreds.hidden = true;
+    elements.ddnsMain.hidden = false;
+
+    elements.ddnsEnableToggle.checked = !!cfg.enabled;
+
+    const v4Sources = (cfg.ip_sources || []).filter(s => s.ip_type === 'ipv4').map(s => s.url).join('\n');
+    const v6Sources = (cfg.ip_sources || []).filter(s => s.ip_type === 'ipv6').map(s => s.url).join('\n');
+    elements.ddnsIPv4Textarea.value = v4Sources;
+    elements.ddnsIPv6Textarea.value = v6Sources;
+
+    elements.ddnsInterval.value = String(cfg.interval_mins || 5);
+    elements.ddnsMaxRetries.value = String(cfg.max_retries || 3);
+    elements.ddnsOnlyOnChange.checked = cfg.only_on_change !== false;
+
+    setDDNSStatus(cfg.enabled ? t('ddns_status_running') : t('ddns_status_disabled'), cfg.enabled ? 'ready' : 'disabled');
+
+    renderDDNSRecords(cfg.records || []);
+}
+
+async function fetchDDNSStatus() {
+    try {
+        const res = await fetch(`${API_BASE}/ddns/status`);
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.ddns.status = data;
+        renderDDNSStatus(data);
+    } catch (err) { /* silently fail for periodic poll */ }
+}
+
+function renderDDNSStatus(data) {
+    if (elements.ddnsIPv4Value) elements.ddnsIPv4Value.textContent = data.current_v4 || t('ddns_unknown');
+    if (elements.ddnsIPv6Value) elements.ddnsIPv6Value.textContent = data.current_v6 || t('ddns_unknown');
+    if (elements.ddnsLastCheck) elements.ddnsLastCheck.textContent = data.last_check ? new Date(data.last_check).toLocaleString() : '—';
+
+    // Render sync log
+    if (elements.ddnsSyncLogList && data.results) {
+        elements.ddnsSyncLogList.innerHTML = '';
+        const results = data.results.slice().reverse();
+        if (results.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-state';
+            empty.textContent = items.length === 0 ? '' : '';
+            elements.ddnsSyncLogList.appendChild(empty);
+        }
+        results.forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'ddns-sync-item';
+            const time = new Date(r.time).toLocaleTimeString();
+            div.innerHTML = `<span class="ddns-sync-time">${time}</span>` +
+                (r.success ? '<span class="ddns-sync-ok">✓</span>' : '<span class="ddns-sync-err">✗</span>') +
+                `<span class="ddns-sync-host">${escapeHtml(r.hostname)}</span>` +
+                `<span class="ddns-sync-ip">${escapeHtml(r.ip || '')}</span>` +
+                `<span class="ddns-sync-msg">${escapeHtml(r.message)}</span>`;
+            elements.ddnsSyncLogList.appendChild(div);
+        });
+    }
+}
+
+function renderDDNSRecords(records) {
+    if (!elements.ddnsRecordsList) return;
+    elements.ddnsRecordsList.innerHTML = '';
+    if (!records || records.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = t('ddns_no_records');
+        elements.ddnsRecordsList.appendChild(empty);
+        return;
+    }
+    records.forEach((rec, i) => {
+        const row = document.createElement('div');
+        row.className = 'rule-row';
+        const content = document.createElement('div');
+        content.className = 'rule-content';
+        const title = document.createElement('div');
+        title.className = 'rule-title';
+        title.textContent = rec.name || '—';
+        const detail = document.createElement('div');
+        detail.className = 'rule-detail';
+        const proxied = rec.proxied ? ' · Proxied' : '';
+        detail.textContent = `${rec.type} · TTL: ${rec.ttl === 1 ? 'Auto' : rec.ttl + 's'}${proxied}`;
+        content.append(title, detail);
+
+        const actions = document.createElement('div');
+        actions.className = 'rule-actions';
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn btn-sm btn-secondary';
+        editBtn.textContent = t('edit');
+        editBtn.addEventListener('click', () => editDDNSRecord(i, rec));
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-sm btn-ghost';
+        delBtn.textContent = t('delete');
+        delBtn.addEventListener('click', () => deleteDDNSRecord(i));
+        actions.append(editBtn, delBtn);
+        row.append(content, actions);
+        elements.ddnsRecordsList.appendChild(row);
+    });
+}
+
+async function ddnsSaveSettings() {
+    const v4Lines = elements.ddnsIPv4Textarea.value.split('\n').map(l => l.trim()).filter(l => l);
+    const v6Lines = elements.ddnsIPv6Textarea.value.split('\n').map(l => l.trim()).filter(l => l);
+    const sources = [
+        ...v4Lines.map(url => ({ url, ip_type: 'ipv4' })),
+        ...v6Lines.map(url => ({ url, ip_type: 'ipv6' }))
+    ];
+
+    const payload = {
+        enabled: elements.ddnsEnableToggle.checked,
+        ip_sources: sources,
+        interval_mins: parseInt(elements.ddnsInterval.value) || 5,
+        max_retries: parseInt(elements.ddnsMaxRetries.value) || 3,
+        only_on_change: elements.ddnsOnlyOnChange.checked
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/ddns/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.ddns.config = data;
+        renderDDNSConfig(data);
+        addLog(t('ddns_settings_saved'), 'system');
+        await fetchDDNSStatus();
+    } catch (err) {
+        setDDNSStatus(err.message, 'error');
+        addLog(`DDNS save failed: ${err.message}`, 'error');
+    }
+}
+
+async function ddnsSyncNow() {
+    try {
+        setDDNSStatus('Syncing...', 'loading');
+        const res = await fetch(`${API_BASE}/ddns/sync-now`, { method: 'POST' });
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.ddns.status = data;
+        renderDDNSStatus(data);
+        setDDNSStatus(t('ddns_status_running'), 'ready');
+        addLog(t('ddns_sync_triggered'), 'system');
+    } catch (err) {
+        setDDNSStatus(err.message, 'error');
+        addLog(`DDNS sync failed: ${err.message}`, 'error');
+    }
+}
+
+async function loadDDNSZones() {
+    if (state.ddns.zonesLoaded) {
+        renderDDNSZones();
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/ddns/zones`);
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.ddns.zones = data.zones || [];
+        state.ddns.zonesLoaded = true;
+        renderDDNSZones();
+    } catch (err) {
+        console.error('Failed to load DDNS zones:', err);
+    }
+}
+
+function renderDDNSZones() {
+    const select = elements.ddnsRecordZoneSelect;
+    if (!select) return;
+    const zones = state.ddns.zones || [];
+    select.innerHTML = '';
+    zones.forEach(z => {
+        const opt = document.createElement('option');
+        opt.value = z.id;
+        opt.textContent = z.name + (z.status ? ` (${z.status})` : '');
+        select.appendChild(opt);
+    });
+    if (!select.value && zones.length > 0) {
+        select.value = zones[0].id;
+    }
+}
+
+async function ddnsSubmitRecord(event) {
+    event.preventDefault();
+    const zoneName = elements.ddnsRecordZoneSelect.selectedOptions[0]?.textContent?.replace(/ \(.*\)/, '') || '';
+    const entry = {
+        subdomain: elements.ddnsRecordSubdomain.value.trim(),
+        zone_id: elements.ddnsRecordZoneSelect.value,
+        zone_name: zoneName,
+        ipv4: elements.ddnsRecordIPv4.checked,
+        ipv6: elements.ddnsRecordIPv6.checked,
+        proxied: elements.ddnsRecordProxied.checked,
+        ttl: parseInt(elements.ddnsRecordTTLSelect.value) || 1
+    };
+
+    const index = elements.ddnsRecordForm.dataset.editIndex;
+    const url = index !== undefined && index !== '' ?
+        `${API_BASE}/ddns/records/${index}` :
+        `${API_BASE}/ddns/records`;
+    const method = index !== undefined && index !== '' ? 'PUT' : 'POST';
+
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entry)
+        });
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.ddns.config = data;
+        renderDDNSConfig(data);
+        resetDDNSRecordForm();
+        addLog(index !== undefined ? t('ddns_record_updated') : t('ddns_record_added'), 'system');
+    } catch (err) {
+        setDDNSStatus(err.message, 'error');
+    }
+}
+
+function editDDNSRecord(index, rec) {
+    elements.ddnsRecordForm.hidden = false;
+    elements.ddnsRecordForm.dataset.editIndex = String(index);
+    const dotIdx = (rec.name || '').indexOf('.');
+    elements.ddnsRecordSubdomain.value = dotIdx > 0 ? rec.name.substring(0, dotIdx) : (rec.name || '');
+    elements.ddnsRecordIPv4.checked = rec.type === 'A';
+    elements.ddnsRecordIPv6.checked = rec.type === 'AAAA';
+    elements.ddnsRecordTTLSelect.value = String(rec.ttl || 1);
+    elements.ddnsRecordProxied.checked = rec.proxied !== false;
+    elements.ddnsRecordSubmit.textContent = t('update_rule');
+    loadDDNSZones();
+    setTimeout(() => {
+        if (rec.zone_id && elements.ddnsRecordZoneSelect) {
+            elements.ddnsRecordZoneSelect.value = rec.zone_id;
+        }
+    }, 500);
+}
+
+function resetDDNSRecordForm() {
+    elements.ddnsRecordForm.hidden = true;
+    delete elements.ddnsRecordForm.dataset.editIndex;
+    elements.ddnsRecordSubdomain.value = '';
+    elements.ddnsRecordIPv4.checked = true;
+    elements.ddnsRecordIPv6.checked = true;
+    elements.ddnsRecordTTLSelect.value = '1';
+    elements.ddnsRecordProxied.checked = true;
+    elements.ddnsRecordSubmit.textContent = t('add_rule');
+}
+
+async function deleteDDNSRecord(index) {
+    try {
+        const res = await fetch(`${API_BASE}/ddns/records/${index}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(await responseError(res));
+        const data = await res.json();
+        state.ddns.config = data;
+        renderDDNSConfig(data);
+        addLog(t('ddns_record_deleted'), 'system');
+    } catch (err) {
+        setDDNSStatus(err.message, 'error');
+    }
+}
+
+function switchDDNSSubTab(name) {
+    document.getElementById('ddns-tab-sources')?.classList.toggle('active', name === 'sources');
+    document.getElementById('ddns-tab-auto')?.classList.toggle('active', name === 'auto');
+    document.getElementById('ddns-tab-sources')?.setAttribute('aria-selected', String(name === 'sources'));
+    document.getElementById('ddns-tab-auto')?.setAttribute('aria-selected', String(name === 'auto'));
+    document.getElementById('ddns-panel-sources').hidden = name !== 'sources';
+    document.getElementById('ddns-panel-auto').hidden = name !== 'auto';
+}
+
+function setDDNSStatus(message, type) {
+    if (!elements.ddnsStatus) return;
+    elements.ddnsStatus.textContent = message;
+    elements.ddnsStatus.className = `manager-status ${type}`;
+}
+
+function updateDDNSText() {
+    if (!elements.ddnsPanel) return;
+    document.getElementById('ddns-title').textContent = t('ddns_title');
+    document.getElementById('ddns-subtitle').textContent = t('ddns_subtitle');
+    document.getElementById('ddns-no-credentials').textContent = t('ddns_no_credentials');
+    document.getElementById('ddns-current-ip-label').textContent = t('ddns_current_ip');
+    document.getElementById('ddns-ipv4-label').textContent = t('ddns_ipv4');
+    document.getElementById('ddns-ipv6-label').textContent = t('ddns_ipv6');
+    elements.ddnsSyncNow.textContent = t('ddns_sync_now');
+    document.getElementById('ddns-settings-toggle').textContent = t('ddns_settings');
+    document.getElementById('ddns-enable-label').textContent = t('ddns_enable');
+    document.getElementById('ddns-tab-sources').textContent = t('ddns_ip_sources');
+    document.getElementById('ddns-tab-auto').textContent = t('ddns_auto_update');
+    document.getElementById('ddns-ipv4-sources-label').textContent = t('ddns_ipv4_sources');
+    document.getElementById('ddns-ipv6-sources-label').textContent = t('ddns_ipv6_sources');
+    document.getElementById('ddns-batch-add-help').textContent = t('ddns_batch_add_help');
+    document.getElementById('ddns-interval-label').textContent = t('ddns_interval');
+    document.getElementById('ddns-max-retries-label').textContent = t('ddns_max_retries');
+    document.getElementById('ddns-only-on-change-label').textContent = t('ddns_only_on_change');
+    elements.ddnsSaveSettings.textContent = t('ddns_save_settings');
+    document.getElementById('ddns-records-label').textContent = t('ddns_records');
+    elements.ddnsAddRecordBtn.textContent = t('ddns_add_record');
+    document.getElementById('ddns-record-subdomain-label').textContent = t('subdomain');
+    elements.ddnsRecordSubdomain.placeholder = t('subdomain_placeholder');
+    document.getElementById('ddns-record-zone-label').textContent = t('domain');
+    document.getElementById('ddns-record-ip-version-label').textContent = t('ddns_ip_sources');
+    document.getElementById('ddns-record-ttl-label').textContent = t('ddns_record_ttl');
+    document.getElementById('ddns-record-proxied-label').textContent = t('ddns_record_proxied');
+    elements.ddnsRecordCancel.textContent = t('cancel_edit');
+    elements.ddnsRecordSubmit.textContent = elements.ddnsRecordForm?.dataset.editIndex ? t('update_rule') : t('add_record');
+    document.getElementById('ddns-sync-log-label').textContent = t('ddns_sync_log');
+    if (elements.ddnsTab) elements.ddnsTab.textContent = t('ddns_tab');
+
+    if (state.ddns.config) renderDDNSConfig(state.ddns.config);
+    if (state.ddns.status) renderDDNSStatus(state.ddns.status);
+}
+
+// Poll DDNS status periodically when tab is active
+setInterval(() => {
+    if (elements.ddnsPanel && !elements.ddnsPanel.hidden) {
+        fetchDDNSStatus();
+    }
+}, 10000);
 
 init();

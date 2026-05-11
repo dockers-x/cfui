@@ -2,6 +2,7 @@ package server
 
 import (
 	"cfui/internal/config"
+	"cfui/internal/ddns"
 	"cfui/internal/logger"
 	"cfui/internal/mcpbridge"
 	"cfui/internal/pool"
@@ -94,6 +95,7 @@ type Server struct {
 	runner    *service.Runner
 	tunnelMgr *tunnelmgr.Manager
 	mcpSvc    *mcpbridge.Service
+	ddnsSvc   *ddns.Service
 	assets    embed.FS
 	locales   embed.FS
 }
@@ -106,6 +108,7 @@ func NewServer(cfgMgr *config.Manager, runner *service.Runner, assets embed.FS, 
 		runner:    runner,
 		tunnelMgr: tunnelMgr,
 		mcpSvc:    mcpbridge.NewService(cfgMgr, runner, tunnelMgr, tokenStore),
+		ddnsSvc:   ddns.NewService(cfgMgr),
 		assets:    assets,
 		locales:   locales,
 	}
@@ -128,11 +131,20 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/tunnel-manager/zones", s.handleTunnelManagerZones)
 	mux.HandleFunc("/api/tunnel-manager/entries", s.handleTunnelManagerEntries)
 	mux.HandleFunc("/api/tunnel-manager/entries/", s.handleTunnelManagerEntry)
+	mux.HandleFunc("/api/tunnel-manager/verify-token", s.handleTunnelManagerVerifyToken)
 	mux.HandleFunc("/api/mcp/status", s.handleMCPStatus)
 	mux.HandleFunc("/api/mcp/tokens", s.handleMCPTokens)
 	mux.HandleFunc("/api/mcp/tokens/", s.handleMCPToken)
 	mux.Handle("/mcp", s.mcpSvc.Handler())
 	mux.Handle("/mcp/", s.mcpSvc.Handler())
+
+	// DDNS endpoints
+	mux.HandleFunc("/api/ddns/config", s.handleDDNSConfig)
+	mux.HandleFunc("/api/ddns/status", s.handleDDNSStatus)
+	mux.HandleFunc("/api/ddns/sync-now", s.handleDDNSSyncNow)
+	mux.HandleFunc("/api/ddns/zones", s.handleDDNSZones)
+	mux.HandleFunc("/api/ddns/records/", s.handleDDNSRecord)
+	mux.HandleFunc("/api/ddns/records", s.handleDDNSRecords)
 
 	// Static Files
 	// The assets are in "web/dist", so we need to strip that prefix
@@ -235,6 +247,20 @@ func (s *Server) handleTunnelManagerZones(w http.ResponseWriter, r *http.Request
 	writeJSON(w, map[string][]tunnelmgr.ZoneResponse{"zones": zones})
 }
 
+func (s *Server) handleTunnelManagerVerifyToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req tunnelmgr.VerifyTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	resp := s.tunnelMgr.VerifyPermissions(r.Context(), req)
+	writeJSON(w, resp)
+}
+
 func (s *Server) handleTunnelManagerConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -330,6 +356,16 @@ func (s *Server) Run(addr string) error {
 	handler := s.GetHandler()
 	logger.Sugar.Infof("Server listening on %s", addr)
 	return http.ListenAndServe(addr, handler)
+}
+
+// StartDDNS starts the DDNS background service if configured.
+func (s *Server) StartDDNS() {
+	s.ddnsSvc.Start()
+}
+
+// StopDDNS stops the DDNS background service.
+func (s *Server) StopDDNS() {
+	s.ddnsSvc.Stop()
 }
 
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -614,5 +650,172 @@ func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		logger.Sugar.Errorf("Failed to encode version response: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+// DDNS handlers
+
+func (s *Server) handleDDNSConfig(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, s.ddnsSvc.GetConfig())
+	case http.MethodPost:
+		var req ddns.SaveRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		if err := s.ddnsSvc.SaveConfig(req); err != nil {
+			writeAPIError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, s.ddnsSvc.GetConfig())
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleDDNSStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	writeJSON(w, s.ddnsSvc.Status())
+}
+
+func (s *Server) handleDDNSSyncNow(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	status, err := s.ddnsSvc.SyncNow(r.Context())
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, status)
+}
+
+func (s *Server) handleDDNSZones(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	zones, err := s.ddnsSvc.ListZones(r.Context())
+	if err != nil {
+		writeAPIError(w, http.StatusBadGateway, err)
+		return
+	}
+	writeJSON(w, map[string][]ddns.ZoneResponse{"zones": zones})
+}
+
+func (s *Server) handleDDNSRecords(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	cfg := s.cfgMgr.Get()
+	var req ddns.AddRecordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	req.Subdomain = strings.TrimSpace(req.Subdomain)
+	req.ZoneID = strings.TrimSpace(req.ZoneID)
+	req.ZoneName = strings.TrimSpace(req.ZoneName)
+	if req.Subdomain == "" || req.ZoneID == "" {
+		writeAPIError(w, http.StatusBadRequest, errors.New("subdomain and zone_id are required"))
+		return
+	}
+	if !req.IPv4 && !req.IPv6 {
+		writeAPIError(w, http.StatusBadRequest, errors.New("at least one of ipv4 or ipv6 must be selected"))
+		return
+	}
+	if req.TTL <= 0 {
+		req.TTL = 1
+	}
+
+	// Resolve zone name if not provided
+	if req.ZoneName == "" {
+		if zones, err := s.tunnelMgr.ListZones(r.Context()); err == nil {
+			for _, z := range zones {
+				if z.ID == req.ZoneID {
+					req.ZoneName = z.Name
+					break
+				}
+			}
+		}
+	}
+
+	hostname := req.Subdomain + "." + req.ZoneName
+	if req.IPv4 {
+		cfg.DDNS.Records = append(cfg.DDNS.Records, config.DDNSRecord{
+			Name: hostname, ZoneID: req.ZoneID, ZoneName: req.ZoneName,
+			Type: "A", Proxied: req.Proxied, TTL: req.TTL,
+		})
+	}
+	if req.IPv6 {
+		cfg.DDNS.Records = append(cfg.DDNS.Records, config.DDNSRecord{
+			Name: hostname, ZoneID: req.ZoneID, ZoneName: req.ZoneName,
+			Type: "AAAA", Proxied: req.Proxied, TTL: req.TTL,
+		})
+	}
+	if err := s.cfgMgr.Save(cfg); err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	s.ddnsSvc.Restart()
+	writeJSON(w, s.ddnsSvc.GetConfig())
+}
+
+func (s *Server) handleDDNSRecord(w http.ResponseWriter, r *http.Request) {
+	indexText := strings.TrimPrefix(r.URL.Path, "/api/ddns/records/")
+	index, err := strconv.Atoi(indexText)
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, errors.New("invalid record index"))
+		return
+	}
+
+	cfg := s.cfgMgr.Get()
+	if index < 0 || index >= len(cfg.DDNS.Records) {
+		writeAPIError(w, http.StatusNotFound, errors.New("record not found"))
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPut:
+		var req ddns.AddRecordRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		rec := &cfg.DDNS.Records[index]
+		if req.ZoneName == "" {
+			req.ZoneName = rec.ZoneName
+		}
+		hostname := strings.TrimSpace(req.Subdomain) + "." + strings.TrimSpace(req.ZoneName)
+		rec.Name = hostname
+		rec.ZoneID = strings.TrimSpace(req.ZoneID)
+		rec.ZoneName = strings.TrimSpace(req.ZoneName)
+		rec.Proxied = req.Proxied
+		rec.TTL = req.TTL
+		if rec.TTL <= 0 {
+			rec.TTL = 1
+		}
+		if err := s.cfgMgr.Save(cfg); err != nil {
+			writeAPIError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeJSON(w, s.ddnsSvc.GetConfig())
+	case http.MethodDelete:
+		cfg.DDNS.Records = append(cfg.DDNS.Records[:index], cfg.DDNS.Records[index+1:]...)
+		if err := s.cfgMgr.Save(cfg); err != nil {
+			writeAPIError(w, http.StatusInternalServerError, err)
+			return
+		}
+		s.ddnsSvc.Restart()
+		writeJSON(w, s.ddnsSvc.GetConfig())
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }

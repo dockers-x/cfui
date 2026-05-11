@@ -23,7 +23,10 @@ other = "Cloudflare Tunnel 接続を管理します"
 other = "トンネル Token"
 
 [token_help]
-other = "Cloudflare Zero Trust ダッシュボードから提供された Token を入力してください。"
+other = "トンネル Token を貼り付けてください。取得方法：Cloudflare Zero Trust → ネットワーク → トンネル → トンネルを選択 → 設定 → Token をコピー。"
+
+[token_help_link]
+other = "Cloudflare Zero Trust を開く"
 
 [tunnel_identifier]
 other = "トンネル識別子"
@@ -338,25 +341,34 @@ other = "オリジン TLS 検証を無効化"
 other = "Cloudflare アカウント ID"
 
 [account_id_help]
-other = "CLOUDFLARE_ACCOUNT_ID または CLOUDFLARE_APP_ID でも指定できます。"
+other = "Cloudflare アカウント ID。ダッシュボード URL (dash.cloudflare.com/<id>) またはゾーンの概要ページで確認できます。CLOUDFLARE_ACCOUNT_ID または CLOUDFLARE_APP_ID 環境変数でも設定可能です。"
 
 [tunnel_id_placeholder]
 other = "トンネル UUID"
 
 [tunnel_id_help]
-other = "この項目を変更すると、選択したトンネル設定を読み込みます。"
+other = "トンネルの UUID。取得方法：Cloudflare Zero Trust → ネットワーク → トンネル → トンネル名をクリック → 概要。この項目を変更すると、選択したトンネル設定を読み込みます。"
 
 [auth_help]
-other = "API Token を推奨します。シークレット欄を空にすると保存済みの値を保持します。"
+other = "API Token を推奨します。作成方法：ダッシュボード → マイプロフィール → API トークン。Account:Cloudflare Tunnel:Edit と Zone:Zone:Read 権限が必要です。空欄なら保存済みの値を保持します。"
+
+[api_token_help]
+other = "Cloudflare ダッシュボード → マイプロフィール → API トークン → トークンを作成 で作成。必要な権限：Account · Cloudflare Tunnel · Edit, Zone · Zone · Read。"
+
+[api_key_help]
+other = "Cloudflare ダッシュボード → マイプロフィール → API キー で Global API Key を確認できます。セキュリティ上、API Token の使用を推奨します。"
+
+[api_email_help]
+other = "Cloudflare アカウントのメールアドレス。メール + APIキー 認証を使用する場合のみ必要です。"
 
 [api_token_placeholder]
-other = "空欄なら既存 Token を保持"
+other = "API Token を貼り付け"
 
 [api_email_placeholder]
 other = "you@example.com"
 
 [api_key_placeholder]
-other = "空欄なら既存 Key を保持"
+other = "API Key を貼り付け"
 
 [no_remote_config_loaded]
 other = "リモート設定はまだ読み込まれていません。"
@@ -432,6 +444,9 @@ other = "Account · Cloudflare Tunnel · Edit"
 
 [api_permission_zone]
 other = "Zone · Zone · Read"
+
+[api_permission_dns]
+other = "Zone · DNS · Edit"
 
 [api_permission_note]
 other = "可能ならアカウントスコープの API Token を使ってください。メール + Global API Key は権限が広めです。"
@@ -510,3 +525,165 @@ other = "MCP Token を作成しました"
 
 [mcp_token_deleted]
 other = "MCP Token を削除しました"
+
+[verify_permissions]
+other = "権限を確認"
+
+[verify_checking]
+other = "権限を確認中..."
+
+[verify_enter_token]
+other = "API Token を入力して確認してください。"
+
+[verify_enter_credentials]
+other = "API 認証情報を入力して確認してください。"
+
+[verify_failed]
+other = "確認に失敗しました。認証情報を確認してください。"
+
+[verify_token_status]
+other = "Token ステータス"
+
+[verify_permission_tunnel_edit]
+other = "Tunnel:Edit"
+
+[verify_permission_zone_read]
+other = "Zone:Read"
+
+[verify_permission_dns_edit]
+other = "DNS:Edit"
+
+[ddns_tab]
+other = "DDNS"
+
+[ddns_title]
+other = "動的 DNS"
+
+[ddns_subtitle]
+other = "パブリックIP変更時にDNSレコードを自動更新します。リモートトンネル管理のAPI認証情報を再利用します。"
+
+[ddns_no_credentials]
+other = "最初にリモートトンネル管理でAPI認証情報を設定してください。"
+
+[ddns_settings]
+other = "DDNS 設定"
+
+[ddns_ip_sources]
+other = "IP 取得元"
+
+[ddns_ip_sources_help]
+other = "優先順に試行され、最初に成功したものが採用されます。"
+
+[ddns_ipv4_sources]
+other = "IPv4 ソース"
+
+[ddns_ipv6_sources]
+other = "IPv6 ソース"
+
+[ddns_batch_add_help]
+other = "1行に1つのURL。各行が個別のソースとして追加されます。"
+
+[ddns_add_single]
+other = "個別追加"
+
+[ddns_add_single_url]
+other = "URL"
+
+[ddns_add_single_type]
+other = "IP タイプ"
+
+[ddns_add_batch]
+other = "一括追加"
+
+[ddns_auto_update]
+other = "自動更新"
+
+[ddns_interval]
+other = "チェック間隔"
+
+[ddns_only_on_change]
+other = "IP変更時のみ更新"
+
+[ddns_max_retries]
+other = "最大再試行回数"
+
+[ddns_records]
+other = "DDNS レコード"
+
+[ddns_add_record]
+other = "レコード追加"
+
+[ddns_record_name]
+other = "ホスト名"
+
+[ddns_record_name_placeholder]
+other = "home.example.com"
+
+[ddns_record_type]
+other = "タイプ"
+
+[ddns_record_zone]
+other = "ゾーン"
+
+[ddns_record_proxied]
+other = "プロキシ"
+
+[ddns_record_ttl]
+other = "TTL"
+
+[ddns_save_settings]
+other = "DDNS設定を保存"
+
+[ddns_sync_now]
+other = "今すぐ同期"
+
+[ddns_current_ip]
+other = "現在のパブリックIP"
+
+[ddns_ipv4]
+other = "IPv4"
+
+[ddns_ipv6]
+other = "IPv6"
+
+[ddns_unknown]
+other = "不明"
+
+[ddns_status_running]
+other = "実行中"
+
+[ddns_status_disabled]
+other = "無効"
+
+[ddns_enable]
+other = "DDNS 有効化"
+
+[ddns_sync_log]
+other = "同期ログ"
+
+[ddns_settings_saved]
+other = "DDNS設定を保存しました"
+
+[ddns_synced]
+other = "同期済み"
+
+[ddns_sync_failed]
+other = "失敗"
+
+[ddns_record_added]
+other = "DDNSレコードを追加しました"
+
+[ddns_record_updated]
+other = "DDNSレコードを更新しました"
+
+[ddns_record_deleted]
+other = "DDNSレコードを削除しました"
+
+[ddns_sync_triggered]
+other = "DDNS同期を開始しました"
+
+[ddns_no_records]
+other = "DDNSレコードがありません。下で追加してください。"
+
+[minutes]
+other = "分"
