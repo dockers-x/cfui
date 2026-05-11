@@ -643,6 +643,9 @@ other = "Sync Now"
 [ddns_current_ip]
 other = "Current Public IP"
 
+[ddns_last_check]
+other = "Last checked"
+
 [ddns_ipv4]
 other = "IPv4"
 
@@ -684,6 +687,9 @@ other = "DDNS record deleted"
 
 [ddns_sync_triggered]
 other = "DDNS sync triggered"
+
+[ddns_no_sync_history]
+other = "No sync history yet."
 
 [ddns_no_records]
 other = "No DDNS records. Add one below."

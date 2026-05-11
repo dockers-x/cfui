@@ -1416,50 +1416,81 @@ input:checked+.slider:before {
 }
 
 .ddns-ip-banner {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 16px;
-    padding: 10px 16px;
+    display: grid;
+    gap: 16px;
+    padding: 18px 20px;
     border: 1px solid var(--border-color);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--advanced-bg);
-    margin-bottom: 20px;
-    font-size: 0.85rem;
+    margin-bottom: 24px;
+}
+
+.ddns-ip-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.ddns-ip-meta {
+    display: grid;
+    gap: 6px;
 }
 
 .ddns-ip-label {
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-primary);
 }
 
+.ddns-ip-list {
+    display: grid;
+    gap: 10px;
+}
+
 .ddns-ip-row {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--input-bg);
     color: var(--text-secondary);
+}
+
+.ddns-ip-row strong {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .ddns-ip-row code {
     font-family: var(--font-mono);
-    font-size: 0.85rem;
+    font-size: 0.92rem;
     font-weight: 600;
     color: var(--cf-orange);
     background: transparent;
+    overflow-wrap: anywhere;
 }
 
 .ddns-ip-time {
-    margin-left: auto;
     font-size: 0.78rem;
     color: var(--text-secondary);
 }
 
-.ddns-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+.ddns-settings-actions {
+    margin-top: 16px;
 }
 
-.ddns-left,
-.ddns-right {
-    min-width: 0;
+.ddns-config-panel {
+    display: grid;
+    gap: 24px;
+}
+
+.ddns-section + .ddns-section {
+    padding-top: 24px;
+    border-top: 1px solid var(--border-color);
 }
 
 .ddns-tabs {
@@ -1496,14 +1527,12 @@ input:checked+.slider:before {
     display: none;
 }
 
-.ddns-sync-log {
-    margin-top: 20px;
+.ddns-record-proxied-row {
+    margin-bottom: 12px;
 }
 
-.ddns-sync-log h3 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin-bottom: 10px;
+.ddns-sync-log-list {
+    margin-bottom: 0;
 }
 
 .ddns-sync-item {
@@ -1574,17 +1603,13 @@ textarea:focus {
 }
 
 @media (max-width: 768px) {
-    .ddns-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .ddns-ip-banner {
+    .ddns-ip-header {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .ddns-ip-time {
-        margin-left: 0;
+    .ddns-ip-header .btn {
+        width: 100%;
     }
 }
 

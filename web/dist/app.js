@@ -139,7 +139,6 @@ const elements = {
     ddnsIPv6Value: document.getElementById('ddns-ipv6-value'),
     ddnsLastCheck: document.getElementById('ddns-last-check'),
     ddnsSyncNow: document.getElementById('ddns-sync-now'),
-    ddnsEnableToggle: document.getElementById('ddns-enable-toggle'),
     ddnsIPv4Textarea: document.getElementById('ddns-ipv4-textarea'),
     ddnsIPv6Textarea: document.getElementById('ddns-ipv6-textarea'),
     ddnsInterval: document.getElementById('ddns-interval'),
@@ -1624,11 +1623,9 @@ function renderDDNSConfig(cfg) {
     }
 
     elements.ddnsNoCreds.hidden = true;
-    // Always show IP banner and settings so the user can enable DDNS
+    // Always show IP banner and settings so the user can review DDNS configuration
     elements.ddnsIPBanner.hidden = false;
     elements.ddnsMain.hidden = false;
-
-    elements.ddnsEnableToggle.checked = !!cfg.enabled;
 
     const v4Sources = (cfg.ip_sources || []).filter(s => s.ip_type === 'ipv4').map(s => s.url).join('\n');
     const v6Sources = (cfg.ip_sources || []).filter(s => s.ip_type === 'ipv6').map(s => s.url).join('\n');
@@ -1657,7 +1654,11 @@ async function fetchDDNSStatus() {
 function renderDDNSStatus(data) {
     if (elements.ddnsIPv4Value) elements.ddnsIPv4Value.textContent = data.current_v4 || t('ddns_unknown');
     if (elements.ddnsIPv6Value) elements.ddnsIPv6Value.textContent = data.current_v6 || t('ddns_unknown');
-    if (elements.ddnsLastCheck) elements.ddnsLastCheck.textContent = data.last_check ? new Date(data.last_check).toLocaleString() : '—';
+    if (elements.ddnsLastCheck) {
+        elements.ddnsLastCheck.textContent = data.last_check ?
+            `${t('ddns_last_check')}: ${new Date(data.last_check).toLocaleString()}` :
+            '—';
+    }
 
     // Render sync log
     if (elements.ddnsSyncLogList && data.results) {
@@ -1666,7 +1667,7 @@ function renderDDNSStatus(data) {
         if (results.length === 0) {
             const empty = document.createElement('div');
             empty.className = 'empty-state';
-            empty.textContent = '';
+            empty.textContent = t('ddns_no_sync_history');
             elements.ddnsSyncLogList.appendChild(empty);
         }
         results.forEach(r => {
@@ -1703,8 +1704,9 @@ function renderDDNSRecords(records) {
         title.textContent = rec.name || '—';
         const detail = document.createElement('div');
         detail.className = 'rule-detail';
-        const proxied = rec.proxied ? ' · Proxied' : '';
-        detail.textContent = `${rec.type} · TTL: ${rec.ttl === 1 ? 'Auto' : rec.ttl + 's'}${proxied}`;
+        const ttlText = rec.ttl === 1 ? t('ddns_ttl_auto') : rec.ttl + 's';
+        const proxied = rec.proxied ? ` · ${t('ddns_record_proxied')}` : '';
+        detail.textContent = `${rec.type} · ${t('ddns_record_ttl')}: ${ttlText}${proxied}`;
         content.append(title, detail);
 
         const actions = document.createElement('div');
@@ -1730,9 +1732,10 @@ async function ddnsSaveSettings() {
         ...v4Lines.map(url => ({ url, ip_type: 'ipv4' })),
         ...v6Lines.map(url => ({ url, ip_type: 'ipv6' }))
     ];
+    const enabled = state.ddns.config?.enabled ?? !!elements.featureDdnsToggle?.checked;
 
     const payload = {
-        enabled: elements.ddnsEnableToggle.checked,
+        enabled,
         ip_sources: sources,
         interval_mins: parseInt(elements.ddnsInterval.value) || 5,
         max_retries: parseInt(elements.ddnsMaxRetries.value) || 3,
@@ -1868,7 +1871,7 @@ function resetDDNSRecordForm() {
     elements.ddnsRecordIPv6.checked = true;
     elements.ddnsRecordTTLSelect.value = '1';
     elements.ddnsRecordProxied.checked = true;
-    elements.ddnsRecordSubmit.textContent = t('add_rule');
+    elements.ddnsRecordSubmit.textContent = t('ddns_add_record');
 }
 
 async function deleteDDNSRecord(index) {
@@ -1921,7 +1924,6 @@ function updateDDNSText() {
     document.getElementById('ddns-ipv6-label').textContent = t('ddns_ipv6');
     elements.ddnsSyncNow.textContent = t('ddns_sync_now');
     document.getElementById('ddns-settings-toggle').textContent = t('ddns_settings');
-    document.getElementById('ddns-enable-label').textContent = t('ddns_enable');
     document.getElementById('ddns-tab-sources').textContent = t('ddns_ip_sources');
     document.getElementById('ddns-tab-auto').textContent = t('ddns_auto_update');
     document.getElementById('ddns-ipv4-sources-label').textContent = t('ddns_ipv4_sources');

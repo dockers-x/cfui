@@ -643,6 +643,9 @@ other = "立即同步"
 [ddns_current_ip]
 other = "当前公网 IP"
 
+[ddns_last_check]
+other = "最后检查"
+
 [ddns_ipv4]
 other = "IPv4"
 
@@ -684,6 +687,9 @@ other = "DDNS 记录已删除"
 
 [ddns_sync_triggered]
 other = "DDNS 同步已触发"
+
+[ddns_no_sync_history]
+other = "暂无同步记录。"
 
 [ddns_no_records]
 other = "暂无 DDNS 记录，在下方添加。"

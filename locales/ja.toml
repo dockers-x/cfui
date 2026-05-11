@@ -643,6 +643,9 @@ other = "今すぐ同期"
 [ddns_current_ip]
 other = "現在のパブリックIP"
 
+[ddns_last_check]
+other = "最終確認"
+
 [ddns_ipv4]
 other = "IPv4"
 
@@ -684,6 +687,9 @@ other = "DDNSレコードを削除しました"
 
 [ddns_sync_triggered]
 other = "DDNS同期を開始しました"
+
+[ddns_no_sync_history]
+other = "同期履歴はまだありません。"
 
 [ddns_no_records]
 other = "DDNSレコードがありません。下で追加してください。"

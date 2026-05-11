@@ -2,6 +2,7 @@ package mcpbridge
 
 import (
 	"cfui/internal/config"
+	"cfui/internal/ddns"
 	"cfui/internal/logger"
 	"cfui/internal/service"
 	"cfui/internal/tunnelmgr"
@@ -101,6 +102,12 @@ func newTestService(t *testing.T) *Service {
 	if err != nil {
 		t.Fatalf("NewManager: %v", err)
 	}
+	cfg := cfgMgr.Get()
+	cfg.MCPEnabled = true
+	if err := cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
 	tunnelMgr := tunnelmgr.NewManager(cfgMgr)
-	return NewService(cfgMgr, service.NewRunner(cfgMgr), tunnelMgr, NewTokenStore(t.TempDir()))
+	ddnsSvc := ddns.NewService(cfgMgr)
+	return NewService(cfgMgr, service.NewRunner(cfgMgr), tunnelMgr, NewTokenStore(t.TempDir()), ddnsSvc)
 }

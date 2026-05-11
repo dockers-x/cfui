@@ -2,6 +2,7 @@ package server
 
 import (
 	"cfui/internal/config"
+	"cfui/internal/ddns"
 	"cfui/internal/logger"
 	"cfui/internal/mcpbridge"
 	"cfui/internal/tunnelmgr"
@@ -70,10 +71,17 @@ func newMCPTestServer(t *testing.T) *Server {
 	if err != nil {
 		t.Fatalf("NewManager: %v", err)
 	}
+	cfg := cfgMgr.Get()
+	cfg.MCPEnabled = true
+	if err := cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
 	tunnelMgr := tunnelmgr.NewManager(cfgMgr)
+	ddnsSvc := ddns.NewService(cfgMgr)
 	return &Server{
 		cfgMgr:    cfgMgr,
 		tunnelMgr: tunnelMgr,
-		mcpSvc:    mcpbridge.NewService(cfgMgr, nil, tunnelMgr, mcpbridge.NewTokenStore(t.TempDir())),
+		mcpSvc:    mcpbridge.NewService(cfgMgr, nil, tunnelMgr, mcpbridge.NewTokenStore(t.TempDir()), ddnsSvc),
+		ddnsSvc:   ddnsSvc,
 	}
 }
