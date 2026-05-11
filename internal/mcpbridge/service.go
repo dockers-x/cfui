@@ -2,6 +2,7 @@ package mcpbridge
 
 import (
 	"cfui/internal/config"
+	"cfui/internal/ddns"
 	"cfui/internal/logger"
 	"cfui/internal/service"
 	"cfui/internal/tunnelmgr"
@@ -19,16 +20,18 @@ type Service struct {
 	cfgMgr    *config.Manager
 	runner    *service.Runner
 	tunnelMgr *tunnelmgr.Manager
+	ddnsSvc   *ddns.Service
 	tokens    *TokenStore
 	server    *mcp.Server
 	handler   http.Handler
 }
 
-func NewService(cfgMgr *config.Manager, runner *service.Runner, tunnelMgr *tunnelmgr.Manager, tokens *TokenStore) *Service {
+func NewService(cfgMgr *config.Manager, runner *service.Runner, tunnelMgr *tunnelmgr.Manager, tokens *TokenStore, ddnsSvc *ddns.Service) *Service {
 	s := &Service{
 		cfgMgr:    cfgMgr,
 		runner:    runner,
 		tunnelMgr: tunnelMgr,
+		ddnsSvc:   ddnsSvc,
 		tokens:    tokens,
 	}
 	s.server = s.newMCPServer()
@@ -36,6 +39,10 @@ func NewService(cfgMgr *config.Manager, runner *service.Runner, tunnelMgr *tunne
 		return s.server
 	}, &mcp.StreamableHTTPOptions{Stateless: true})
 	s.handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !s.cfgMgr.Get().MCPEnabled {
+			http.Error(w, "MCP access disabled", http.StatusServiceUnavailable)
+			return
+		}
 		if !s.authorized(r) {
 			w.Header().Set("WWW-Authenticate", `Bearer realm="cfui-mcp"`)
 			http.Error(w, "MCP bearer token required", http.StatusUnauthorized)
@@ -67,25 +74,38 @@ func (s *Service) Status(endpoint string) (StatusResponse, error) {
 	if err != nil {
 		return StatusResponse{}, err
 	}
+	cfg := s.cfgMgr.Get()
+	tools := []string{
+		"cfui_get_status",
+		"cfui_get_config",
+		"cfui_update_config",
+		"cfui_start_tunnel",
+		"cfui_stop_tunnel",
+		"cfui_get_recent_logs",
+		"cfui_get_tunnel_manager_settings",
+		"cfui_save_tunnel_manager_settings",
+		"cfui_get_tunnel_config",
+		"cfui_list_zones",
+		"cfui_add_ingress_rule",
+		"cfui_update_ingress_rule",
+		"cfui_delete_ingress_rule",
+	}
+	if cfg.DDNS.Enabled {
+		tools = append(tools,
+			"cfui_get_ddns_config",
+			"cfui_save_ddns_config",
+			"cfui_get_ddns_status",
+			"cfui_sync_ddns_now",
+			"cfui_list_ddns_zones",
+			"cfui_add_ddns_record",
+			"cfui_delete_ddns_record",
+		)
+	}
 	return StatusResponse{
-		Enabled:  len(tokens) > 0,
+		Enabled:  cfg.MCPEnabled,
 		Endpoint: endpoint,
 		Tokens:   tokens,
-		Tools: []string{
-			"cfui_get_status",
-			"cfui_get_config",
-			"cfui_update_config",
-			"cfui_start_tunnel",
-			"cfui_stop_tunnel",
-			"cfui_get_recent_logs",
-			"cfui_get_tunnel_manager_settings",
-			"cfui_save_tunnel_manager_settings",
-			"cfui_get_tunnel_config",
-			"cfui_list_zones",
-			"cfui_add_ingress_rule",
-			"cfui_update_ingress_rule",
-			"cfui_delete_ingress_rule",
-		},
+		Tools:    tools,
 	}, nil
 }
 
@@ -155,6 +175,34 @@ func (s *Service) newMCPServer() *mcp.Server {
 		Name:        "cfui_delete_ingress_rule",
 		Description: "Delete a Cloudflare Tunnel ingress rule by index.",
 	}, s.deleteIngressRule)
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "cfui_get_ddns_config",
+		Description: "Get DDNS configuration including IP sources, records, interval, and credentials presence. Requires DDNS feature enabled.",
+	}, s.getDDNSConfig)
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "cfui_save_ddns_config",
+		Description: "Save DDNS configuration (sources, records, interval, retries, only_on_change). Requires DDNS feature enabled.",
+	}, s.saveDDNSConfig)
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "cfui_get_ddns_status",
+		Description: "Get current DDNS status: current public IPv4/IPv6, last check time, recent sync results.",
+	}, s.getDDNSStatus)
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "cfui_sync_ddns_now",
+		Description: "Trigger an immediate DDNS sync. Returns the updated status.",
+	}, s.syncDDNSNow)
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "cfui_list_ddns_zones",
+		Description: "List Cloudflare zones accessible with the configured API credentials (shared with Tunnel Manager).",
+	}, s.listDDNSZones)
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "cfui_add_ddns_record",
+		Description: "Append a DDNS record to the saved list.",
+	}, s.addDDNSRecord)
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "cfui_delete_ddns_record",
+		Description: "Delete a DDNS record by zero-based index from the saved list.",
+	}, s.deleteDDNSRecord)
 
 	return server
 }
@@ -413,4 +461,128 @@ type DeleteIngressRuleInput struct {
 func (s *Service) deleteIngressRule(ctx context.Context, req *mcp.CallToolRequest, in DeleteIngressRuleInput) (*mcp.CallToolResult, tunnelmgr.ConfigurationResponse, error) {
 	out, err := s.tunnelMgr.DeleteEntry(ctx, in.Index)
 	return nil, out, err
+}
+
+// --- DDNS tools ---
+
+func (s *Service) requireDDNSEnabled() error {
+	if s.ddnsSvc == nil {
+		return fmt.Errorf("DDNS service unavailable")
+	}
+	if !s.cfgMgr.Get().DDNS.Enabled {
+		return fmt.Errorf("DDNS feature is disabled; enable it in Features settings")
+	}
+	return nil
+}
+
+func (s *Service) getDDNSConfig(ctx context.Context, req *mcp.CallToolRequest, in EmptyInput) (*mcp.CallToolResult, ddns.ConfigResponse, error) {
+	if err := s.requireDDNSEnabled(); err != nil {
+		return nil, ddns.ConfigResponse{}, err
+	}
+	return nil, s.ddnsSvc.GetConfig(), nil
+}
+
+func (s *Service) saveDDNSConfig(ctx context.Context, req *mcp.CallToolRequest, in ddns.SaveRequest) (*mcp.CallToolResult, ddns.ConfigResponse, error) {
+	if err := s.requireDDNSEnabled(); err != nil {
+		return nil, ddns.ConfigResponse{}, err
+	}
+	if err := s.ddnsSvc.SaveConfig(in); err != nil {
+		return nil, ddns.ConfigResponse{}, err
+	}
+	s.ddnsSvc.Restart()
+	return nil, s.ddnsSvc.GetConfig(), nil
+}
+
+func (s *Service) getDDNSStatus(ctx context.Context, req *mcp.CallToolRequest, in EmptyInput) (*mcp.CallToolResult, *ddns.StatusResponse, error) {
+	if s.ddnsSvc == nil {
+		return nil, nil, fmt.Errorf("DDNS service unavailable")
+	}
+	return nil, s.ddnsSvc.Status(), nil
+}
+
+func (s *Service) syncDDNSNow(ctx context.Context, req *mcp.CallToolRequest, in EmptyInput) (*mcp.CallToolResult, *ddns.StatusResponse, error) {
+	if err := s.requireDDNSEnabled(); err != nil {
+		return nil, nil, err
+	}
+	out, err := s.ddnsSvc.SyncNow(ctx)
+	return nil, out, err
+}
+
+type DDNSZonesOutput struct {
+	Zones []ddns.ZoneResponse `json:"zones"`
+}
+
+func (s *Service) listDDNSZones(ctx context.Context, req *mcp.CallToolRequest, in EmptyInput) (*mcp.CallToolResult, DDNSZonesOutput, error) {
+	if err := s.requireDDNSEnabled(); err != nil {
+		return nil, DDNSZonesOutput{}, err
+	}
+	zones, err := s.ddnsSvc.ListZones(ctx)
+	return nil, DDNSZonesOutput{Zones: zones}, err
+}
+
+type AddDDNSRecordInput struct {
+	Name    string `json:"name" jsonschema:"full hostname, e.g. home.example.com"`
+	ZoneID  string `json:"zone_id" jsonschema:"Cloudflare zone id"`
+	Type    string `json:"type" jsonschema:"record type: A or AAAA"`
+	TTL     int    `json:"ttl,omitempty" jsonschema:"TTL in seconds; 1 means Auto"`
+	Proxied bool   `json:"proxied,omitempty"`
+}
+
+func (s *Service) addDDNSRecord(ctx context.Context, req *mcp.CallToolRequest, in AddDDNSRecordInput) (*mcp.CallToolResult, ddns.ConfigResponse, error) {
+	if err := s.requireDDNSEnabled(); err != nil {
+		return nil, ddns.ConfigResponse{}, err
+	}
+	cur := s.ddnsSvc.GetConfig()
+	ttl := in.TTL
+	if ttl == 0 {
+		ttl = 1
+	}
+	cur.Records = append(cur.Records, config.DDNSRecord{
+		Name:    in.Name,
+		ZoneID:  in.ZoneID,
+		Type:    in.Type,
+		TTL:     ttl,
+		Proxied: in.Proxied,
+	})
+	saveReq := ddns.SaveRequest{
+		Enabled:      cur.Enabled,
+		IPSources:    cur.IPSources,
+		Records:      cur.Records,
+		IntervalMins: cur.IntervalMins,
+		OnlyOnChange: cur.OnlyOnChange,
+		MaxRetries:   cur.MaxRetries,
+	}
+	if err := s.ddnsSvc.SaveConfig(saveReq); err != nil {
+		return nil, ddns.ConfigResponse{}, err
+	}
+	s.ddnsSvc.Restart()
+	return nil, s.ddnsSvc.GetConfig(), nil
+}
+
+type DeleteDDNSRecordInput struct {
+	Index int `json:"index" jsonschema:"zero-based DDNS record index"`
+}
+
+func (s *Service) deleteDDNSRecord(ctx context.Context, req *mcp.CallToolRequest, in DeleteDDNSRecordInput) (*mcp.CallToolResult, ddns.ConfigResponse, error) {
+	if err := s.requireDDNSEnabled(); err != nil {
+		return nil, ddns.ConfigResponse{}, err
+	}
+	cur := s.ddnsSvc.GetConfig()
+	if in.Index < 0 || in.Index >= len(cur.Records) {
+		return nil, ddns.ConfigResponse{}, fmt.Errorf("record index out of range")
+	}
+	cur.Records = append(cur.Records[:in.Index], cur.Records[in.Index+1:]...)
+	saveReq := ddns.SaveRequest{
+		Enabled:      cur.Enabled,
+		IPSources:    cur.IPSources,
+		Records:      cur.Records,
+		IntervalMins: cur.IntervalMins,
+		OnlyOnChange: cur.OnlyOnChange,
+		MaxRetries:   cur.MaxRetries,
+	}
+	if err := s.ddnsSvc.SaveConfig(saveReq); err != nil {
+		return nil, ddns.ConfigResponse{}, err
+	}
+	s.ddnsSvc.Restart()
+	return nil, s.ddnsSvc.GetConfig(), nil
 }

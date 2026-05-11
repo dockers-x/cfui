@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
+	stderrors "errors"
 	"fmt"
 	"strings"
 	"time"
@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ErrDisabled = errors.New("tunnel management is disabled")
+	ErrDisabled = stderrors.New("tunnel management is disabled")
 )
 
 type cloudflareClient interface {
@@ -54,6 +54,8 @@ type SettingsResponse struct {
 	TunnelID          string   `json:"tunnel_id"`
 	AuthMode          string   `json:"auth_mode"`
 	APIEmail          string   `json:"api_email,omitempty"`
+	APIToken          string   `json:"api_token,omitempty"`
+	APIKey            string   `json:"api_key,omitempty"`
 	APITokenSet       bool     `json:"api_token_set"`
 	APIKeySet         bool     `json:"api_key_set"`
 	DerivedFromToken  bool     `json:"derived_from_token"`
@@ -108,9 +110,8 @@ type VerifyTokenResponse struct {
 	Error       string            `json:"error,omitempty"`
 }
 
-// Required permission group names as they appear in the Cloudflare API.
 const (
-	permTunnelEdit = "Cloudflare Tunnel"
+	permTunnelEdit = "Argo Tunnel (Legacy)"
 	permZoneRead   = "Zone"
 	permDNSEdit    = "DNS"
 )
@@ -157,13 +158,25 @@ func (m *Manager) SaveSettings(req SettingsRequest) error {
 	return m.cfgMgr.Save(cfg)
 }
 
-// VerifyPermissions checks whether the provided credentials have the
-// required Cloudflare API permissions for tunnel management and DNS.
 func (m *Manager) VerifyPermissions(ctx context.Context, req VerifyTokenRequest) VerifyTokenResponse {
 	perms := []PermissionCheck{
-		{Name: "account_tunnel_edit", Description: "Account · Cloudflare Tunnel · Edit", Required: true},
+		{Name: "account_tunnel_edit", Description: "Account · Argo Tunnel (Legacy) · Edit", Required: true},
 		{Name: "zone_read", Description: "Zone · Zone · Read", Required: true},
 		{Name: "zone_dns_edit", Description: "Zone · DNS · Edit", Required: true},
+	}
+
+	// Fall back to stored credentials when the request has none.
+	// Frontend never sees saved secrets, so blank fields mean "use what's saved".
+	stored := m.cfgMgr.Get().TunnelManagement
+	if strings.TrimSpace(req.APIToken) == "" && strings.TrimSpace(req.APIKey) == "" {
+		if req.AuthMode == "key" {
+			if req.APIEmail == "" {
+				req.APIEmail = stored.APIEmail
+			}
+			req.APIKey = stored.APIKey
+		} else {
+			req.APIToken = stored.APIToken
+		}
 	}
 
 	client, err := newSDKClientFromRequest(req)
@@ -171,10 +184,17 @@ func (m *Manager) VerifyPermissions(ctx context.Context, req VerifyTokenRequest)
 		return VerifyTokenResponse{Valid: false, Permissions: perms, Error: "Failed to create API client: " + err.Error()}
 	}
 
-	// Verify the token is valid
+	// Try /user/tokens/verify to get the token ID, then fetch its
+	// permission groups. Some token types (e.g. cfat_*) don't support
+	// /user/tokens/verify; in that case probe permissions via actual
+	// API calls using the stored account ID.
 	verifyResp, err := client.VerifyAPIToken(ctx)
 	if err != nil {
-		return VerifyTokenResponse{Valid: false, TokenStatus: "invalid", Permissions: perms, Error: "Token verification failed: " + err.Error()}
+		return VerifyTokenResponse{
+			Valid:       true,
+			TokenStatus: "active",
+			Permissions: probePermissions(ctx, client, req, stored.AccountID, stored.TunnelID),
+		}
 	}
 
 	resp := VerifyTokenResponse{
@@ -183,20 +203,21 @@ func (m *Manager) VerifyPermissions(ctx context.Context, req VerifyTokenRequest)
 		Permissions: perms,
 	}
 
-	// Try to get token details (which includes permission groups)
+	if !resp.Valid {
+		return resp
+	}
+
 	if token, err := client.GetAPIToken(ctx, verifyResp.ID); err == nil {
 		checkPermissionsFromToken(token.Policies, perms)
 		resp.Permissions = perms
 	} else {
-		// Fall back to probing if we can't get token details
-		resp.Permissions = probePermissions(ctx, client, req)
+		resp.Permissions = probePermissions(ctx, client, req, stored.AccountID, stored.TunnelID)
 	}
 
 	return resp
 }
 
 func checkPermissionsFromToken(policies []cloudflare.APITokenPolicies, checks []PermissionCheck) {
-	// Collect all granted permission group names
 	granted := make(map[string]bool)
 	for _, policy := range policies {
 		if policy.Effect != "allow" {
@@ -219,36 +240,35 @@ func checkPermissionsFromToken(policies []cloudflare.APITokenPolicies, checks []
 	}
 }
 
-func probePermissions(ctx context.Context, client cloudflareClient, req VerifyTokenRequest) []PermissionCheck {
+func probePermissions(ctx context.Context, client cloudflareClient, req VerifyTokenRequest, accountID, tunnelID string) []PermissionCheck {
 	checks := []PermissionCheck{
-		{Name: "account_tunnel_edit", Description: "Account · Cloudflare Tunnel · Edit", Required: true},
+		{Name: "account_tunnel_edit", Description: "Account · Argo Tunnel (Legacy) · Edit", Required: true},
 		{Name: "zone_read", Description: "Zone · Zone · Read", Required: true},
 		{Name: "zone_dns_edit", Description: "Zone · DNS · Edit", Required: true},
 	}
 
-	// Probe Tunnel:Edit by trying to fetch a known-non-existent tunnel config.
-	// A 403 means permission missing; a 404 means permission is present.
-	cfg := config.TunnelManagementConfig{
-		Enabled:   true,
-		APIToken:  req.APIToken,
-		APIEmail:  req.APIEmail,
-		APIKey:    req.APIKey,
-		AccountID: "00000000000000000000000000000000",
-		TunnelID:  "00000000-0000-0000-0000-000000000000",
-	}
-	client2, err := newSDKClient(cfg)
-	if err == nil {
-		_, err = client2.GetTunnelConfiguration(ctx, cloudflare.AccountIdentifier(cfg.AccountID), cfg.TunnelID)
-		checks[0].Granted = !isPermissionError(err)
+	// Probe Tunnel:Edit using the stored account / tunnel IDs when
+	// available, so account-scoped tokens are evaluated correctly.
+	if accountID != "" && tunnelID != "" {
+		cfg := config.TunnelManagementConfig{
+			Enabled:   true,
+			APIToken:  req.APIToken,
+			APIEmail:  req.APIEmail,
+			APIKey:    req.APIKey,
+			AccountID: accountID,
+			TunnelID:  tunnelID,
+		}
+		if c2, err := newSDKClient(cfg); err == nil {
+			_, err = c2.GetTunnelConfiguration(ctx, cloudflare.AccountIdentifier(accountID), tunnelID)
+			checks[0].Granted = !isPermissionError(err)
+		}
 	}
 
 	// Probe Zone:Read by listing zones
-	_, err = client.ListZonesContext(ctx)
+	_, err := client.ListZonesContext(ctx)
 	checks[1].Granted = !isPermissionError(err)
 
-	// For DNS:Edit we can't easily probe without side effects.
-	// Assume it's granted if Zone:Read is granted (common token configurations).
-	// Users should verify this manually if they plan to use public hostnames.
+	// DNS:Edit cannot be probed without side effects; use Zone:Read result.
 	checks[2].Granted = checks[1].Granted
 
 	return checks
@@ -258,12 +278,8 @@ func isPermissionError(err error) bool {
 	if err == nil {
 		return false
 	}
-	s := err.Error()
-	return strings.Contains(s, "403") ||
-		strings.Contains(s, "forbidden") ||
-		strings.Contains(s, "unauthorized") ||
-		strings.Contains(s, "insufficient permissions") ||
-		strings.Contains(s, "Authentication error")
+	var authErr *cloudflare.AuthenticationError
+	return stderrors.As(err, &authErr)
 }
 
 func newSDKClientFromRequest(req VerifyTokenRequest) (cloudflareClient, error) {
@@ -420,7 +436,6 @@ func (m *Manager) syncDNSForHostname(ctx context.Context, hostname string) error
 
 	target := fmt.Sprintf("%s.cfargotunnel.com", cfg.TunnelID)
 
-	// Look for an existing CNAME record for this hostname
 	existing, _, err := client.ListDNSRecords(ctx, cloudflare.ZoneIdentifier(zone.ID), cloudflare.ListDNSRecordsParams{
 		Type: "CNAME",
 		Name: hostname,
@@ -436,7 +451,7 @@ func (m *Manager) syncDNSForHostname(ctx context.Context, hostname string) error
 			Name:    hostname,
 			Content: target,
 			Proxied: cloudflare.BoolPtr(true),
-			TTL:     1, // Auto TTL
+			TTL:     1,
 		})
 	} else {
 		_, err = client.CreateDNSRecord(ctx, cloudflare.ZoneIdentifier(zone.ID), cloudflare.CreateDNSRecordParams{
@@ -444,7 +459,7 @@ func (m *Manager) syncDNSForHostname(ctx context.Context, hostname string) error
 			Name:    hostname,
 			Content: target,
 			Proxied: cloudflare.BoolPtr(true),
-			TTL:     1, // Auto TTL
+			TTL:     1,
 		})
 	}
 	if err != nil {
@@ -513,6 +528,8 @@ func settingsResponse(effective, persisted config.TunnelManagementConfig, derive
 		TunnelID:          effective.TunnelID,
 		AuthMode:          authMode,
 		APIEmail:          effective.APIEmail,
+		APIToken:          effective.APIToken,
+		APIKey:            effective.APIKey,
 		APITokenSet:       effective.APIToken != "",
 		APIKeySet:         effective.APIKey != "",
 		DerivedFromToken:  derived,
@@ -557,7 +574,7 @@ func effectiveWithTokenIdentity(cfg config.Config) (config.TunnelManagementConfi
 func parseTunnelToken(token string) (tokenIdentity, error) {
 	token = strings.TrimSpace(token)
 	if token == "" {
-		return tokenIdentity{}, errors.New("tunnel token is empty")
+		return tokenIdentity{}, stderrors.New("tunnel token is empty")
 	}
 
 	content, err := base64.StdEncoding.DecodeString(token)
@@ -577,7 +594,7 @@ func parseTunnelToken(token string) (tokenIdentity, error) {
 	}
 
 	if strings.TrimSpace(encoded.AccountTag) == "" || strings.TrimSpace(encoded.TunnelID) == "" {
-		return tokenIdentity{}, errors.New("tunnel token does not contain account and tunnel identifiers")
+		return tokenIdentity{}, stderrors.New("tunnel token does not contain account and tunnel identifiers")
 	}
 
 	return tokenIdentity{

@@ -350,10 +350,10 @@ other = "隧道 UUID"
 other = "您的隧道 UUID。获取路径：Cloudflare Zero Trust → 网络 → 隧道 → 点击隧道名称 → 概览。修改此字段后会加载所选隧道配置。"
 
 [auth_help]
-other = "推荐使用 API Token。创建路径：仪表板 → 我的个人资料 → API 令牌。需要 Account:Cloudflare Tunnel:Edit 和 Zone:Zone:Read 权限。留空则保留已保存的值。"
+other = "推荐使用 API Token。创建路径：仪表板 → 我的个人资料 → API 令牌。需要权限：Account · Argo Tunnel (Legacy) · Edit, Zone · Zone · Read, Zone · DNS · Edit。留空则保留已保存的值。"
 
 [api_token_help]
-other = "在 Cloudflare 仪表板 → 我的个人资料 → API 令牌 → 创建令牌 中创建。所需权限：Account · Cloudflare Tunnel · Edit, Zone · Zone · Read。"
+other = "在 Cloudflare 仪表板 → 我的个人资料 → API 令牌 → 创建令牌 中创建。所需权限：Account · Argo Tunnel (Legacy) · Edit, Zone · Zone · Read, Zone · DNS · Edit。"
 
 [api_key_help]
 other = "在 Cloudflare 仪表板 → 我的个人资料 → API 密钥 中找到 Global API Key。为安全起见，建议使用 API Token 代替。"
@@ -440,7 +440,7 @@ other = "加载域名失败"
 other = "所需 Cloudflare API 权限"
 
 [api_permission_tunnel]
-other = "Account · Cloudflare Tunnel · Edit"
+other = "Account · Argo Tunnel (Legacy) · Edit"
 
 [api_permission_zone]
 other = "Zone · Zone · Read"
@@ -613,6 +613,9 @@ other = "DDNS 记录"
 [ddns_add_record]
 other = "添加记录"
 
+[ddns_record_ip_version]
+other = "IP 版本"
+
 [ddns_record_name]
 other = "主机名"
 
@@ -687,3 +690,42 @@ other = "暂无 DDNS 记录，在下方添加。"
 
 [minutes]
 other = "分钟"
+
+[ddns_record_a]
+other = "IPv4 (A)"
+
+[ddns_record_aaaa]
+other = "IPv6 (AAAA)"
+
+[ddns_ttl_auto]
+other = "自动"
+
+[features_tab]
+other = "功能选项"
+
+[features_title]
+other = "功能选项设置"
+
+[features_subtitle]
+other = "启用或禁用可选功能标签。禁用的功能会从导航栏隐藏。"
+
+[feature_manager_name]
+other = "远程隧道管理"
+
+[feature_manager_desc]
+other = "通过 Cloudflare API 管理托管的 ingress 规则。"
+
+[feature_ddns_name]
+other = "DDNS"
+
+[feature_ddns_desc]
+other = "在公网 IP 变化时自动更新 DNS 记录。"
+
+[feature_mcp_name]
+other = "MCP 接入"
+
+[feature_mcp_desc]
+other = "让 AI 客户端通过 Model Context Protocol 操作 cfui。"
+
+[feature_ddns_requires_manager]
+other = "DDNS 依赖远程隧道管理（复用其 API 凭据），请先启用远程隧道管理。"

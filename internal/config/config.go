@@ -40,6 +40,9 @@ type Config struct {
 
 	// DDNS configuration for automatic DNS record updating.
 	DDNS DDNSConfig `json:"ddns"`
+
+	// MCPEnabled gates the Model Context Protocol HTTP endpoint.
+	MCPEnabled bool `json:"mcp_enabled"`
 }
 
 // DDNSConfig stores settings for the built-in DDNS client.

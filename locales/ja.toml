@@ -350,10 +350,10 @@ other = "トンネル UUID"
 other = "トンネルの UUID。取得方法：Cloudflare Zero Trust → ネットワーク → トンネル → トンネル名をクリック → 概要。この項目を変更すると、選択したトンネル設定を読み込みます。"
 
 [auth_help]
-other = "API Token を推奨します。作成方法：ダッシュボード → マイプロフィール → API トークン。Account:Cloudflare Tunnel:Edit と Zone:Zone:Read 権限が必要です。空欄なら保存済みの値を保持します。"
+other = "API Token を推奨します。作成方法：ダッシュボード → マイプロフィール → API トークン。必要な権限：Account · Argo Tunnel (Legacy) · Edit, Zone · Zone · Read, Zone · DNS · Edit。空欄なら保存済みの値を保持します。"
 
 [api_token_help]
-other = "Cloudflare ダッシュボード → マイプロフィール → API トークン → トークンを作成 で作成。必要な権限：Account · Cloudflare Tunnel · Edit, Zone · Zone · Read。"
+other = "Cloudflare ダッシュボード → マイプロフィール → API トークン → トークンを作成 で作成。必要な権限：Account · Argo Tunnel (Legacy) · Edit, Zone · Zone · Read, Zone · DNS · Edit。"
 
 [api_key_help]
 other = "Cloudflare ダッシュボード → マイプロフィール → API キー で Global API Key を確認できます。セキュリティ上、API Token の使用を推奨します。"
@@ -440,7 +440,7 @@ other = "ドメインの読み込みに失敗しました"
 other = "必要な Cloudflare API 権限"
 
 [api_permission_tunnel]
-other = "Account · Cloudflare Tunnel · Edit"
+other = "Account · Argo Tunnel (Legacy) · Edit"
 
 [api_permission_zone]
 other = "Zone · Zone · Read"
@@ -613,6 +613,9 @@ other = "DDNS レコード"
 [ddns_add_record]
 other = "レコード追加"
 
+[ddns_record_ip_version]
+other = "IP バージョン"
+
 [ddns_record_name]
 other = "ホスト名"
 
@@ -687,3 +690,42 @@ other = "DDNSレコードがありません。下で追加してください。"
 
 [minutes]
 other = "分"
+
+[ddns_record_a]
+other = "IPv4 (A)"
+
+[ddns_record_aaaa]
+other = "IPv6 (AAAA)"
+
+[ddns_ttl_auto]
+other = "自動"
+
+[features_tab]
+other = "機能設定"
+
+[features_title]
+other = "機能設定"
+
+[features_subtitle]
+other = "オプション機能タブを有効または無効にします。無効にするとナビゲーションから隠れます。"
+
+[feature_manager_name]
+other = "リモートトンネル管理"
+
+[feature_manager_desc]
+other = "Cloudflare API で ingress ルールを管理します。"
+
+[feature_ddns_name]
+other = "DDNS"
+
+[feature_ddns_desc]
+other = "パブリックIP変更時にDNSレコードを自動更新します。"
+
+[feature_mcp_name]
+other = "MCP アクセス"
+
+[feature_mcp_desc]
+other = "AI クライアントが Model Context Protocol 経由で cfui を操作できるようにします。"
+
+[feature_ddns_requires_manager]
+other = "DDNS はリモートトンネル管理の API 認証情報を利用します。先にリモートトンネル管理を有効化してください。"

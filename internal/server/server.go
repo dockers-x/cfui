@@ -11,6 +11,7 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"strconv"
@@ -103,12 +104,13 @@ type Server struct {
 func NewServer(cfgMgr *config.Manager, runner *service.Runner, assets embed.FS, locales embed.FS) *Server {
 	tunnelMgr := tunnelmgr.NewManager(cfgMgr)
 	tokenStore := mcpbridge.NewTokenStore(cfgMgr.Dir())
+	ddnsSvc := ddns.NewService(cfgMgr)
 	return &Server{
 		cfgMgr:    cfgMgr,
 		runner:    runner,
 		tunnelMgr: tunnelMgr,
-		mcpSvc:    mcpbridge.NewService(cfgMgr, runner, tunnelMgr, tokenStore),
-		ddnsSvc:   ddns.NewService(cfgMgr),
+		mcpSvc:    mcpbridge.NewService(cfgMgr, runner, tunnelMgr, tokenStore, ddnsSvc),
+		ddnsSvc:   ddnsSvc,
 		assets:    assets,
 		locales:   locales,
 	}
@@ -135,6 +137,7 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/mcp/status", s.handleMCPStatus)
 	mux.HandleFunc("/api/mcp/tokens", s.handleMCPTokens)
 	mux.HandleFunc("/api/mcp/tokens/", s.handleMCPToken)
+	mux.HandleFunc("/api/features", s.handleFeatures)
 	mux.Handle("/mcp", s.mcpSvc.Handler())
 	mux.Handle("/mcp/", s.mcpSvc.Handler())
 
@@ -170,6 +173,78 @@ func (s *Server) handleMCPStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, status)
+}
+
+// FeaturesResponse describes feature toggle state.
+type FeaturesResponse struct {
+	TunnelManager bool `json:"tunnel_manager"`
+	DDNS          bool `json:"ddns"`
+	MCP           bool `json:"mcp"`
+}
+
+// FeaturesRequest carries partial feature toggle updates.
+type FeaturesRequest struct {
+	TunnelManager *bool `json:"tunnel_manager,omitempty"`
+	DDNS          *bool `json:"ddns,omitempty"`
+	MCP           *bool `json:"mcp,omitempty"`
+}
+
+func (s *Server) handleFeatures(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		cfg := s.cfgMgr.Get()
+		writeJSON(w, FeaturesResponse{
+			TunnelManager: cfg.TunnelManagement.Enabled,
+			DDNS:          cfg.DDNS.Enabled,
+			MCP:           cfg.MCPEnabled,
+		})
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req FeaturesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	cfg := s.cfgMgr.Get()
+	ddnsChanged := false
+	if req.TunnelManager != nil {
+		cfg.TunnelManagement.Enabled = *req.TunnelManager
+		// DDNS reuses tunnel manager API credentials; disabling the
+		// manager must also disable DDNS.
+		if !*req.TunnelManager && cfg.DDNS.Enabled {
+			cfg.DDNS.Enabled = false
+			ddnsChanged = true
+		}
+	}
+	if req.DDNS != nil {
+		// DDNS depends on Remote Tunnel Manager for API credentials.
+		if *req.DDNS && !cfg.TunnelManagement.Enabled {
+			writeAPIError(w, http.StatusBadRequest, fmt.Errorf("DDNS requires Remote Tunnel Manager to be enabled"))
+			return
+		}
+		if cfg.DDNS.Enabled != *req.DDNS {
+			ddnsChanged = true
+		}
+		cfg.DDNS.Enabled = *req.DDNS
+	}
+	if req.MCP != nil {
+		cfg.MCPEnabled = *req.MCP
+	}
+	if err := s.cfgMgr.Save(cfg); err != nil {
+		writeAPIError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if ddnsChanged {
+		s.ddnsSvc.Restart()
+	}
+	writeJSON(w, FeaturesResponse{
+		TunnelManager: cfg.TunnelManagement.Enabled,
+		DDNS:          cfg.DDNS.Enabled,
+		MCP:           cfg.MCPEnabled,
+	})
 }
 
 func (s *Server) handleMCPTokens(w http.ResponseWriter, r *http.Request) {

@@ -64,9 +64,10 @@
         <main class="main-content">
             <nav class="app-tabs" role="tablist" aria-label="Configuration sections">
                 <button id="local-tab" class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="local-panel">Tunnel Configuration</button>
-                <button id="manager-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="manager-panel">Remote Tunnel Manager</button>
-                <button id="ddns-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="ddns-panel">DDNS</button>
-                <button id="mcp-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="mcp-panel">MCP</button>
+                <button id="manager-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="manager-panel" hidden>Remote Tunnel Manager</button>
+                <button id="ddns-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="ddns-panel" hidden>DDNS</button>
+                <button id="mcp-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="mcp-panel" hidden>MCP</button>
+                <button id="features-tab" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="features-panel">Features</button>
             </nav>
 
             <section id="local-panel" class="tab-panel active" role="tabpanel" aria-labelledby="local-tab">
@@ -442,19 +443,6 @@
                         <p id="ddns-no-credentials">Configure API credentials in Remote Tunnel Manager first.</p>
                     </div>
                     <div id="ddns-main" hidden>
-            <div class="card ddns-card">
-                <div class="card-header stacked-header">
-                    <div>
-                        <h2 id="ddns-title">Dynamic DNS</h2>
-                        <p class="subtitle" id="ddns-subtitle">Automatically update DNS records when your public IP changes.</p>
-                    </div>
-                    <span class="manager-status" id="ddns-status">Disabled</span>
-                </div>
-                <div class="card-body">
-                    <div id="ddns-no-creds" class="ddns-no-creds" hidden>
-                        <p id="ddns-no-credentials">Configure API credentials in Remote Tunnel Manager first.</p>
-                    </div>
-                    <div id="ddns-main" hidden>
                         <div class="ddns-ip-banner" id="ddns-ip-banner">
                             <span class="ddns-ip-label" id="ddns-current-ip-label">Current Public IP</span>
                             <span class="ddns-ip-row"><strong id="ddns-ipv4-label">IPv4</strong>: <code id="ddns-ipv4-value">—</code></span>
@@ -558,14 +546,14 @@
                                                     <input type="checkbox" id="ddns-record-ipv4" checked aria-label="IPv4">
                                                     <span class="slider round"></span>
                                                 </label>
-                                                <label class="label-text" for="ddns-record-ipv4">IPv4 (A)</label>
+                                                <label class="label-text" id="ddns-record-ipv4-label" for="ddns-record-ipv4">IPv4 (A)</label>
                                             </div>
                                             <div class="toggle-container">
                                                 <label class="switch">
                                                     <input type="checkbox" id="ddns-record-ipv6" checked aria-label="IPv6">
                                                     <span class="slider round"></span>
                                                 </label>
-                                                <label class="label-text" for="ddns-record-ipv6">IPv6 (AAAA)</label>
+                                                <label class="label-text" id="ddns-record-ipv6-label" for="ddns-record-ipv6">IPv6 (AAAA)</label>
                                             </div>
                                         </div>
                                         <div class="form-group">
@@ -671,6 +659,47 @@
                     <div class="rules-list mcp-token-list" id="mcp-token-list"></div>
                 </div>
             </div>
+            </section>
+
+            <section id="features-panel" class="tab-panel" role="tabpanel" aria-labelledby="features-tab" hidden>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 id="features-title">Features</h2>
+                        <p class="subtitle" id="features-subtitle">Enable or disable optional feature tabs. Disabled features are hidden from the navigation.</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="feature-toggle-row">
+                            <div class="feature-toggle-info">
+                                <h3 id="feature-manager-name">Remote Tunnel Manager</h3>
+                                <p class="help-text" id="feature-manager-desc">Manage Cloudflare-hosted ingress rules via API.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="feature-manager-toggle" aria-label="Enable Remote Tunnel Manager">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="feature-toggle-row">
+                            <div class="feature-toggle-info">
+                                <h3 id="feature-ddns-name">DDNS</h3>
+                                <p class="help-text" id="feature-ddns-desc">Automatically update DNS records when your public IP changes.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="feature-ddns-toggle" aria-label="Enable DDNS">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="feature-toggle-row">
+                            <div class="feature-toggle-info">
+                                <h3 id="feature-mcp-name">MCP Access</h3>
+                                <p class="help-text" id="feature-mcp-desc">Let AI clients operate cfui through the Model Context Protocol.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="feature-mcp-toggle" aria-label="Enable MCP Access">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
     </div>

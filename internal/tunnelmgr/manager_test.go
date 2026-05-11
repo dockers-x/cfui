@@ -50,7 +50,7 @@ func (f *fakeCFClient) GetAPIToken(ctx context.Context, tokenID string) (cloudfl
 			{
 				Effect: "allow",
 				PermissionGroups: []cloudflare.APITokenPermissionGroups{
-					{Name: "Cloudflare Tunnel"},
+					{Name: "Argo Tunnel (Legacy)"},
 					{Name: "Zone"},
 					{Name: "DNS"},
 				},

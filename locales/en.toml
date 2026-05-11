@@ -350,10 +350,10 @@ other = "Tunnel UUID"
 other = "Your tunnel's UUID. Find it at Cloudflare Zero Trust → Networks → Tunnels → click your tunnel name → Overview. Changing this field loads the selected tunnel configuration."
 
 [auth_help]
-other = "API Token is recommended. Create one at Dashboard → My Profile → API Tokens. Requires Account:Cloudflare Tunnel:Edit and Zone:Zone:Read. Blank fields keep saved values."
+other = "API Token is recommended. Create one at Dashboard → My Profile → API Tokens. Requires: Account · Argo Tunnel (Legacy) · Edit, Zone · Zone · Read, Zone · DNS · Edit. Blank fields keep saved values."
 
 [api_token_help]
-other = "Create at Cloudflare Dashboard → My Profile → API Tokens → Create Token. Required permissions: Account · Cloudflare Tunnel · Edit, Zone · Zone · Read."
+other = "Create at Cloudflare Dashboard → My Profile → API Tokens → Create Token. Required permissions: Account · Argo Tunnel (Legacy) · Edit, Zone · Zone · Read, Zone · DNS · Edit."
 
 [api_key_help]
 other = "Find your Global API Key at Cloudflare Dashboard → My Profile → API Keys. For security, prefer an API Token instead."
@@ -440,7 +440,7 @@ other = "Failed to load domains"
 other = "Required Cloudflare API permissions"
 
 [api_permission_tunnel]
-other = "Account · Cloudflare Tunnel · Edit"
+other = "Account · Argo Tunnel (Legacy) · Edit"
 
 [api_permission_zone]
 other = "Zone · Zone · Read"
@@ -613,6 +613,9 @@ other = "DDNS Records"
 [ddns_add_record]
 other = "Add Record"
 
+[ddns_record_ip_version]
+other = "IP Version"
+
 [ddns_record_name]
 other = "Hostname"
 
@@ -687,3 +690,42 @@ other = "No DDNS records. Add one below."
 
 [minutes]
 other = "min"
+
+[ddns_record_a]
+other = "IPv4 (A)"
+
+[ddns_record_aaaa]
+other = "IPv6 (AAAA)"
+
+[ddns_ttl_auto]
+other = "Auto"
+
+[features_tab]
+other = "Features"
+
+[features_title]
+other = "Features"
+
+[features_subtitle]
+other = "Enable or disable optional feature tabs. Disabled features are hidden from the navigation."
+
+[feature_manager_name]
+other = "Remote Tunnel Manager"
+
+[feature_manager_desc]
+other = "Manage Cloudflare-hosted ingress rules via API."
+
+[feature_ddns_name]
+other = "DDNS"
+
+[feature_ddns_desc]
+other = "Automatically update DNS records when your public IP changes."
+
+[feature_mcp_name]
+other = "MCP Access"
+
+[feature_mcp_desc]
+other = "Let AI clients operate cfui through the Model Context Protocol."
+
+[feature_ddns_requires_manager]
+other = "DDNS requires Remote Tunnel Manager to be enabled first (it reuses the API credentials)."

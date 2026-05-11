@@ -1602,3 +1602,33 @@ textarea:focus {
         animation: none;
     }
 }
+
+.feature-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-color, #2a2a2a);
+    gap: 16px;
+}
+
+.feature-toggle-row:last-child {
+    border-bottom: none;
+}
+
+.feature-toggle-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.feature-toggle-info h3 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.feature-toggle-info .help-text {
+    margin: 0;
+    font-size: 0.875rem;
+    opacity: 0.75;
+}
