@@ -299,7 +299,7 @@ other = "版本"
 other = "条规则"
 
 [no_ingress_rules]
-other = "未找到 ingress 规则。请在下方添加第一条规则。"
+other = "未找到 ingress 规则。点击添加规则创建第一条规则。"
 
 [catch_all_rule]
 other = "（兜底规则）"
@@ -661,6 +661,9 @@ other = "运行中"
 [ddns_status_disabled]
 other = "已禁用"
 
+[ddns_status_syncing]
+other = "正在同步..."
+
 [ddns_enable]
 other = "启用 DDNS"
 
@@ -692,7 +695,7 @@ other = "DDNS 同步已触发"
 other = "暂无同步记录。"
 
 [ddns_no_records]
-other = "暂无 DDNS 记录，在下方添加。"
+other = "暂无 DDNS 记录。点击添加记录创建一条记录。"
 
 [minutes]
 other = "分钟"
@@ -753,3 +756,108 @@ other = "让 AI 客户端通过 Model Context Protocol 操作 cfui。"
 
 [feature_ddns_requires_manager]
 other = "DDNS 依赖远程隧道管理（复用其 API 凭据），请先启用远程隧道管理。"
+
+[toast_success]
+other = "已完成"
+
+[toast_error]
+other = "操作失败"
+
+[toast_info]
+other = "提示"
+
+[toast_warning]
+other = "请检查"
+
+[toast_close]
+other = "关闭通知"
+
+[dialog_close]
+other = "关闭弹窗"
+
+[theme_dark_enabled]
+other = "已切换深色主题"
+
+[theme_light_enabled]
+other = "已切换浅色主题"
+
+[language_changed]
+other = "语言已更新"
+
+[logs_cleared]
+other = "日志已清空"
+
+[log_stream_connected]
+other = "实时日志已连接"
+
+[log_stream_disconnected]
+other = "实时日志已断开"
+
+[log_stream_failed]
+other = "实时日志连接失败"
+
+[tunnel_start_requested]
+other = "隧道启动命令已发送"
+
+[tunnel_stop_requested]
+other = "隧道停止命令已发送"
+
+[config_save_failed]
+other = "保存配置失败"
+
+[feature_updated]
+other = "功能设置已更新"
+
+[feature_update_failed]
+other = "更新功能设置失败"
+
+[mcp_token_create_failed]
+other = "创建 MCP Token 失败"
+
+[mcp_token_delete_failed]
+other = "删除 MCP Token 失败"
+
+[verify_permissions_passed]
+other = "权限验证通过"
+
+[verify_permissions_failed]
+other = "权限验证发现缺失权限"
+
+[manager_settings_save_failed]
+other = "保存隧道管理配置失败"
+
+[manager_config_loaded]
+other = "隧道配置已加载"
+
+[manager_config_load_failed]
+other = "加载隧道配置失败"
+
+[edit_published_app_title]
+other = "编辑已发布应用"
+
+[tunnel_rule_save_failed]
+other = "保存隧道规则失败"
+
+[tunnel_rule_delete_failed]
+other = "删除隧道规则失败"
+
+[ddns_config_load_failed]
+other = "加载 DDNS 配置失败"
+
+[ddns_edit_record]
+other = "编辑记录"
+
+[ddns_record_dialog_description]
+other = "创建跟随当前公网 IP 的 DNS 记录。"
+
+[ddns_save_failed]
+other = "保存 DDNS 设置失败"
+
+[ddns_record_save_failed]
+other = "保存 DDNS 记录失败"
+
+[ddns_record_delete_failed]
+other = "删除 DDNS 记录失败"
+
+[ddns_record_ip_required]
+other = "请至少选择一个 IP 版本。"

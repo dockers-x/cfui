@@ -30,6 +30,7 @@ const state = {
 };
 
 const elements = {
+    toastViewport: document.getElementById('toast-viewport'),
     statusBadge: document.getElementById('status-badge'),
     statusDot: document.querySelector('.status-dot'),
     statusText: document.querySelector('.status-text'),
@@ -85,6 +86,11 @@ const elements = {
     managerConfigPanel: document.getElementById('manager-config-panel'),
     managerConfigMeta: document.getElementById('manager-config-meta'),
     managerRulesList: document.getElementById('manager-rules-list'),
+    managerAddEntryBtn: document.getElementById('manager-add-entry-btn'),
+    managerEntryDialog: document.getElementById('manager-entry-dialog'),
+    managerEntryDialogTitle: document.getElementById('manager-entry-dialog-title'),
+    managerEntryDialogDescription: document.getElementById('manager-entry-dialog-description'),
+    managerEntryDialogClose: document.getElementById('manager-entry-dialog-close'),
     managerEntryForm: document.getElementById('manager-entry-form'),
     managerEntryIndex: document.getElementById('manager-entry-index'),
     managerEntrySubdomain: document.getElementById('manager-entry-subdomain'),
@@ -147,6 +153,10 @@ const elements = {
     ddnsSaveSettings: document.getElementById('ddns-save-settings'),
     ddnsRecordsList: document.getElementById('ddns-records-list'),
     ddnsAddRecordBtn: document.getElementById('ddns-add-record-btn'),
+    ddnsRecordDialog: document.getElementById('ddns-record-dialog'),
+    ddnsRecordDialogTitle: document.getElementById('ddns-record-dialog-title'),
+    ddnsRecordDialogDescription: document.getElementById('ddns-record-dialog-description'),
+    ddnsRecordDialogClose: document.getElementById('ddns-record-dialog-close'),
     ddnsRecordForm: document.getElementById('ddns-record-form'),
     ddnsRecordSubdomain: document.getElementById('ddns-record-subdomain'),
     ddnsRecordZoneSelect: document.getElementById('ddns-record-zone-select'),
@@ -162,6 +172,133 @@ const elements = {
     ddnsRecordCancel: document.getElementById('ddns-record-cancel'),
     ddnsSyncLogList: document.getElementById('ddns-sync-log-list')
 };
+
+function showToast(message, type = 'info', options = {}) {
+    const viewport = elements.toastViewport;
+    if (!viewport || !message) return;
+
+    const toast = document.createElement('div');
+    const safeType = ['success', 'error', 'info', 'warning'].includes(type) ? type : 'info';
+    toast.className = `toast toast-${safeType}`;
+    toast.setAttribute('role', safeType === 'error' ? 'alert' : 'status');
+
+    const dot = document.createElement('span');
+    dot.className = 'toast-dot';
+    dot.setAttribute('aria-hidden', 'true');
+
+    const content = document.createElement('div');
+    content.className = 'toast-content';
+
+    const title = document.createElement('div');
+    title.className = 'toast-title';
+    title.textContent = options.title || t(`toast_${safeType}`);
+
+    const body = document.createElement('div');
+    body.className = 'toast-message';
+    body.textContent = message;
+    content.append(title, body);
+
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'toast-close';
+    close.setAttribute('aria-label', t('toast_close'));
+    close.innerHTML = '<span aria-hidden="true">&times;</span>';
+
+    toast.append(dot, content, close);
+    viewport.appendChild(toast);
+
+    let dismissed = false;
+    const dismiss = () => {
+        if (dismissed) return;
+        dismissed = true;
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 180);
+    };
+    close.addEventListener('click', dismiss);
+
+    requestAnimationFrame(() => toast.classList.add('show'));
+    const duration = options.duration ?? (safeType === 'error' ? 6500 : 4200);
+    if (duration > 0) {
+        setTimeout(dismiss, duration);
+    }
+
+    while (viewport.children.length > 5) {
+        viewport.firstElementChild?.remove();
+    }
+}
+
+function toastSuccess(message) {
+    showToast(message, 'success');
+}
+
+function toastError(message) {
+    showToast(message, 'error');
+}
+
+function toastInfo(message) {
+    showToast(message, 'info');
+}
+
+let activeDialog = null;
+let lastFocusedElement = null;
+
+function openDialog(dialog, focusTarget) {
+    if (!dialog) return;
+    if (activeDialog && activeDialog !== dialog) {
+        closeDialog(activeDialog);
+    }
+    lastFocusedElement = document.activeElement;
+    dialog.hidden = false;
+    activeDialog = dialog;
+    document.body.classList.add('modal-open');
+    setTimeout(() => {
+        const target = focusTarget || dialog.querySelector('input, select, textarea, button');
+        target?.focus();
+    }, 0);
+}
+
+function closeDialog(dialog) {
+    if (!dialog || dialog.hidden) return;
+    dialog.hidden = true;
+    if (activeDialog === dialog) activeDialog = null;
+    document.body.classList.remove('modal-open');
+    if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+        lastFocusedElement.focus();
+    }
+}
+
+function handleDialogKeydown(event) {
+    if (!activeDialog || activeDialog.hidden) return;
+
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        if (activeDialog === elements.managerEntryDialog) {
+            closeTunnelEntryDialog(true);
+        } else if (activeDialog === elements.ddnsRecordDialog) {
+            closeDDNSRecordDialog(true);
+        } else {
+            closeDialog(activeDialog);
+        }
+        return;
+    }
+
+    if (event.key !== 'Tab') return;
+    const focusable = Array.from(activeDialog.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+        .filter(el => el.offsetParent !== null);
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+    }
+}
+
+document.addEventListener('keydown', handleDialogKeydown);
 
 // Theme Management
 function initTheme() {
@@ -195,7 +332,7 @@ async function init() {
     await fetchMCPStatus();
     await maybeLoadTunnelManagerZones(true);
     if (state.tunnelManager.settings?.enabled && state.tunnelManager.settings?.account_id && state.tunnelManager.settings?.tunnel_id) {
-        await loadTunnelManagerConfig();
+        await loadTunnelManagerConfig(true);
     }
     await fetchStatus();
     syncReleasedRows();
@@ -206,7 +343,10 @@ async function init() {
 }
 
 // Event Listeners
-elements.themeToggle.addEventListener('click', toggleTheme);
+elements.themeToggle.addEventListener('click', () => {
+    toggleTheme();
+    toastInfo(state.currentTheme === 'dark' ? t('theme_dark_enabled') : t('theme_light_enabled'));
+});
 
 function toggleVisibility(input, btn) {
     const type = input.type === 'password' ? 'text' : 'password';
@@ -282,8 +422,13 @@ elements.managerTunnelId?.addEventListener('change', async () => {
     await saveTunnelManagerSettings(true);
     await loadTunnelManagerConfig();
 });
+elements.managerAddEntryBtn?.addEventListener('click', () => openTunnelEntryDialog());
 elements.managerEntryForm?.addEventListener('submit', submitTunnelManagerEntry);
-elements.managerEntryCancel?.addEventListener('click', resetTunnelEntryForm);
+elements.managerEntryCancel?.addEventListener('click', () => closeTunnelEntryDialog(true));
+elements.managerEntryDialogClose?.addEventListener('click', () => closeTunnelEntryDialog(true));
+elements.managerEntryDialog?.addEventListener('click', (event) => {
+    if (event.target === elements.managerEntryDialog) closeTunnelEntryDialog(true);
+});
 
 // API token/key visibility toggles
 const managerAPITokenToggle = document.getElementById('manager-api-token-toggle');
@@ -294,12 +439,14 @@ managerAPIKeyToggle?.addEventListener('click', () => toggleVisibility(elements.m
 elements.ddnsSyncNow?.addEventListener('click', ddnsSyncNow);
 elements.ddnsSaveSettings?.addEventListener('click', ddnsSaveSettings);
 elements.ddnsAddRecordBtn?.addEventListener('click', () => {
-    resetDDNSRecordForm();
-    elements.ddnsRecordForm.hidden = false;
-    loadDDNSZones();
+    openDDNSRecordDialog();
 });
 elements.ddnsRecordForm?.addEventListener('submit', ddnsSubmitRecord);
-elements.ddnsRecordCancel?.addEventListener('click', resetDDNSRecordForm);
+elements.ddnsRecordCancel?.addEventListener('click', () => closeDDNSRecordDialog(true));
+elements.ddnsRecordDialogClose?.addEventListener('click', () => closeDDNSRecordDialog(true));
+elements.ddnsRecordDialog?.addEventListener('click', (event) => {
+    if (event.target === elements.ddnsRecordDialog) closeDDNSRecordDialog(true);
+});
 elements.ddnsRecordIPv4?.addEventListener('change', syncDDNSRecordValueFields);
 elements.ddnsRecordIPv6?.addEventListener('change', syncDDNSRecordValueFields);
 document.getElementById('ddns-tab-sources')?.addEventListener('click', () => switchDDNSSubTab('sources'));
@@ -310,6 +457,7 @@ elements.actionBtn.addEventListener('click', async () => {
     const action = state.isRunning ? 'stop' : 'start';
     if (action === 'start' && !elements.tokenInput.value) {
         addLog(t('error_token_required'), 'error');
+        toastError(t('error_token_required'));
         return;
     }
 
@@ -326,16 +474,21 @@ elements.actionBtn.addEventListener('click', async () => {
             throw new Error(data.error || 'Failed to perform action');
         }
 
-        addLog(`${t('command_sent')}: ${action}`, 'system');
+        const message = action === 'start' ? t('tunnel_start_requested') : t('tunnel_stop_requested');
+        addLog(message, 'system');
+        toastSuccess(message);
         setTimeout(fetchStatus, 500);
     } catch (err) {
         // For stop action, the tunnel might shut down before responding
         // Check status anyway to see if the operation succeeded
         if (action === 'stop') {
-            addLog(`${t('command_sent')}: ${action}`, 'system');
+            const message = t('tunnel_stop_requested');
+            addLog(message, 'system');
+            toastSuccess(message);
             setTimeout(fetchStatus, 500);
         } else {
             addLog(err.message, 'error');
+            toastError(err.message);
         }
     } finally {
         elements.actionBtn.disabled = false;
@@ -345,11 +498,12 @@ elements.actionBtn.addEventListener('click', async () => {
 elements.clearLogsBtn.addEventListener('click', () => {
     elements.logsContainer.innerHTML = '';
     state.logs = []; // Clear the stored logs array
+    toastInfo(t('logs_cleared'));
 });
 
 elements.toggleStreamBtn.addEventListener('click', () => {
     if (state.isStreamConnected) {
-        disconnectLogStream();
+        disconnectLogStream(true);
     } else {
         connectLogStream();
     }
@@ -361,6 +515,7 @@ elements.langSelect.addEventListener('change', async (e) => {
     state.currentLang = newLang;
     localStorage.setItem('lang', newLang);
     updateUIText();
+    toastSuccess(t('language_changed'));
 });
 
 function activateTab(tab) {
@@ -476,14 +631,18 @@ async function saveAllConfig() {
     };
 
     try {
-        await fetch(`${API_BASE}/config`, {
+        const res = await fetch(`${API_BASE}/config`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
         });
+        if (!res.ok) throw new Error(await responseError(res));
         addLog(t('config_saved'), 'system');
+        toastSuccess(t('config_saved'));
     } catch (err) {
-        addLog('Failed to save config', 'error');
+        const message = `${t('config_save_failed')}: ${err.message}`;
+        addLog(message, 'error');
+        toastError(message);
     }
 }
 
@@ -515,6 +674,7 @@ async function saveFeature(key, value) {
     if (key === 'ddns' && value && !state.features?.tunnel_manager) {
         if (elements.featureDdnsToggle) elements.featureDdnsToggle.checked = false;
         addLog(t('feature_ddns_requires_manager'), 'error');
+        toastError(t('feature_ddns_requires_manager'));
         return;
     }
     const body = {};
@@ -528,6 +688,7 @@ async function saveFeature(key, value) {
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             addLog(err.error || 'feature update failed', 'error');
+            toastError(err.error || t('feature_update_failed'));
             await refreshFeatures();
             return;
         }
@@ -540,8 +701,11 @@ async function saveFeature(key, value) {
             elements.featureDdnsToggle.disabled = !data.tunnel_manager;
         }
         if (elements.featureMcpToggle) elements.featureMcpToggle.checked = !!data.mcp;
+        toastSuccess(t('feature_updated'));
     } catch (err) {
         console.error('save feature failed', err);
+        toastError(t('feature_update_failed'));
+        await refreshFeatures();
     }
 }
 
@@ -581,9 +745,11 @@ async function createMCPToken(event) {
         showCreatedMCPToken(data.token);
         await fetchMCPStatus();
         addLog(t('mcp_token_created'), 'system');
+        toastSuccess(t('mcp_token_created'));
     } catch (err) {
         setMCPStatus(err.message, 'error');
         addLog(`MCP token create failed: ${err.message}`, 'error');
+        toastError(`${t('mcp_token_create_failed')}: ${err.message}`);
     } finally {
         elements.mcpTokenCreate.disabled = false;
     }
@@ -595,9 +761,11 @@ async function deleteMCPToken(id) {
         if (!res.ok) throw new Error(await responseError(res));
         await fetchMCPStatus();
         addLog(t('mcp_token_deleted'), 'system');
+        toastSuccess(t('mcp_token_deleted'));
     } catch (err) {
         setMCPStatus(err.message, 'error');
         addLog(`MCP token delete failed: ${err.message}`, 'error');
+        toastError(`${t('mcp_token_delete_failed')}: ${err.message}`);
     }
 }
 
@@ -785,6 +953,9 @@ async function maybeLoadTunnelManagerZones(quiet = true) {
 
 async function saveTunnelManagerSettings(quiet = false) {
     if (!elements.managerEnableToggle) return;
+    if (!quiet && elements.managerSaveSettings) {
+        elements.managerSaveSettings.disabled = true;
+    }
     const payload = {
         enabled: elements.managerEnableToggle.checked,
         account_id: elements.managerAccountId.value.trim(),
@@ -814,6 +985,7 @@ async function saveTunnelManagerSettings(quiet = false) {
         if (payload.api_key) state.config.tunnel_management.api_key = payload.api_key;
         if (!quiet) {
             addLog(t('manager_settings_saved'), 'system');
+            toastSuccess(t('manager_settings_saved'));
         }
         if (canLoadTunnelManagerZones(data)) {
             await loadTunnelManagerZones(true);
@@ -824,6 +996,11 @@ async function saveTunnelManagerSettings(quiet = false) {
     } catch (err) {
         setManagerStatus(err.message, 'error');
         addLog(`Tunnel manager settings failed: ${err.message}`, 'error');
+        if (!quiet) toastError(`${t('manager_settings_save_failed')}: ${err.message}`);
+    } finally {
+        if (!quiet && elements.managerSaveSettings) {
+            elements.managerSaveSettings.disabled = false;
+        }
     }
 }
 
@@ -839,6 +1016,7 @@ async function loadTunnelManagerZones(quiet = false) {
         renderTunnelManagerZones();
         if (!quiet) {
             setManagerStatus(t('manager_status_zones_loaded'), 'ready');
+            toastSuccess(t('manager_status_zones_loaded'));
         }
     } catch (err) {
         state.tunnelManager.zones = [];
@@ -847,6 +1025,7 @@ async function loadTunnelManagerZones(quiet = false) {
         if (!quiet) {
             setManagerStatus(err.message, 'error');
             addLog(`${t('zone_load_failed')}: ${err.message}`, 'error');
+            toastError(`${t('zone_load_failed')}: ${err.message}`);
         }
     }
 }
@@ -905,8 +1084,11 @@ function renderTunnelManagerZones() {
     updateDomainInputMode();
 }
 
-async function loadTunnelManagerConfig() {
+async function loadTunnelManagerConfig(quiet = false) {
     try {
+        if (!quiet && elements.managerLoadConfig) {
+            elements.managerLoadConfig.disabled = true;
+        }
         setManagerStatus(t('manager_status_loading'), 'loading');
         const res = await fetch(`${API_BASE}/tunnel-manager/config`);
         if (!res.ok) throw new Error(await responseError(res));
@@ -915,9 +1097,15 @@ async function loadTunnelManagerConfig() {
         renderTunnelManagerConfig(data);
         setManagerStatus(t('manager_status_loaded'), 'ready');
         addLog(`Loaded tunnel config ${data.tunnel_id || ''} v${data.version}`, 'system');
+        if (!quiet) toastSuccess(t('manager_config_loaded'));
     } catch (err) {
         setManagerStatus(err.message, 'error');
         addLog(`Tunnel manager load failed: ${err.message}`, 'error');
+        if (!quiet) toastError(`${t('manager_config_load_failed')}: ${err.message}`);
+    } finally {
+        if (!quiet && elements.managerLoadConfig) {
+            elements.managerLoadConfig.disabled = false;
+        }
     }
 }
 
@@ -967,7 +1155,38 @@ function renderTunnelManagerConfig(config) {
     });
 }
 
+function openTunnelEntryDialog(entry = null) {
+    if (!elements.managerEntryDialog || !elements.managerEntryForm) return;
+    if (entry) {
+        fillTunnelEntryForm(entry);
+    } else {
+        resetTunnelEntryForm();
+    }
+    const editing = elements.managerEntryIndex.value !== '';
+    if (elements.managerEntryDialogTitle) {
+        elements.managerEntryDialogTitle.textContent = editing ? t('edit_published_app_title') : t('published_app_title');
+    }
+    if (elements.managerEntryDialogDescription) {
+        elements.managerEntryDialogDescription.textContent = t('published_app_help');
+    }
+    if (elements.managerEntryDialogClose) {
+        elements.managerEntryDialogClose.setAttribute('aria-label', t('dialog_close'));
+    }
+    elements.managerEntryForm.hidden = false;
+    openDialog(elements.managerEntryDialog, editing ? elements.managerEntryService : elements.managerEntrySubdomain);
+}
+
+function closeTunnelEntryDialog(reset = false) {
+    if (reset) resetTunnelEntryForm();
+    if (elements.managerEntryForm) elements.managerEntryForm.hidden = true;
+    closeDialog(elements.managerEntryDialog);
+}
+
 function editTunnelManagerEntry(entry) {
+    openTunnelEntryDialog(entry);
+}
+
+function fillTunnelEntryForm(entry) {
     const hostname = splitHostname(entry.hostname || '');
     const service = splitService(entry.service || '');
     elements.managerEntryIndex.value = String(entry.index);
@@ -982,7 +1201,6 @@ function editTunnelManagerEntry(entry) {
     elements.managerEntryNoTLS.checked = !!entry.no_tls_verify;
     elements.managerEntrySubmit.textContent = t('update_rule');
     updateServicePlaceholder();
-    elements.managerEntryService.focus();
 }
 
 function resetTunnelEntryForm() {
@@ -1059,12 +1277,14 @@ async function submitTunnelManagerEntry(event) {
     };
     if (!entry.service) {
         setManagerStatus(t('service_required'), 'error');
+        toastError(t('service_required'));
         return;
     }
 
     const url = index === '' ? `${API_BASE}/tunnel-manager/entries` : `${API_BASE}/tunnel-manager/entries/${index}`;
     const method = index === '' ? 'POST' : 'PUT';
     try {
+        elements.managerEntrySubmit.disabled = true;
         setManagerStatus(index === '' ? t('manager_status_adding_rule') : t('manager_status_updating_rule'), 'loading');
         const res = await fetch(url, {
             method,
@@ -1076,11 +1296,16 @@ async function submitTunnelManagerEntry(event) {
         state.tunnelManager.config = data;
         renderTunnelManagerConfig(data);
         resetTunnelEntryForm();
+        closeTunnelEntryDialog(false);
         setManagerStatus(t('manager_status_saved'), 'ready');
         addLog(index === '' ? t('tunnel_rule_added') : t('tunnel_rule_updated'), 'system');
+        toastSuccess(index === '' ? t('tunnel_rule_added') : t('tunnel_rule_updated'));
     } catch (err) {
         setManagerStatus(err.message, 'error');
         addLog(`Tunnel rule save failed: ${err.message}`, 'error');
+        toastError(`${t('tunnel_rule_save_failed')}: ${err.message}`);
+    } finally {
+        elements.managerEntrySubmit.disabled = false;
     }
 }
 
@@ -1094,9 +1319,11 @@ async function deleteTunnelManagerEntry(index) {
         renderTunnelManagerConfig(data);
         setManagerStatus(t('manager_status_deleted'), 'ready');
         addLog(t('tunnel_rule_deleted'), 'system');
+        toastSuccess(t('tunnel_rule_deleted'));
     } catch (err) {
         setManagerStatus(err.message, 'error');
         addLog(`Tunnel rule delete failed: ${err.message}`, 'error');
+        toastError(`${t('tunnel_rule_delete_failed')}: ${err.message}`);
     }
 }
 
@@ -1378,11 +1605,13 @@ async function verifyTokenPermissions() {
     if (authMode === 'token' && !payload.api_token && !state.tunnelManager.settings?.api_token_set) {
         result.hidden = false;
         result.innerHTML = '<span class="perm-error">' + t('verify_enter_token') + '</span>';
+        toastError(t('verify_enter_token'));
         return;
     }
     if (authMode === 'key' && !payload.api_email && !payload.api_key) {
         result.hidden = false;
         result.innerHTML = '<span class="perm-error">' + t('verify_enter_credentials') + '</span>';
+        toastError(t('verify_enter_credentials'));
         return;
     }
 
@@ -1400,12 +1629,19 @@ async function verifyTokenPermissions() {
 
         if (!data.valid && data.error && !data.permissions) {
             result.innerHTML = '<span class="perm-error">' + (data.error || t('verify_failed')) + '</span>';
+            toastError(data.error || t('verify_failed'));
             return;
         }
 
         renderPermissionResult(data);
+        if (data.valid) {
+            toastSuccess(t('verify_permissions_passed'));
+        } else {
+            toastError(t('verify_permissions_failed'));
+        }
     } catch (err) {
         result.innerHTML = '<span class="perm-error">' + err.message + '</span>';
+        toastError(`${t('verify_failed')}: ${err.message}`);
     } finally {
         btn.disabled = false;
     }
@@ -1471,11 +1707,16 @@ function updateTunnelManagerText() {
     elements.managerSaveSettings.textContent = t('save_manager_settings');
     elements.managerLoadConfig.textContent = t('load_tunnel_config');
     document.querySelector('.manager-config-panel .section-heading h3').textContent = t('ingress_rules');
+    if (elements.managerAddEntryBtn) elements.managerAddEntryBtn.textContent = t('add_rule');
     if (!state.tunnelManager.config) {
         elements.managerConfigMeta.textContent = t('no_remote_config_loaded');
     }
-    document.getElementById('published-app-title').textContent = t('published_app_title');
-    document.getElementById('published-app-help').textContent = t('published_app_help');
+    if (elements.managerEntryDialogTitle) {
+        elements.managerEntryDialogTitle.textContent = elements.managerEntryIndex.value === '' ? t('published_app_title') : t('edit_published_app_title');
+    }
+    if (elements.managerEntryDialogDescription) {
+        elements.managerEntryDialogDescription.textContent = t('published_app_help');
+    }
     document.querySelector('label[for="manager-entry-subdomain"]').textContent = t('subdomain');
     elements.managerEntrySubdomain.placeholder = t('subdomain_placeholder');
     document.querySelector('label[for="manager-entry-domain"]').textContent = t('domain');
@@ -1546,6 +1787,7 @@ function connectLogStream() {
         console.log('Log stream connected');
         state.isStreamConnected = true;
         updateStreamButtonState();
+        toastSuccess(t('log_stream_connected'));
     };
 
     state.logStream.onmessage = (event) => {
@@ -1555,17 +1797,21 @@ function connectLogStream() {
 
     state.logStream.onerror = (error) => {
         console.error('Log stream error:', error);
+        toastError(t('log_stream_failed'));
         disconnectLogStream();
     };
 }
 
-function disconnectLogStream() {
+function disconnectLogStream(showFeedback = false) {
     if (state.logStream) {
         state.logStream.close();
         state.logStream = null;
         state.isStreamConnected = false;
         updateStreamButtonState();
         console.log('Log stream disconnected');
+        if (showFeedback) {
+            toastInfo(t('log_stream_disconnected'));
+        }
     }
 }
 
@@ -1619,6 +1865,7 @@ async function fetchDDNSConfig() {
         renderDDNSConfig(data);
     } catch (err) {
         setDDNSStatus(err.message, 'error');
+        toastError(`${t('ddns_config_load_failed')}: ${err.message}`);
     }
 }
 
@@ -1783,7 +2030,42 @@ function renderDDNSRecords(records) {
     });
 }
 
+function openDDNSRecordDialog(index = null, rec = null) {
+    if (!elements.ddnsRecordDialog || !elements.ddnsRecordForm) return;
+    if (rec) {
+        fillDDNSRecordForm(index, rec);
+    } else {
+        resetDDNSRecordForm(false);
+    }
+    const editing = elements.ddnsRecordForm.dataset.editIndex !== undefined;
+    if (elements.ddnsRecordDialogTitle) {
+        elements.ddnsRecordDialogTitle.textContent = editing ? t('ddns_edit_record') : t('ddns_add_record');
+    }
+    if (elements.ddnsRecordDialogDescription) {
+        elements.ddnsRecordDialogDescription.textContent = t('ddns_record_dialog_description');
+    }
+    if (elements.ddnsRecordDialogClose) {
+        elements.ddnsRecordDialogClose.setAttribute('aria-label', t('dialog_close'));
+    }
+    elements.ddnsRecordForm.hidden = false;
+    openDialog(elements.ddnsRecordDialog, elements.ddnsRecordSubdomain);
+    loadDDNSZones().then(() => {
+        if (rec?.zone_id && elements.ddnsRecordZoneSelect) {
+            elements.ddnsRecordZoneSelect.value = rec.zone_id;
+        }
+    });
+}
+
+function closeDDNSRecordDialog(reset = false) {
+    if (reset) resetDDNSRecordForm(true);
+    if (elements.ddnsRecordForm) elements.ddnsRecordForm.hidden = true;
+    closeDialog(elements.ddnsRecordDialog);
+}
+
 async function ddnsSaveSettings() {
+    if (elements.ddnsSaveSettings) {
+        elements.ddnsSaveSettings.disabled = true;
+    }
     const v4Lines = elements.ddnsIPv4Textarea.value.split('\n').map(l => l.trim()).filter(l => l);
     const v6Lines = elements.ddnsIPv6Textarea.value.split('\n').map(l => l.trim()).filter(l => l);
     const sources = [
@@ -1811,16 +2093,25 @@ async function ddnsSaveSettings() {
         state.ddns.config = data;
         renderDDNSConfig(data);
         addLog(t('ddns_settings_saved'), 'system');
+        toastSuccess(t('ddns_settings_saved'));
         await fetchDDNSStatus();
     } catch (err) {
         setDDNSStatus(err.message, 'error');
         addLog(`DDNS save failed: ${err.message}`, 'error');
+        toastError(`${t('ddns_save_failed')}: ${err.message}`);
+    } finally {
+        if (elements.ddnsSaveSettings) {
+            elements.ddnsSaveSettings.disabled = false;
+        }
     }
 }
 
 async function ddnsSyncNow() {
     try {
-        setDDNSStatus('Syncing...', 'loading');
+        if (elements.ddnsSyncNow) {
+            elements.ddnsSyncNow.disabled = true;
+        }
+        setDDNSStatus(t('ddns_status_syncing'), 'loading');
         const res = await fetch(`${API_BASE}/ddns/sync-now`, { method: 'POST' });
         if (!res.ok) throw new Error(await responseError(res));
         const data = await res.json();
@@ -1828,9 +2119,15 @@ async function ddnsSyncNow() {
         renderDDNSStatus(data);
         setDDNSStatus(t('ddns_status_running'), 'ready');
         addLog(t('ddns_sync_triggered'), 'system');
+        toastSuccess(t('ddns_sync_triggered'));
     } catch (err) {
         setDDNSStatus(err.message, 'error');
         addLog(`DDNS sync failed: ${err.message}`, 'error');
+        toastError(`${t('ddns_sync_failed')}: ${err.message}`);
+    } finally {
+        if (elements.ddnsSyncNow) {
+            elements.ddnsSyncNow.disabled = false;
+        }
     }
 }
 
@@ -1848,6 +2145,7 @@ async function loadDDNSZones() {
         renderDDNSZones();
     } catch (err) {
         console.error('Failed to load DDNS zones:', err);
+        toastError(`${t('zone_load_failed')}: ${err.message}`);
     }
 }
 
@@ -1888,6 +2186,10 @@ async function ddnsSubmitRecord(event) {
             normalizeDDNSRecordValue('A', elements.ddnsRecordIPv4Value?.value) :
             normalizeDDNSRecordValue('AAAA', elements.ddnsRecordIPv6Value?.value);
     }
+    if (!entry.ipv4 && !entry.ipv6) {
+        toastError(t('ddns_record_ip_required'));
+        return;
+    }
 
     const url = editing ?
         `${API_BASE}/ddns/records/${index}` :
@@ -1895,6 +2197,7 @@ async function ddnsSubmitRecord(event) {
     const method = editing ? 'PUT' : 'POST';
 
     try {
+        elements.ddnsRecordSubmit.disabled = true;
         const res = await fetch(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
@@ -1904,15 +2207,23 @@ async function ddnsSubmitRecord(event) {
         const data = await res.json();
         state.ddns.config = data;
         renderDDNSConfig(data);
-        resetDDNSRecordForm();
+        resetDDNSRecordForm(true);
+        closeDDNSRecordDialog(false);
         addLog(editing ? t('ddns_record_updated') : t('ddns_record_added'), 'system');
+        toastSuccess(editing ? t('ddns_record_updated') : t('ddns_record_added'));
     } catch (err) {
         setDDNSStatus(err.message, 'error');
+        toastError(`${t('ddns_record_save_failed')}: ${err.message}`);
+    } finally {
+        elements.ddnsRecordSubmit.disabled = false;
     }
 }
 
 function editDDNSRecord(index, rec) {
-    elements.ddnsRecordForm.hidden = false;
+    openDDNSRecordDialog(index, rec);
+}
+
+function fillDDNSRecordForm(index, rec) {
     elements.ddnsRecordForm.dataset.editIndex = String(index);
     const zoneName = rec.zone_name || '';
     const suffix = zoneName ? `.${zoneName}` : '';
@@ -1931,15 +2242,10 @@ function editDDNSRecord(index, rec) {
     elements.ddnsRecordProxied.checked = rec.proxied !== false;
     elements.ddnsRecordSubmit.textContent = t('update_rule');
     syncDDNSRecordValueFields();
-    loadDDNSZones().then(() => {
-        if (rec.zone_id && elements.ddnsRecordZoneSelect) {
-            elements.ddnsRecordZoneSelect.value = rec.zone_id;
-        }
-    });
 }
 
-function resetDDNSRecordForm() {
-    elements.ddnsRecordForm.hidden = true;
+function resetDDNSRecordForm(hide = true) {
+    elements.ddnsRecordForm.hidden = hide;
     delete elements.ddnsRecordForm.dataset.editIndex;
     elements.ddnsRecordSubdomain.value = '';
     elements.ddnsRecordIPv4.checked = true;
@@ -1964,8 +2270,10 @@ async function deleteDDNSRecord(index) {
         state.ddns.config = data;
         renderDDNSConfig(data);
         addLog(t('ddns_record_deleted'), 'system');
+        toastSuccess(t('ddns_record_deleted'));
     } catch (err) {
         setDDNSStatus(err.message, 'error');
+        toastError(`${t('ddns_record_delete_failed')}: ${err.message}`);
     }
 }
 
@@ -2017,6 +2325,12 @@ function updateDDNSText() {
     elements.ddnsSaveSettings.textContent = t('ddns_save_settings');
     document.getElementById('ddns-records-label').textContent = t('ddns_records');
     elements.ddnsAddRecordBtn.textContent = t('ddns_add_record');
+    if (elements.ddnsRecordDialogTitle) {
+        elements.ddnsRecordDialogTitle.textContent = elements.ddnsRecordForm?.dataset.editIndex ? t('ddns_edit_record') : t('ddns_add_record');
+    }
+    if (elements.ddnsRecordDialogDescription) {
+        elements.ddnsRecordDialogDescription.textContent = t('ddns_record_dialog_description');
+    }
     document.getElementById('ddns-record-subdomain-label').textContent = t('subdomain');
     elements.ddnsRecordSubdomain.placeholder = t('subdomain_placeholder');
     document.getElementById('ddns-record-zone-label').textContent = t('domain');

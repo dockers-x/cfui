@@ -299,7 +299,7 @@ other = "Version"
 other = "rules"
 
 [no_ingress_rules]
-other = "No ingress rules found. Add the first rule below."
+other = "No ingress rules found. Use Add Rule to create the first one."
 
 [catch_all_rule]
 other = "(catch-all rule)"
@@ -661,6 +661,9 @@ other = "Running"
 [ddns_status_disabled]
 other = "Disabled"
 
+[ddns_status_syncing]
+other = "Syncing..."
+
 [ddns_enable]
 other = "Enable DDNS"
 
@@ -692,7 +695,7 @@ other = "DDNS sync triggered"
 other = "No sync history yet."
 
 [ddns_no_records]
-other = "No DDNS records. Add one below."
+other = "No DDNS records. Use Add Record to create one."
 
 [minutes]
 other = "min"
@@ -753,3 +756,108 @@ other = "Let AI clients operate cfui through the Model Context Protocol."
 
 [feature_ddns_requires_manager]
 other = "DDNS requires Remote Tunnel Manager to be enabled first (it reuses the API credentials)."
+
+[toast_success]
+other = "Done"
+
+[toast_error]
+other = "Action failed"
+
+[toast_info]
+other = "Notice"
+
+[toast_warning]
+other = "Check this"
+
+[toast_close]
+other = "Dismiss notification"
+
+[dialog_close]
+other = "Close dialog"
+
+[theme_dark_enabled]
+other = "Dark theme enabled"
+
+[theme_light_enabled]
+other = "Light theme enabled"
+
+[language_changed]
+other = "Language updated"
+
+[logs_cleared]
+other = "Logs cleared"
+
+[log_stream_connected]
+other = "Real-time logs connected"
+
+[log_stream_disconnected]
+other = "Real-time logs disconnected"
+
+[log_stream_failed]
+other = "Real-time log connection failed"
+
+[tunnel_start_requested]
+other = "Tunnel start command sent"
+
+[tunnel_stop_requested]
+other = "Tunnel stop command sent"
+
+[config_save_failed]
+other = "Failed to save configuration"
+
+[feature_updated]
+other = "Feature setting updated"
+
+[feature_update_failed]
+other = "Failed to update feature setting"
+
+[mcp_token_create_failed]
+other = "Failed to create MCP token"
+
+[mcp_token_delete_failed]
+other = "Failed to delete MCP token"
+
+[verify_permissions_passed]
+other = "Permission check passed"
+
+[verify_permissions_failed]
+other = "Permission check found missing access"
+
+[manager_settings_save_failed]
+other = "Failed to save tunnel manager settings"
+
+[manager_config_loaded]
+other = "Tunnel config loaded"
+
+[manager_config_load_failed]
+other = "Failed to load tunnel config"
+
+[edit_published_app_title]
+other = "Edit published application"
+
+[tunnel_rule_save_failed]
+other = "Failed to save tunnel rule"
+
+[tunnel_rule_delete_failed]
+other = "Failed to delete tunnel rule"
+
+[ddns_config_load_failed]
+other = "Failed to load DDNS configuration"
+
+[ddns_edit_record]
+other = "Edit Record"
+
+[ddns_record_dialog_description]
+other = "Create DNS records that follow the detected public IP."
+
+[ddns_save_failed]
+other = "Failed to save DDNS settings"
+
+[ddns_record_save_failed]
+other = "Failed to save DDNS record"
+
+[ddns_record_delete_failed]
+other = "Failed to delete DDNS record"
+
+[ddns_record_ip_required]
+other = "Select at least one IP version."

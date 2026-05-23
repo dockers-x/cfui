@@ -15,6 +15,7 @@
 </head>
 
 <body>
+    <div id="toast-viewport" class="toast-viewport" role="status" aria-live="polite" aria-atomic="false"></div>
     <div class="app-container">
         <header class="header">
             <div class="logo-area">
@@ -339,92 +340,10 @@
                                 <h3>Ingress Rules</h3>
                                 <p class="help-text" id="manager-config-meta">No remote config loaded.</p>
                             </div>
+                            <button type="button" id="manager-add-entry-btn" class="btn btn-sm btn-primary">Add Rule</button>
                         </div>
 
                         <div class="rules-list" id="manager-rules-list"></div>
-
-                        <form id="manager-entry-form" class="entry-form public-hostname-form">
-                            <input type="hidden" id="manager-entry-index">
-                            <div class="public-hostname-title">
-                                <div>
-                                    <h3 id="published-app-title">Add published application</h3>
-                                    <p class="help-text" id="published-app-help">Create a public hostname route like the Cloudflare Zero Trust tunnel form.</p>
-                                </div>
-                            </div>
-                            <div class="form-section-label">Public hostname</div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="manager-entry-subdomain">Subdomain</label>
-                                    <input type="text" id="manager-entry-subdomain" placeholder="app" spellcheck="false">
-                                </div>
-                                <div class="form-group">
-                                    <label for="manager-entry-domain">Domain</label>
-                                    <div class="domain-select-row">
-                                        <select id="manager-entry-domain-select" class="form-select">
-                                            <option value="">Manual domain</option>
-                                        </select>
-                                        <button type="button" id="manager-refresh-zones" class="btn btn-sm btn-secondary">Refresh domains</button>
-                                    </div>
-                                    <input type="text" id="manager-entry-domain" placeholder="example.com" spellcheck="false">
-                                    <p class="help-text" id="manager-entry-domain-help">Select a Cloudflare zone or type a domain manually.</p>
-                                </div>
-                            </div>
-                            <div class="form-row form-row-wide">
-                                <div class="form-group">
-                                    <label for="manager-entry-path">Path</label>
-                                    <input type="text" id="manager-entry-path" placeholder="/api/*" spellcheck="false">
-                                    <p class="help-text" id="manager-entry-path-help">Optional path matcher. Leave empty to publish the whole hostname.</p>
-                                </div>
-                            </div>
-                            <div class="form-section-label">Service</div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="manager-entry-service-type">Type</label>
-                                    <select id="manager-entry-service-type" class="form-select">
-                                        <option value="http">HTTP</option>
-                                        <option value="https">HTTPS</option>
-                                        <option value="ssh">SSH</option>
-                                        <option value="rdp">RDP</option>
-                                        <option value="tcp">TCP</option>
-                                        <option value="unix">UNIX socket</option>
-                                        <option value="http_status">HTTP status</option>
-                                        <option value="raw">Custom</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="manager-entry-service">URL</label>
-                                    <input type="text" id="manager-entry-service" placeholder="localhost:8080" spellcheck="false" required>
-                                    <p class="help-text" id="manager-entry-service-help">Use host:port for HTTP/HTTPS/TCP/SSH/RDP, a socket path for UNIX, or a status code.</p>
-                                </div>
-                            </div>
-                            <details class="advanced-section public-hostname-advanced">
-                                <summary class="advanced-toggle">Additional application settings</summary>
-                                <div class="advanced-content">
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="manager-entry-http-host-header">HTTP Host Header</label>
-                                            <input type="text" id="manager-entry-http-host-header" placeholder="origin.example.com" spellcheck="false">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="manager-entry-origin-server-name">Origin Server Name</label>
-                                            <input type="text" id="manager-entry-origin-server-name" placeholder="origin.example.com" spellcheck="false">
-                                        </div>
-                                    </div>
-                                    <label id="manager-entry-origin-tls-label">Origin TLS</label>
-                                    <div class="toggle-container">
-                                        <label class="switch">
-                                            <input type="checkbox" id="manager-entry-no-tls" aria-label="Disable origin TLS verification">
-                                            <span class="slider round"></span>
-                                        </label>
-                                        <label class="label-text" id="manager-entry-no-tls-label" for="manager-entry-no-tls">Disable origin TLS verification</label>
-                                    </div>
-                                </div>
-                            </details>
-                            <div class="manager-actions">
-                                <button type="submit" id="manager-entry-submit" class="btn btn-primary">Add Rule</button>
-                                <button type="button" id="manager-entry-cancel" class="btn btn-ghost">Cancel Edit</button>
-                            </div>
-                        </form>
                     </div>
                 </div>
             </div>
@@ -528,72 +447,6 @@
                                     <button type="button" id="ddns-add-record-btn" class="btn btn-sm btn-primary">Add Record</button>
                                 </div>
                                 <div class="rules-list" id="ddns-records-list"></div>
-
-                                <form id="ddns-record-form" class="entry-form" hidden>
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="ddns-record-subdomain" id="ddns-record-subdomain-label">Subdomain</label>
-                                            <input type="text" id="ddns-record-subdomain" placeholder="home" spellcheck="false">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="ddns-record-zone-select" id="ddns-record-zone-label">Domain</label>
-                                            <select id="ddns-record-zone-select" class="form-select"></select>
-                                        </div>
-                                    </div>
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label id="ddns-record-ip-version-label">IP Version</label>
-                                            <div class="toggle-container">
-                                                <label class="switch">
-                                                    <input type="checkbox" id="ddns-record-ipv4" checked aria-label="IPv4">
-                                                    <span class="slider round"></span>
-                                                </label>
-                                                <label class="label-text" id="ddns-record-ipv4-label" for="ddns-record-ipv4">IPv4 (A)</label>
-                                            </div>
-                                            <div class="toggle-container">
-                                                <label class="switch">
-                                                    <input type="checkbox" id="ddns-record-ipv6" checked aria-label="IPv6">
-                                                    <span class="slider round"></span>
-                                                </label>
-                                                <label class="label-text" id="ddns-record-ipv6-label" for="ddns-record-ipv6">IPv6 (AAAA)</label>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="ddns-record-ttl-select" id="ddns-record-ttl-label">TTL</label>
-                                            <select id="ddns-record-ttl-select" class="form-select">
-                                                <option value="1" selected>Auto</option>
-                                                <option value="60">60s</option>
-                                                <option value="120">120s</option>
-                                                <option value="300">300s</option>
-                                                <option value="600">600s</option>
-                                                <option value="1800">1800s</option>
-                                                <option value="3600">3600s</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="form-row">
-                                        <div class="form-group" id="ddns-record-ipv4-value-group">
-                                            <label for="ddns-record-ipv4-value" id="ddns-record-ipv4-value-label">IPv4 Value</label>
-                                            <input type="text" id="ddns-record-ipv4-value" placeholder="{IPV4}" spellcheck="false">
-                                        </div>
-                                        <div class="form-group" id="ddns-record-ipv6-value-group">
-                                            <label for="ddns-record-ipv6-value" id="ddns-record-ipv6-value-label">IPv6 Value</label>
-                                            <input type="text" id="ddns-record-ipv6-value" placeholder="{IPV6}" spellcheck="false">
-                                        </div>
-                                    </div>
-                                    <p class="help-text" id="ddns-record-value-help">Use {IPV4} / {IPV6} for automatic detection, or enter a fixed public IP.</p>
-                                    <div class="toggle-container ddns-record-proxied-row">
-                                        <label class="switch">
-                                            <input type="checkbox" id="ddns-record-proxied" checked aria-label="Proxied">
-                                            <span class="slider round"></span>
-                                        </label>
-                                        <label class="label-text" id="ddns-record-proxied-label" for="ddns-record-proxied">Proxied</label>
-                                    </div>
-                                    <div class="manager-actions">
-                                        <button type="submit" id="ddns-record-submit" class="btn btn-primary">Add Record</button>
-                                        <button type="button" id="ddns-record-cancel" class="btn btn-ghost">Cancel</button>
-                                    </div>
-                                </form>
                             </section>
 
                             <section class="ddns-section ddns-log-section">
@@ -717,6 +570,173 @@
                 </div>
             </section>
         </main>
+    </div>
+    <div id="manager-entry-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="manager-entry-dialog-title" aria-describedby="manager-entry-dialog-description" hidden>
+        <div class="modal-panel" role="document">
+            <div class="modal-header">
+                <div>
+                    <h2 id="manager-entry-dialog-title">Add published application</h2>
+                    <p id="manager-entry-dialog-description" class="subtitle">Create a public hostname route like the Cloudflare Zero Trust tunnel form.</p>
+                </div>
+                <button type="button" id="manager-entry-dialog-close" class="modal-close" aria-label="Close dialog">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="manager-entry-form" class="entry-form public-hostname-form">
+                <input type="hidden" id="manager-entry-index">
+                <div class="form-section-label">Public hostname</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="manager-entry-subdomain">Subdomain</label>
+                        <input type="text" id="manager-entry-subdomain" placeholder="app" spellcheck="false">
+                    </div>
+                    <div class="form-group">
+                        <label for="manager-entry-domain">Domain</label>
+                        <div class="domain-select-row">
+                            <select id="manager-entry-domain-select" class="form-select">
+                                <option value="">Manual domain</option>
+                            </select>
+                            <button type="button" id="manager-refresh-zones" class="btn btn-sm btn-secondary">Refresh domains</button>
+                        </div>
+                        <input type="text" id="manager-entry-domain" placeholder="example.com" spellcheck="false">
+                        <p class="help-text" id="manager-entry-domain-help">Select a Cloudflare zone or type a domain manually.</p>
+                    </div>
+                </div>
+                <div class="form-row form-row-wide">
+                    <div class="form-group">
+                        <label for="manager-entry-path">Path</label>
+                        <input type="text" id="manager-entry-path" placeholder="/api/*" spellcheck="false">
+                        <p class="help-text" id="manager-entry-path-help">Optional path matcher. Leave empty to publish the whole hostname.</p>
+                    </div>
+                </div>
+                <div class="form-section-label">Service</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="manager-entry-service-type">Type</label>
+                        <select id="manager-entry-service-type" class="form-select">
+                            <option value="http">HTTP</option>
+                            <option value="https">HTTPS</option>
+                            <option value="ssh">SSH</option>
+                            <option value="rdp">RDP</option>
+                            <option value="tcp">TCP</option>
+                            <option value="unix">UNIX socket</option>
+                            <option value="http_status">HTTP status</option>
+                            <option value="raw">Custom</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="manager-entry-service">URL</label>
+                        <input type="text" id="manager-entry-service" placeholder="localhost:8080" spellcheck="false" required>
+                        <p class="help-text" id="manager-entry-service-help">Use host:port for HTTP/HTTPS/TCP/SSH/RDP, a socket path for UNIX, or a status code.</p>
+                    </div>
+                </div>
+                <details class="advanced-section public-hostname-advanced">
+                    <summary class="advanced-toggle">Additional application settings</summary>
+                    <div class="advanced-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="manager-entry-http-host-header">HTTP Host Header</label>
+                                <input type="text" id="manager-entry-http-host-header" placeholder="origin.example.com" spellcheck="false">
+                            </div>
+                            <div class="form-group">
+                                <label for="manager-entry-origin-server-name">Origin Server Name</label>
+                                <input type="text" id="manager-entry-origin-server-name" placeholder="origin.example.com" spellcheck="false">
+                            </div>
+                        </div>
+                        <label id="manager-entry-origin-tls-label">Origin TLS</label>
+                        <div class="toggle-container">
+                            <label class="switch">
+                                <input type="checkbox" id="manager-entry-no-tls" aria-label="Disable origin TLS verification">
+                                <span class="slider round"></span>
+                            </label>
+                            <label class="label-text" id="manager-entry-no-tls-label" for="manager-entry-no-tls">Disable origin TLS verification</label>
+                        </div>
+                    </div>
+                </details>
+                <div class="manager-actions">
+                    <button type="submit" id="manager-entry-submit" class="btn btn-primary">Add Rule</button>
+                    <button type="button" id="manager-entry-cancel" class="btn btn-ghost">Cancel Edit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="ddns-record-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="ddns-record-dialog-title" aria-describedby="ddns-record-dialog-description" hidden>
+        <div class="modal-panel" role="document">
+            <div class="modal-header">
+                <div>
+                    <h2 id="ddns-record-dialog-title">Add DDNS record</h2>
+                    <p id="ddns-record-dialog-description" class="subtitle">Create DNS records that follow the detected public IP.</p>
+                </div>
+                <button type="button" id="ddns-record-dialog-close" class="modal-close" aria-label="Close dialog">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="ddns-record-form" class="entry-form" hidden>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ddns-record-subdomain" id="ddns-record-subdomain-label">Subdomain</label>
+                        <input type="text" id="ddns-record-subdomain" placeholder="home" spellcheck="false">
+                    </div>
+                    <div class="form-group">
+                        <label for="ddns-record-zone-select" id="ddns-record-zone-label">Domain</label>
+                        <select id="ddns-record-zone-select" class="form-select"></select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label id="ddns-record-ip-version-label">IP Version</label>
+                        <div class="toggle-container">
+                            <label class="switch">
+                                <input type="checkbox" id="ddns-record-ipv4" checked aria-label="IPv4">
+                                <span class="slider round"></span>
+                            </label>
+                            <label class="label-text" id="ddns-record-ipv4-label" for="ddns-record-ipv4">IPv4 (A)</label>
+                        </div>
+                        <div class="toggle-container">
+                            <label class="switch">
+                                <input type="checkbox" id="ddns-record-ipv6" checked aria-label="IPv6">
+                                <span class="slider round"></span>
+                            </label>
+                            <label class="label-text" id="ddns-record-ipv6-label" for="ddns-record-ipv6">IPv6 (AAAA)</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="ddns-record-ttl-select" id="ddns-record-ttl-label">TTL</label>
+                        <select id="ddns-record-ttl-select" class="form-select">
+                            <option value="1" selected>Auto</option>
+                            <option value="60">60s</option>
+                            <option value="120">120s</option>
+                            <option value="300">300s</option>
+                            <option value="600">600s</option>
+                            <option value="1800">1800s</option>
+                            <option value="3600">3600s</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" id="ddns-record-ipv4-value-group">
+                        <label for="ddns-record-ipv4-value" id="ddns-record-ipv4-value-label">IPv4 Value</label>
+                        <input type="text" id="ddns-record-ipv4-value" placeholder="{IPV4}" spellcheck="false">
+                    </div>
+                    <div class="form-group" id="ddns-record-ipv6-value-group">
+                        <label for="ddns-record-ipv6-value" id="ddns-record-ipv6-value-label">IPv6 Value</label>
+                        <input type="text" id="ddns-record-ipv6-value" placeholder="{IPV6}" spellcheck="false">
+                    </div>
+                </div>
+                <p class="help-text" id="ddns-record-value-help">Use {IPV4} / {IPV6} for automatic detection, or enter a fixed public IP.</p>
+                <div class="toggle-container ddns-record-proxied-row">
+                    <label class="switch">
+                        <input type="checkbox" id="ddns-record-proxied" checked aria-label="Proxied">
+                        <span class="slider round"></span>
+                    </label>
+                    <label class="label-text" id="ddns-record-proxied-label" for="ddns-record-proxied">Proxied</label>
+                </div>
+                <div class="manager-actions">
+                    <button type="submit" id="ddns-record-submit" class="btn btn-primary">Add Record</button>
+                    <button type="button" id="ddns-record-cancel" class="btn btn-ghost">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
     <script src="app.js"></script>
 </body>
