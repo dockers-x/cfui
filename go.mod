@@ -6,7 +6,7 @@ require (
 	entgo.io/ent v0.14.6
 	github.com/BurntSushi/toml v1.6.0
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
-	github.com/cloudflare/cloudflare-go v0.116.0
+	github.com/cloudflare/cloudflare-go v0.117.0
 	github.com/cloudflare/cloudflared v0.0.0-20260508111348-ae3799a09858
 	github.com/lib-x/entsqlite v0.2.2
 	github.com/modelcontextprotocol/go-sdk v1.6.1
