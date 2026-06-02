@@ -77,6 +77,42 @@
         <main>
             <!-- Local tunnel panel -->
             <section id="panel-local" class="tab-panel" role="tabpanel" aria-labelledby="tab-local">
+                <!-- Tunnel error (surfaces the reason from /api/status) -->
+                <div id="tunnel-alert" class="alert" data-kind="error" role="alert" hidden>
+                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <div class="alert-body">
+                        <div class="alert-title" data-i18n="tunnel_error_label">Tunnel error</div>
+                        <div class="alert-msg mono" id="tunnel-alert-msg"></div>
+                    </div>
+                    <div class="alert-actions">
+                        <button type="button" class="btn btn--sm" id="tunnel-alert-logs" data-i18n="view_logs">View logs</button>
+                        <button type="button" class="icon-btn" id="tunnel-alert-dismiss" aria-label="Dismiss" data-i18n-attr="aria-label|dismiss">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Restart-required notice (config changed while the tunnel is running) -->
+                <div id="restart-hint" class="alert" data-kind="warn" role="status" hidden>
+                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M23 4v6h-6"></path>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                    <div class="alert-body">
+                        <div class="alert-title" data-i18n="restart_required">Configuration changed. Restart the tunnel to apply.</div>
+                    </div>
+                    <div class="alert-actions">
+                        <button type="button" class="btn btn--sm btn--primary" id="restart-now">
+                            <span class="spinner" aria-hidden="true"></span>
+                            <span class="text" data-i18n="restart_tunnel">Restart</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <div class="card-header-text">
@@ -217,7 +253,7 @@
                                     <span class="label" data-i18n="autorestart">Auto-restart on failure</span>
                                 </label>
                                 <span style="flex:1"></span>
-                                <button id="action-btn" type="button" class="btn btn--primary" data-action="start">
+                                <button id="action-btn" type="button" class="btn btn--primary" data-action="start" data-i18n-attr="title|action_shortcut_hint" title="Ctrl/⌘ + Enter">
                                     <span class="spinner" aria-hidden="true"></span>
                                     <span class="text" data-i18n="start_tunnel">Start Tunnel</span>
                                 </button>
@@ -226,7 +262,7 @@
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card logs-card">
                     <div class="card-header">
                         <div class="card-header-text">
                             <h2 class="card-title" data-i18n="system_logs">System Logs</h2>
@@ -238,16 +274,27 @@
                                 <span class="dot"></span>
                                 <span class="text" data-i18n="log_status_disconnected">Disconnected</span>
                             </span>
+                            <select id="log-level-filter" class="form-select" aria-label="Filter logs" data-i18n-attr="aria-label|log_filter_label">
+                                <option value="all" data-i18n="log_filter_all">All levels</option>
+                                <option value="info" data-i18n="log_filter_info">Info &amp; up</option>
+                                <option value="warn" data-i18n="log_filter_warn">Warnings &amp; up</option>
+                                <option value="error" data-i18n="log_filter_error">Errors only</option>
+                            </select>
                         </div>
                         <div class="right">
                             <button id="toggle-stream" type="button" class="btn btn--sm" data-i18n="log_stream_enable">Enable Real-time Logs</button>
                             <button id="copy-logs" type="button" class="btn btn--sm btn--ghost" data-i18n="copy">Copy</button>
+                            <button id="download-logs" type="button" class="btn btn--sm btn--ghost" data-i18n="log_download">Download</button>
                             <button id="clear-logs" type="button" class="btn btn--sm btn--ghost" data-i18n="clear">Clear</button>
                         </div>
                     </div>
-                    <div class="logs" id="logs-container" aria-live="polite" aria-atomic="false">
+                    <div class="logs" id="logs-container" aria-live="off" aria-atomic="false">
                         <div class="line system"><span class="ts"></span><span class="msg" data-i18n="system_ready">System ready. Waiting for configuration...</span></div>
                     </div>
+                    <button id="logs-jump" type="button" class="logs-jump" hidden>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <span data-i18n="log_new_entries">New logs</span>
+                    </button>
                 </div>
             </section>
 
@@ -840,7 +887,12 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="js/app-core.js"></script>
+    <script src="js/app-ui.js"></script>
+    <script src="js/app-tunnel.js"></script>
+    <script src="js/app-logs.js"></script>
+    <script src="js/app-services.js"></script>
+    <script src="js/app-init.js"></script>
 </body>
 
 </html>

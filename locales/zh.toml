@@ -956,3 +956,45 @@ other = "复制"
 
 [cancel]
 other = "取消"
+
+[status_offline]
+other = "连接断开"
+
+[tunnel_error_label]
+other = "隧道错误"
+
+[dismiss]
+other = "忽略"
+
+[restart_required]
+other = "配置已变更，请重启隧道以生效。"
+
+[restart_tunnel]
+other = "重启"
+
+[tunnel_restarted]
+other = "隧道已重启"
+
+[log_filter_label]
+other = "日志级别筛选"
+
+[log_filter_all]
+other = "全部级别"
+
+[log_filter_info]
+other = "Info 及以上"
+
+[log_filter_warn]
+other = "Warn 及以上"
+
+[log_filter_error]
+other = "仅 Error"
+
+[log_download]
+other = "下载"
+
+[log_new_entries]
+other = "新日志"
+
+[action_shortcut_hint]
+other = "Ctrl/⌘ + Enter"

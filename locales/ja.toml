@@ -956,3 +956,45 @@ other = "コピー"
 
 [cancel]
 other = "キャンセル"
+
+[status_offline]
+other = "接続切断"
+
+[tunnel_error_label]
+other = "トンネルエラー"
+
+[dismiss]
+other = "閉じる"
+
+[restart_required]
+other = "設定が変更されました。トンネルを再起動してください。"
+
+[restart_tunnel]
+other = "再起動"
+
+[tunnel_restarted]
+other = "トンネルを再起動しました"
+
+[log_filter_label]
+other = "ログレベルフィルター"
+
+[log_filter_all]
+other = "すべてのレベル"
+
+[log_filter_info]
+other = "Info 以上"
+
+[log_filter_warn]
+other = "Warn 以上"
+
+[log_filter_error]
+other = "Error のみ"
+
+[log_download]
+other = "ダウンロード"
+
+[log_new_entries]
+other = "新しいログ"
+
+[action_shortcut_hint]
+other = "Ctrl/⌘ + Enter"

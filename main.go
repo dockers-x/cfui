@@ -20,7 +20,7 @@ import (
 	"cfui/version"
 )
 
-//go:embed web/dist/*
+//go:embed all:web/dist
 var assets embed.FS
 
 //go:embed locales/*

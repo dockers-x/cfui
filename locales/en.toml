@@ -956,3 +956,45 @@ other = "Copy"
 
 [cancel]
 other = "Cancel"
+
+[status_offline]
+other = "Disconnected"
+
+[tunnel_error_label]
+other = "Tunnel error"
+
+[dismiss]
+other = "Dismiss"
+
+[restart_required]
+other = "Configuration changed. Restart the tunnel to apply."
+
+[restart_tunnel]
+other = "Restart"
+
+[tunnel_restarted]
+other = "Tunnel restarted"
+
+[log_filter_label]
+other = "Filter log level"
+
+[log_filter_all]
+other = "All levels"
+
+[log_filter_info]
+other = "Info & up"
+
+[log_filter_warn]
+other = "Warnings & up"
+
+[log_filter_error]
+other = "Errors only"
+
+[log_download]
+other = "Download"
+
+[log_new_entries]
+other = "New logs"
+
+[action_shortcut_hint]
+other = "Ctrl/⌘ + Enter"
