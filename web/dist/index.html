@@ -92,7 +92,7 @@
                                 </label>
                                 <div class="input-suffix">
                                     <input
-                                        type="text"
+                                        type="password"
                                         id="token-input"
                                         class="input"
                                         placeholder="eyJhIjoi..."
@@ -102,7 +102,7 @@
                                         autocapitalize="off"
                                         data-i18n-attr="placeholder|token_placeholder"
                                     >
-                                    <button id="toggle-token" class="icon-btn" type="button" aria-label="Hide token" aria-pressed="false" title="Hide">
+                                    <button id="toggle-token" class="icon-btn" type="button" aria-label="Hide token" aria-pressed="false" data-i18n-attr="aria-label|token_show" title="Show">
                                         <svg class="eye-on" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                             <circle cx="12" cy="12" r="3"></circle>
@@ -112,10 +112,6 @@
                                             <line x1="1" y1="1" x2="23" y2="23"></line>
                                         </svg>
                                     </button>
-                                </div>
-                                <div class="strength" id="token-strength" data-level="empty" hidden>
-                                    <span class="bars"><i></i><i></i><i></i><i></i></span>
-                                    <span class="label" data-i18n="token_strength_empty">No token</span>
                                 </div>
                                 <div class="help-row">
                                     <p class="help-text" data-i18n="token_help">Paste your tunnel token. Find it at Zero Trust → Networks → Connectors → Cloudflare Tunnels → select your tunnel → Edit → copy from the install command.</p>
@@ -315,8 +311,8 @@
                                             </details>
                                         </div>
                                         <div class="input-suffix">
-                                            <input type="text" id="manager-api-token" class="input" placeholder="" spellcheck="false" autocomplete="off" data-i18n-attr="placeholder|api_token_placeholder">
-                                            <button id="manager-api-token-toggle" class="icon-btn" type="button" aria-label="Hide">
+                                            <input type="password" id="manager-api-token" class="input" placeholder="" spellcheck="false" autocomplete="off" data-i18n-attr="placeholder|api_token_placeholder">
+                                            <button id="manager-api-token-toggle" class="icon-btn" type="button" aria-label="Show token" aria-pressed="false" data-i18n-attr="aria-label|token_show" title="Show">
                                                 <svg class="eye-on" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                                     <circle cx="12" cy="12" r="3"></circle>
@@ -348,8 +344,8 @@
                                     <div class="form-field">
                                         <label for="manager-api-key" data-i18n="api_key">API Key</label>
                                         <div class="input-suffix">
-                                            <input type="text" id="manager-api-key" class="input" placeholder="" spellcheck="false" autocomplete="off" data-i18n-attr="placeholder|api_key_placeholder">
-                                            <button id="manager-api-key-toggle" class="icon-btn" type="button" aria-label="Hide">
+                                            <input type="password" id="manager-api-key" class="input" placeholder="" spellcheck="false" autocomplete="off" data-i18n-attr="placeholder|api_key_placeholder">
+                                            <button id="manager-api-key-toggle" class="icon-btn" type="button" aria-label="Show token" aria-pressed="false" data-i18n-attr="aria-label|token_show" title="Show">
                                                 <svg class="eye-on" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                                     <circle cx="12" cy="12" r="3"></circle>
@@ -556,10 +552,6 @@
                                 <div class="form-field">
                                     <label for="mcp-token-input" data-i18n="mcp_token_value">Token</label>
                                     <input type="text" id="mcp-token-input" class="input" placeholder="" spellcheck="false" autocomplete="off" data-i18n-attr="placeholder|mcp_token_value_placeholder">
-                                    <div class="strength" id="mcp-token-strength" data-level="empty" hidden>
-                                        <span class="bars"><i></i><i></i><i></i><i></i></span>
-                                        <span class="label"></span>
-                                    </div>
                                     <p class="help-text" data-i18n="mcp_token_input_help">Paste your own token or leave blank to generate a strong one.</p>
                                 </div>
                             </div>

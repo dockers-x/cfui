@@ -22,6 +22,12 @@ other = "Manage your Cloudflare Tunnel connection"
 [tunnel_token]
 other = "Tunnel Token"
 
+[token_show]
+other = "Show token"
+
+[token_hide]
+other = "Hide token"
+
 [token_help]
 other = "Paste your tunnel token here. Find it at Zero Trust → Networks → Connectors → Cloudflare Tunnels → select your tunnel → Edit → copy the token from the installation command."
 
@@ -933,9 +939,6 @@ other = "Disable backend TLS verification?"
 
 [tls_i_understand]
 other = "I understand the risk"
-
-[token_strength_empty]
-other = "No token"
 
 [weak_token_message]
 other = "This token is short and easy to guess. Use at least 24 random characters."

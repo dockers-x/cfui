@@ -22,6 +22,12 @@ other = "管理您的 Cloudflare Tunnel 连接"
 [tunnel_token]
 other = "隧道 Token"
 
+[token_show]
+other = "显示令牌"
+
+[token_hide]
+other = "隐藏令牌"
+
 [token_help]
 other = "在此粘贴您的隧道 Token。获取路径：Zero Trust → 网络 → 连接器 → Cloudflare Tunnels → 选择您的隧道 → 编辑 → 从安装命令中复制 Token。"
 
@@ -933,9 +939,6 @@ other = "关闭后端 TLS 校验？"
 
 [tls_i_understand]
 other = "我已了解风险"
-
-[token_strength_empty]
-other = "未填写"
 
 [weak_token_message]
 other = "此令牌太短且容易猜测，请使用至少 24 位随机字符。"

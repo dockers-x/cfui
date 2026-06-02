@@ -445,7 +445,6 @@
         $('edge-bind-address-input').value = cfg.edge_bind_address || '';
         $('no-tls-verify-toggle').checked = !!cfg.no_tls_verify;
         updateMetricsVisibility();
-        updateTokenStrength();
     }
 
     async function fetchConfig() {
@@ -705,37 +704,14 @@
     }
 
     /* =============================================================
-       Token strength + visibility
+       Token visibility
        ============================================================= */
-
-    function updateTokenStrength() {
-        const input = $('token-input');
-        const meter = $('token-strength');
-        if (!input || !meter) return;
-        const v = input.value.trim();
-        if (!v) {
-            meter.hidden = true;
-            meter.setAttribute('data-level', 'empty');
-            meter.querySelector('.label').textContent = t('token_strength_empty');
-            return;
-        }
-        meter.hidden = false;
-        const len = v.length;
-        // Cloudflare tunnel tokens are JSON Web Tokens; real ones are very long.
-        let level = 'weak';
-        if (len >= 80) level = 'strong';
-        else if (len >= 32) level = 'fair';
-        meter.setAttribute('data-level', level);
-        meter.querySelector('.label').textContent = t(`token_strength_${level}`);
-    }
 
     function setTokenVisible(input, btn, visible) {
         input.type = visible ? 'text' : 'password';
         if (btn) {
             btn.setAttribute('aria-pressed', String(visible));
             btn.setAttribute('aria-label', t(visible ? 'token_hide' : 'token_show'));
-            btn.querySelector('.eye-on').style.display = visible ? 'none' : 'block';
-            btn.querySelector('.eye-off').style.display = visible ? 'block' : 'none';
         }
     }
 
@@ -827,6 +803,11 @@
                 $('feature-ddns-toggle').disabled = !data.tunnel_manager;
             }
             if ($('feature-mcp-toggle')) $('feature-mcp-toggle').checked = !!data.mcp;
+            // Features and panel enable flags share the same backend state.
+            // Re-pull panel settings so the status pill reflects the new value
+            // immediately (no need to open & re-save the panel).
+            if (key === 'tunnel_manager') await fetchTunnelManagerSettings();
+            if (key === 'ddns') await fetchDDNSConfig();
             toast.ok(t('feature_updated'));
         } catch (err) {
             toast.err(err.message);
@@ -1312,23 +1293,24 @@
     }
 
     function renderDDNSConfig(cfg) {
-        if (!cfg.has_credentials) {
-            $('ddns-no-creds').hidden = false;
-            $('ddns-main').hidden = true;
-            setDDNSStatus('disabled', t('ddns_status_disabled'));
-            return;
+        const credsMissing = !cfg.has_credentials;
+        // The "no credentials" callout is shown when credentials are missing,
+        // but the status pill reflects the user's enable intent (cfg.enabled),
+        // not the credentials state. The user may have just enabled DDNS in
+        // Features and the pill should reflect that immediately.
+        $('ddns-no-creds').hidden = !credsMissing;
+        $('ddns-main').hidden = credsMissing;
+        if (!credsMissing) {
+            const v4 = (cfg.ip_sources || []).filter((s) => s.ip_type === 'ipv4').map((s) => s.url).join('\n');
+            const v6 = (cfg.ip_sources || []).filter((s) => s.ip_type === 'ipv6').map((s) => s.url).join('\n');
+            $('ddns-ipv4-textarea').value = v4;
+            $('ddns-ipv6-textarea').value = v6;
+            $('ddns-interval').value = String(cfg.interval_mins || 5);
+            $('ddns-max-retries').value = String(cfg.max_retries || 3);
+            $('ddns-only-on-change').checked = cfg.only_on_change !== false;
+            renderDDNSRecords(cfg.records || []);
         }
-        $('ddns-no-creds').hidden = true;
-        $('ddns-main').hidden = false;
-        const v4 = (cfg.ip_sources || []).filter((s) => s.ip_type === 'ipv4').map((s) => s.url).join('\n');
-        const v6 = (cfg.ip_sources || []).filter((s) => s.ip_type === 'ipv6').map((s) => s.url).join('\n');
-        $('ddns-ipv4-textarea').value = v4;
-        $('ddns-ipv6-textarea').value = v6;
-        $('ddns-interval').value = String(cfg.interval_mins || 5);
-        $('ddns-max-retries').value = String(cfg.max_retries || 3);
-        $('ddns-only-on-change').checked = cfg.only_on_change !== false;
         setDDNSStatus(cfg.enabled ? 'ok' : 'disabled', t(cfg.enabled ? 'ddns_status_running' : 'ddns_status_disabled'));
-        renderDDNSRecords(cfg.records || []);
     }
 
     async function fetchDDNSStatus() {
@@ -1789,23 +1771,6 @@
         }
     }
 
-    function updateMCPTokenStrength() {
-        const input = $('mcp-token-input');
-        const meter = $('mcp-token-strength');
-        if (!input || !meter) return;
-        const v = input.value.trim();
-        if (!v) {
-            meter.hidden = true;
-            return;
-        }
-        meter.hidden = false;
-        let level = 'weak';
-        if (v.length >= 32) level = 'strong';
-        else if (v.length >= 16) level = 'fair';
-        meter.setAttribute('data-level', level);
-        meter.querySelector('.label').textContent = t(`token_strength_${level}`);
-    }
-
     async function createMCPToken(e) {
         e.preventDefault();
         const name = $('mcp-token-name').value.trim();
@@ -1825,7 +1790,6 @@
             const data = await apiSend('/mcp/tokens', 'POST', { name, token });
             $('mcp-token-name').value = '';
             $('mcp-token-input').value = '';
-            updateMCPTokenStrength();
             showCreatedMCPToken(data.token);
             await fetchMCPStatus();
             toast.ok(t('mcp_token_created'));
@@ -1883,7 +1847,6 @@
 
         // Token
         $('toggle-token')?.addEventListener('click', toggleTokenVisibility);
-        $('token-input')?.addEventListener('input', updateTokenStrength);
         $('token-input')?.addEventListener('blur', () => saveConfig({ source: 'input' }));
         $('custom-version-input')?.addEventListener('change', () => saveConfig({ source: 'input' }));
         $('software-name-input')?.addEventListener('change', () => saveConfig({ source: 'input' }));
@@ -1941,7 +1904,6 @@
             $('mcp-help-toggle').setAttribute('aria-expanded', String(hidden));
         });
         $('mcp-token-form')?.addEventListener('submit', createMCPToken);
-        $('mcp-token-input')?.addEventListener('input', updateMCPTokenStrength);
         $('mcp-copy-created')?.addEventListener('click', () => {
             const v = $('mcp-created-value')?.textContent || '';
             navigator.clipboard?.writeText(v).then(
@@ -1993,7 +1955,6 @@
         wireEvents();
         await loadLanguage(state.currentLang);
         updateMetricsVisibility();
-        updateTokenStrength();
         addLog({ key: 'system_ready' }, 'system');
         await fetchVersion();
         await fetchConfig();
@@ -2012,6 +1973,18 @@
             if (!$('panel-ddns').hidden) fetchDDNSStatus();
         }, 10000);
     }
+
+    // Refresh data when panels become visible (e.g. after toggling a feature
+    // in the Features tab and then opening the now-visible panel). Without
+    // this the status pills would show stale state from the last fetch.
+    document.addEventListener('tabchange', (e) => {
+        const name = e.detail?.name;
+        if (name === 'manager' && state.features?.tunnel_manager) {
+            fetchTunnelManagerSettings();
+        } else if (name === 'ddns' && state.features?.ddns) {
+            refreshDDNS();
+        }
+    });
 
     window.addEventListener('beforeunload', () => disconnectLogStream(true));
 

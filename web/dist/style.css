@@ -330,6 +330,24 @@ input, select, textarea {
     display: block;
 }
 
+/* Password visibility toggle: show eye-off by default (input is hidden),
+   swap to eye-on when aria-pressed="true" (input revealed). */
+.icon-btn .eye-on {
+    display: none;
+}
+
+.icon-btn .eye-off {
+    display: block;
+}
+
+.icon-btn[aria-pressed="true"] .eye-on {
+    display: block;
+}
+
+.icon-btn[aria-pressed="true"] .eye-off {
+    display: none;
+}
+
 /* Status pill (single source of truth) */
 .status-pill {
     display: inline-flex;
@@ -357,6 +375,7 @@ input, select, textarea {
 
 .status-pill[data-state="ok"] .dot {
     background: var(--state-ok);
+    animation: status-breathe 2.2s ease-in-out infinite;
 }
 
 .status-pill[data-state="error"] .dot {
@@ -374,6 +393,11 @@ input, select, textarea {
 
 @keyframes blink {
     50% { opacity: 0.35; }
+}
+
+@keyframes status-breathe {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.8); }
 }
 
 /* ============================================================
@@ -713,37 +737,6 @@ select.form-select {
     0% { box-shadow: 0 0 0 3px var(--state-ok-soft); border-color: var(--state-ok); }
     100% { box-shadow: 0 0 0 0 transparent; }
 }
-
-/* Token strength meter */
-.strength {
-    margin-top: 6px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: var(--fs-xs);
-    color: var(--text-muted);
-}
-
-.strength .bars {
-    display: inline-flex;
-    gap: 3px;
-    flex: 0 0 auto;
-}
-
-.strength .bars > i {
-    display: inline-block;
-    width: 18px;
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-}
-
-.strength[data-level="weak"] .bars > i:nth-child(-n+1) { background: var(--state-error); }
-.strength[data-level="fair"] .bars > i:nth-child(-n+2) { background: var(--state-warn); }
-.strength[data-level="strong"] .bars > i:nth-child(-n+4) { background: var(--state-ok); }
-.strength[data-level="weak"] .label { color: var(--state-error); }
-.strength[data-level="fair"] .label { color: var(--state-warn); }
-.strength[data-level="strong"] .label { color: var(--state-ok); }
 
 /* ============================================================
    Buttons

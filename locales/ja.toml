@@ -22,6 +22,12 @@ other = "Cloudflare Tunnel 接続を管理します"
 [tunnel_token]
 other = "トンネル Token"
 
+[token_show]
+other = "トークンを表示"
+
+[token_hide]
+other = "トークンを隠す"
+
 [token_help]
 other = "トンネル Token を貼り付けてください。取得方法：Zero Trust → ネットワーク → コネクタ → Cloudflare Tunnels → トンネルを選択 → 編集 → インストールコマンドから Token をコピー。"
 
@@ -933,9 +939,6 @@ other = "バックエンド TLS 検証を無効化しますか？"
 
 [tls_i_understand]
 other = "リスクを理解しました"
-
-[token_strength_empty]
-other = "未入力"
 
 [weak_token_message]
 other = "このトークンは短く推測されやすいです。24 文字以上のランダムな文字列を使用してください。"
