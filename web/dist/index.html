@@ -270,7 +270,7 @@
                     </div>
                     <div class="logs-toolbar">
                         <div class="left">
-                            <span id="log-conn-state" class="pill" data-state="disabled">
+                            <span id="log-conn-state" class="pill" data-state="disabled" role="status" aria-live="polite" aria-atomic="true">
                                 <span class="dot"></span>
                                 <span class="text" data-i18n="log_status_disconnected">Disconnected</span>
                             </span>
@@ -282,7 +282,10 @@
                             </select>
                         </div>
                         <div class="right">
-                            <button id="toggle-stream" type="button" class="btn btn--sm" data-i18n="log_stream_enable">Enable Real-time Logs</button>
+                            <button id="toggle-stream" type="button" class="btn btn--sm" aria-pressed="false">
+                                <span class="spinner" aria-hidden="true"></span>
+                                <span class="text" data-i18n="log_stream_enable">Enable Real-time Logs</span>
+                            </button>
                             <button id="copy-logs" type="button" class="btn btn--sm btn--ghost" data-i18n="copy">Copy</button>
                             <button id="download-logs" type="button" class="btn btn--sm btn--ghost" data-i18n="log_download">Download</button>
                             <button id="clear-logs" type="button" class="btn btn--sm btn--ghost" data-i18n="clear">Clear</button>

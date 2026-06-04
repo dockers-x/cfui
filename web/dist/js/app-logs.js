@@ -4,7 +4,7 @@
    ========================================================================= */
 (() => {
     'use strict';
-    const { state, $, t, formatTime, toast, API_BASE } = window.cfui;
+    const { state, $, t, formatTime, toast, API_BASE, setBusy } = window.cfui;
 
     const LEVEL_ORDER = { debug: 0, info: 1, warn: 2, error: 3, fatal: 4 };
     const LEVEL_CLASS = { DEBUG: 'debug', INFO: 'info', WARN: 'warn', WARNING: 'warn', ERROR: 'error', FATAL: 'error', DPANIC: 'error', PANIC: 'error' };
@@ -187,27 +187,35 @@
 
     /* ---- SSE streaming ---- */
 
-    function setLogConnPill(pillState, text) {
+    function setLogConnPill(pillState, textKey) {
         const pill = $('log-conn-state');
         if (!pill) return;
         pill.setAttribute('data-state', pillState);
-        pill.querySelector('.text').textContent = text;
+        pill.setAttribute('aria-label', t(textKey));
+        const text = pill.querySelector('.text');
+        if (text) {
+            text.textContent = t(textKey);
+            text.setAttribute('data-i18n', textKey);
+        }
     }
 
     function connectLogStream() {
         if (state.logStream || state.isStreamConnecting) return;
         state.isStreamConnecting = true;
-        setLogConnPill('loading', t('log_status_connecting'));
+        setLogConnPill('loading', 'log_status_connecting');
+        updateStreamButton();
         const es = new EventSource(API_BASE + '/logs/stream');
         state.logStream = es;
         es.onopen = () => {
+            if (state.logStream !== es) return;
             state.isStreamConnected = true;
             state.isStreamConnecting = false;
-            setLogConnPill('ok', t('log_status_connected'));
+            setLogConnPill('ok', 'log_status_connected');
             updateStreamButton();
             toast.ok(t('log_stream_connected'));
         };
         es.onmessage = (e) => {
+            if (state.logStream !== es) return;
             if (!e.data) return;
             /* Track raw lines for copy/download */
             state.streamLines.push(e.data);
@@ -215,13 +223,14 @@
             renderStreamLine(e.data);
         };
         es.onerror = () => {
-            setLogConnPill(state.isStreamConnected ? 'warn' : 'error',
-                state.isStreamConnected ? t('log_status_reconnecting') : t('log_status_failed'));
+            if (state.logStream !== es) return;
+            setLogConnPill('error', 'log_status_failed');
             es.close();
             state.logStream = null;
             state.isStreamConnected = false;
             state.isStreamConnecting = false;
             updateStreamButton();
+            toast.err(t('log_stream_failed'));
         };
     }
 
@@ -229,7 +238,7 @@
         if (state.logStream) { state.logStream.close(); state.logStream = null; }
         state.isStreamConnected = false;
         state.isStreamConnecting = false;
-        setLogConnPill('disabled', t('log_status_disconnected'));
+        setLogConnPill('disabled', 'log_status_disconnected');
         updateStreamButton();
         if (!silent) toast.info(t('log_stream_disconnected'));
     }
@@ -237,7 +246,18 @@
     function updateStreamButton() {
         const btn = $('toggle-stream');
         if (!btn) return;
-        btn.querySelector('.text').textContent = t(state.isStreamConnected ? 'log_stream_disable' : 'log_stream_enable');
+        const textKey = state.isStreamConnected ? 'log_stream_disable' : 'log_stream_enable';
+        setBusy(btn, state.isStreamConnecting);
+        btn.setAttribute('aria-pressed', String(state.isStreamConnected));
+        btn.setAttribute('aria-label', t(textKey));
+        btn.title = t(textKey);
+        const text = btn.querySelector('.text');
+        if (text) {
+            text.textContent = t(textKey);
+            text.setAttribute('data-i18n', textKey);
+        } else {
+            btn.textContent = t(textKey);
+        }
     }
 
     /* ---- Wire ---- */
@@ -279,6 +299,7 @@
 
         /* Initialise filter */
         applyFilterToContainer();
+        updateStreamButton();
     }
 
     /* ---- Export ---- */
