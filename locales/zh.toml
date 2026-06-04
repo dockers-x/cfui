@@ -1120,7 +1120,7 @@ other = "可选的 R2 bucket 管理"
 other = "只有想让 cfui 列出或创建 bucket 时才需要。WebDAV 文件读写不使用这里的 Cloudflare API Token。"
 
 [s3_account_help]
-other = "用于生成 R2 endpoint，也用于可选的 bucket 列表/创建接口。留空则复用远程 Tunnel 管理中的 Account ID。"
+other = "用于生成 R2 endpoint，也用于可选的 bucket 列表/创建接口。留空时会自动使用远程 Tunnel 管理或本地隧道 token 里的 Account ID。"
 
 [s3_jurisdiction]
 other = "区域管辖"
@@ -1148,6 +1148,9 @@ other = "R2 bucket 管理可用。"
 
 [s3_bucket_choose]
 other = "选择 bucket"
+
+[s3_refresh_buckets]
+other = "刷新 R2 bucket"
 
 [s3_create_bucket]
 other = "创建 R2 bucket"
@@ -1224,8 +1227,14 @@ other = "尚未保存 WebDAV 密码。"
 [s3_webdav_endpoint]
 other = "WebDAV endpoint"
 
+[s3_webdav_host]
+other = "当前访问域名"
+
+[s3_webdav_path]
+other = "WebDAV 路径"
+
 [s3_endpoint_help]
-other = "启用功能后，用这个路径配合 WebDAV 用户名和密码访问。"
+other = "前面是当前访问域名，后面是 WebDAV 路径。复制按钮会复制完整地址。"
 
 [s3_test_connection]
 other = "测试连接"

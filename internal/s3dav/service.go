@@ -460,7 +460,7 @@ func (s *Service) requestMount(req MountRequest, current config.S3WebDAVMountCon
 	next.Provider = normalizeProvider(req.Provider)
 	next.AccountID = strings.TrimSpace(req.AccountID)
 	if next.AccountID == "" && next.Provider == ProviderCloudflareR2 {
-		next.AccountID = strings.TrimSpace(s.cfgMgr.Get().EffectiveTunnelManagement().AccountID)
+		next.AccountID = s.defaultCloudflareAccountID()
 	}
 	next.Jurisdiction = normalizeJurisdiction(req.Jurisdiction)
 	next.EndpointURL = strings.TrimSpace(req.EndpointURL)
@@ -522,7 +522,7 @@ func (s *Service) normalizeMount(mount config.S3WebDAVMountConfig) config.S3WebD
 	mount.Provider = normalizeProvider(mount.Provider)
 	mount.AccountID = strings.TrimSpace(mount.AccountID)
 	if mount.AccountID == "" && mount.Provider == ProviderCloudflareR2 {
-		mount.AccountID = strings.TrimSpace(s.cfgMgr.Get().EffectiveTunnelManagement().AccountID)
+		mount.AccountID = s.defaultCloudflareAccountID()
 	}
 	mount.Jurisdiction = normalizeJurisdiction(mount.Jurisdiction)
 	mount.EndpointURL = strings.TrimSpace(mount.EndpointURL)
@@ -545,6 +545,17 @@ func (s *Service) normalizeMount(mount config.S3WebDAVMountConfig) config.S3WebD
 	mount.SecretAccessKey = strings.TrimSpace(mount.SecretAccessKey)
 	mount.WebDAVUsername = strings.TrimSpace(mount.WebDAVUsername)
 	return mount
+}
+
+func (s *Service) defaultCloudflareAccountID() string {
+	cfg := s.cfgMgr.Get()
+	if accountID := strings.TrimSpace(cfg.EffectiveTunnelManagement().AccountID); accountID != "" {
+		return accountID
+	}
+	if identity, err := cfg.TunnelTokenIdentity(); err == nil {
+		return strings.TrimSpace(identity.AccountID)
+	}
+	return ""
 }
 
 func (s *Service) settingsResponse(ctx context.Context, cfg config.S3WebDAVConfig) SettingsResponse {

@@ -2,6 +2,7 @@ package s3dav
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"strings"
 	"testing"
@@ -198,6 +199,24 @@ func TestR2ManagementIsOptionalAndUsesBucketProbe(t *testing.T) {
 	management = svc.Settings(context.Background()).Mounts[0].R2BucketManagement
 	if management.Enabled || management.Status != "PERMISSION_DENIED" {
 		t.Fatalf("unexpected denied management status: %#v", management)
+	}
+}
+
+func TestR2MountUsesAccountIDFromTunnelToken(t *testing.T) {
+	svc := newTestService(t, fakeCloudflareClient{}, afero.NewMemMapFs())
+	cfg := svc.cfgMgr.Get()
+	cfg.Token = base64.StdEncoding.EncodeToString([]byte(`{"a":"account-from-token","t":"22222222-2222-2222-2222-222222222222","s":"secret"}`))
+	cfg.S3WebDAV.Mounts[0].Provider = ProviderCloudflareR2
+	if err := svc.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	mount := svc.Settings(context.Background()).Mounts[0]
+	if mount.AccountID != "account-from-token" {
+		t.Fatalf("expected account id from tunnel token, got %#v", mount)
+	}
+	if mount.EndpointURL != "https://account-from-token.r2.cloudflarestorage.com" {
+		t.Fatalf("expected R2 endpoint from token account id, got %q", mount.EndpointURL)
 	}
 }
 

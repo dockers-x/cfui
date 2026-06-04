@@ -703,7 +703,7 @@
                             </div>
                             <div id="s3-r2-guide" class="notice" data-state="warn" hidden>
                                 <p data-i18n="s3_r2_credentials_guide">Create an R2 API token from the R2 console to get the Access Key ID and Secret Access Key. The Secret Access Key is only shown once.</p>
-                                <p><span data-i18n="s3_r2_tokens_path">Direct path:</span> <code>https://dash.cloudflare.com/&lt;ACCOUNT_ID&gt;/r2/api-tokens</code></p>
+                                <p><span data-i18n="s3_r2_tokens_path">Direct path:</span> <a id="s3-r2-token-link" class="s3-token-link" href="#" target="_blank" rel="noopener" hidden></a><code id="s3-r2-token-placeholder">https://dash.cloudflare.com/&lt;ACCOUNT_ID&gt;/r2/api-tokens</code></p>
                             </div>
                         </div>
 
@@ -713,13 +713,12 @@
                                     <div class="section-title" data-i18n="s3_r2_management">Optional R2 bucket management</div>
                                     <div class="section-subtitle" data-i18n="s3_r2_management_help">Only needed if you want cfui to list or create buckets. WebDAV file access does not use this Cloudflare API token.</div>
                                 </div>
-                                <button id="s3-refresh-buckets" type="button" class="btn btn--sm" data-i18n="refresh">Refresh</button>
                             </div>
                             <div class="form-row">
                                 <div class="form-field">
                                     <label for="s3-account-id" data-i18n="account_id">Account ID / App ID</label>
                                     <input type="text" id="s3-account-id" class="input" spellcheck="false" autocomplete="off" data-i18n-attr="placeholder|account_id_placeholder">
-                                    <p class="help-text" data-i18n="s3_account_help">Used to build the R2 endpoint and to call the optional bucket list/create API. Leave empty to reuse Remote Tunnel Manager's Account ID.</p>
+                                    <p class="help-text" data-i18n="s3_account_help">Used to build the R2 endpoint and to call the optional bucket list/create API. Leave it empty to use the Account ID from Remote Tunnel Manager or the local tunnel token.</p>
                                 </div>
                                 <div class="form-field">
                                     <label for="s3-jurisdiction" data-i18n="s3_jurisdiction">Jurisdiction</label>
@@ -734,16 +733,31 @@
                             <div class="form-row">
                                 <div class="form-field">
                                     <label for="s3-bucket-select" data-i18n="s3_bucket_select">Choose from R2 buckets</label>
-                                    <select id="s3-bucket-select" class="form-select"></select>
-                                    <p class="help-text" id="s3-r2-management-state" data-i18n="s3_r2_management_unavailable">Bucket list/create is optional and needs a Cloudflare API Token with Workers R2 Storage Edit.</p>
-                                </div>
-                                <div class="form-field">
-                                    <label for="s3-create-bucket-name" data-i18n="s3_create_bucket">Create R2 bucket</label>
-                                    <div class="input-with-button">
-                                        <input type="text" id="s3-create-bucket-name" class="input" spellcheck="false" autocomplete="off" placeholder="cfui-files">
-                                        <button id="s3-create-bucket" type="button" class="btn btn--sm" data-i18n="create">Create</button>
+                                    <div class="s3-bucket-picker">
+                                        <select id="s3-bucket-select" class="form-select"></select>
+                                        <button id="s3-refresh-buckets" type="button" class="icon-btn" aria-label="Refresh R2 buckets" title="Refresh R2 buckets" data-i18n-attr="aria-label|s3_refresh_buckets;title|s3_refresh_buckets">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                                                <path d="M3 21v-5h5"></path>
+                                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                                                <path d="M16 8h5V3"></path>
+                                            </svg>
+                                        </button>
+                                        <button id="s3-toggle-create-bucket" type="button" class="icon-btn" aria-label="Create R2 bucket" title="Create R2 bucket" aria-expanded="false" aria-controls="s3-create-bucket-panel" data-i18n-attr="aria-label|s3_create_bucket;title|s3_create_bucket">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <path d="M12 5v14"></path>
+                                                <path d="M5 12h14"></path>
+                                            </svg>
+                                        </button>
                                     </div>
-                                    <p class="help-text" data-i18n="s3_create_bucket_help">Use lowercase letters, numbers, dots, and hyphens.</p>
+                                    <div id="s3-create-bucket-panel" class="s3-create-bucket-panel" hidden>
+                                        <div class="input-with-button">
+                                            <input type="text" id="s3-create-bucket-name" class="input" spellcheck="false" autocomplete="off" placeholder="cfui-files" data-i18n-attr="aria-label|s3_create_bucket">
+                                            <button id="s3-create-bucket" type="button" class="btn btn--sm" data-i18n="create">Create</button>
+                                        </div>
+                                        <p class="help-text" data-i18n="s3_create_bucket_help">Use lowercase letters, numbers, dots, and hyphens.</p>
+                                    </div>
+                                    <p class="help-text" id="s3-r2-management-state" data-i18n="s3_r2_management_unavailable">Bucket list/create is optional and needs a Cloudflare API Token with Workers R2 Storage Edit.</p>
                                 </div>
                             </div>
                         </div>
@@ -827,8 +841,9 @@
                             <div class="form-row single-column">
                                 <div class="form-field">
                                     <label for="s3-webdav-endpoint" data-i18n="s3_webdav_endpoint">WebDAV endpoint</label>
-                                    <div class="input-with-button">
-                                        <input type="text" id="s3-webdav-endpoint" class="input" readonly value="/webdav/s3/">
+                                    <div class="s3-webdav-endpoint">
+                                        <input type="text" id="s3-webdav-origin" class="input" readonly value="" aria-label="Current host" title="Current host" data-i18n-attr="aria-label|s3_webdav_host;title|s3_webdav_host">
+                                        <input type="text" id="s3-webdav-endpoint" class="input" readonly value="/webdav/s3/" aria-label="WebDAV path" title="WebDAV path" data-i18n-attr="aria-label|s3_webdav_path;title|s3_webdav_path">
                                         <button id="s3-copy-endpoint" type="button" class="icon-btn" aria-label="Copy WebDAV endpoint" title="Copy WebDAV endpoint" data-i18n-attr="aria-label|copy_webdav_endpoint;title|copy_webdav_endpoint">
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -836,7 +851,7 @@
                                             </svg>
                                         </button>
                                     </div>
-                                    <p class="help-text" data-i18n="s3_endpoint_help">Use this path with the WebDAV username and password after the feature is enabled.</p>
+                                    <p class="help-text" data-i18n="s3_endpoint_help">The first field is the current host, and the second is the WebDAV path. The copy button copies the full URL.</p>
                                 </div>
                             </div>
                             <div class="btn-row btn-row--end">

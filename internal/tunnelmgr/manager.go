@@ -4,8 +4,6 @@ import (
 	"cfui/internal/config"
 	"cfui/internal/logger"
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	stderrors "errors"
 	"fmt"
 	"strings"
@@ -556,11 +554,6 @@ type tokenIdentity struct {
 	TunnelID  string
 }
 
-type encodedTunnelToken struct {
-	AccountTag string `json:"a"`
-	TunnelID   string `json:"t"`
-}
-
 func effectiveWithTokenIdentity(cfg config.Config) (config.TunnelManagementConfig, bool, bool) {
 	effective := cfg.EffectiveTunnelManagement()
 	if effective.AccountID != "" && effective.TunnelID != "" {
@@ -585,34 +578,13 @@ func effectiveWithTokenIdentity(cfg config.Config) (config.TunnelManagementConfi
 }
 
 func parseTunnelToken(token string) (tokenIdentity, error) {
-	token = strings.TrimSpace(token)
-	if token == "" {
-		return tokenIdentity{}, stderrors.New("tunnel token is empty")
-	}
-
-	content, err := base64.StdEncoding.DecodeString(token)
+	identity, err := config.ParseTunnelTokenIdentity(token)
 	if err != nil {
-		content, err = base64.RawStdEncoding.DecodeString(token)
-		if err != nil {
-			content, err = base64.RawURLEncoding.DecodeString(token)
-			if err != nil {
-				return tokenIdentity{}, err
-			}
-		}
-	}
-
-	var encoded encodedTunnelToken
-	if err := json.Unmarshal(content, &encoded); err != nil {
 		return tokenIdentity{}, err
 	}
-
-	if strings.TrimSpace(encoded.AccountTag) == "" || strings.TrimSpace(encoded.TunnelID) == "" {
-		return tokenIdentity{}, stderrors.New("tunnel token does not contain account and tunnel identifiers")
-	}
-
 	return tokenIdentity{
-		AccountID: strings.TrimSpace(encoded.AccountTag),
-		TunnelID:  strings.TrimSpace(encoded.TunnelID),
+		AccountID: identity.AccountID,
+		TunnelID:  identity.TunnelID,
 	}, nil
 }
 

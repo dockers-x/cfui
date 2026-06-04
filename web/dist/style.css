@@ -694,6 +694,48 @@ label .hint {
     align-items: center;
 }
 
+.s3-bucket-picker {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--tap) var(--tap);
+    gap: var(--gap-2);
+    align-items: center;
+}
+
+.s3-bucket-picker .icon-btn {
+    width: var(--tap);
+    height: var(--tap);
+}
+
+.s3-create-bucket-panel {
+    margin-top: var(--gap-2);
+    padding: var(--gap-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-control);
+    background: var(--bg-elevated);
+}
+
+.s3-token-link {
+    color: var(--cf-orange);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.s3-token-link:hover {
+    text-decoration: underline;
+}
+
+.s3-webdav-endpoint {
+    display: grid;
+    grid-template-columns: minmax(160px, 0.5fr) minmax(0, 1fr) var(--tap);
+    gap: var(--gap-2);
+    align-items: center;
+}
+
+.s3-webdav-endpoint .icon-btn {
+    width: var(--tap);
+    height: var(--tap);
+}
+
 .secret-field .icon-btn {
     min-width: var(--tap);
     min-height: var(--tap);
@@ -1398,6 +1440,14 @@ details.disclosure > .body {
     .secret-field,
     .s3-file-row {
         grid-template-columns: 1fr;
+    }
+
+    .s3-webdav-endpoint {
+        grid-template-columns: minmax(0, 1fr) var(--tap);
+    }
+
+    .s3-webdav-endpoint #s3-webdav-origin {
+        grid-column: 1 / -1;
     }
 
     .s3-file-actions {

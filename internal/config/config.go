@@ -5,6 +5,9 @@ import (
 	"cfui/internal/persist"
 	"cfui/internal/persist/ent"
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 	"sync"
@@ -128,6 +131,16 @@ type TunnelManagementConfig struct {
 	APIKey    string `json:"api_key"`
 }
 
+type TunnelTokenIdentity struct {
+	AccountID string
+	TunnelID  string
+}
+
+type encodedTunnelToken struct {
+	AccountTag string `json:"a"`
+	TunnelID   string `json:"t"`
+}
+
 // S3WebDAVConfig stores global state for optional S3-backed WebDAV mounts.
 type S3WebDAVConfig struct {
 	Enabled   bool                  `json:"enabled"`
@@ -226,6 +239,42 @@ func (c Config) EffectiveTunnelManagement() TunnelManagementConfig {
 	}
 
 	return cfg
+}
+
+func (c Config) TunnelTokenIdentity() (TunnelTokenIdentity, error) {
+	return ParseTunnelTokenIdentity(c.Token)
+}
+
+func ParseTunnelTokenIdentity(token string) (TunnelTokenIdentity, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return TunnelTokenIdentity{}, errors.New("tunnel token is empty")
+	}
+
+	content, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		content, err = base64.RawStdEncoding.DecodeString(token)
+		if err != nil {
+			content, err = base64.RawURLEncoding.DecodeString(token)
+			if err != nil {
+				return TunnelTokenIdentity{}, err
+			}
+		}
+	}
+
+	var encoded encodedTunnelToken
+	if err := json.Unmarshal(content, &encoded); err != nil {
+		return TunnelTokenIdentity{}, err
+	}
+
+	if strings.TrimSpace(encoded.AccountTag) == "" || strings.TrimSpace(encoded.TunnelID) == "" {
+		return TunnelTokenIdentity{}, errors.New("tunnel token does not contain account and tunnel identifiers")
+	}
+
+	return TunnelTokenIdentity{
+		AccountID: strings.TrimSpace(encoded.AccountTag),
+		TunnelID:  strings.TrimSpace(encoded.TunnelID),
+	}, nil
 }
 
 func firstEnv(keys ...string) (string, bool) {

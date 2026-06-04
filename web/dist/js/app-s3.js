@@ -136,9 +136,11 @@
         $('s3-webdav-username').value = mount.webdav_username || '';
         $('s3-webdav-password').value = '';
         $('s3-password-state').textContent = t(mount.password_set ? 's3_password_set' : 's3_password_not_set');
-        $('s3-webdav-endpoint').value = mount.endpoint || mount.mount_path || DEFAULT_MOUNT;
+        updateWebDAVEndpoint();
+        setCreateBucketPanel(false);
         renderBucketSelect(state.s3.buckets, mount.bucket_name);
         renderR2ManagementState(mount.r2_bucket_management);
+        renderR2TokenPath();
         updateProviderUI();
     }
 
@@ -152,6 +154,7 @@
             $('s3-path-style').checked = true;
             applyR2EndpointPreset();
         }
+        renderR2TokenPath();
     }
 
     function applyR2EndpointPreset() {
@@ -159,12 +162,48 @@
         const accountID = $('s3-account-id')?.value.trim();
         if (!endpoint || endpoint.value.trim() || !accountID) return;
         endpoint.value = r2EndpointFor(accountID, $('s3-jurisdiction')?.value || 'default');
+        renderR2TokenPath();
     }
 
     function r2EndpointFor(accountID, jurisdiction) {
         if (jurisdiction === 'eu') return `https://${accountID}.eu.r2.cloudflarestorage.com`;
         if (jurisdiction === 'fedramp') return `https://${accountID}.fedramp.r2.cloudflarestorage.com`;
         return `https://${accountID}.r2.cloudflarestorage.com`;
+    }
+
+    function webDAVEndpointFor(path) {
+        const normalized = (path || DEFAULT_MOUNT).trim() || DEFAULT_MOUNT;
+        try {
+            return new URL(normalized, window.location.origin).toString();
+        } catch {
+            return normalized;
+        }
+    }
+
+    function updateWebDAVEndpoint() {
+        const origin = $('s3-webdav-origin');
+        const path = $('s3-webdav-endpoint');
+        if (origin) origin.value = window.location.origin;
+        if (path) path.value = ($('s3-mount-path')?.value || activeMount()?.mount_path || DEFAULT_MOUNT).trim() || DEFAULT_MOUNT;
+    }
+
+    function renderR2TokenPath() {
+        const link = $('s3-r2-token-link');
+        const placeholder = $('s3-r2-token-placeholder');
+        if (!link || !placeholder) return;
+        const accountID = $('s3-account-id')?.value.trim();
+        if (!accountID) {
+            link.hidden = true;
+            link.removeAttribute('href');
+            link.textContent = '';
+            placeholder.hidden = false;
+            return;
+        }
+        const url = `https://dash.cloudflare.com/${encodeURIComponent(accountID)}/r2/api-tokens`;
+        link.href = url;
+        link.textContent = url;
+        link.hidden = false;
+        placeholder.hidden = true;
     }
 
     function renderR2ManagementState(management) {
@@ -281,6 +320,15 @@
         sel.value = current;
     }
 
+    function setCreateBucketPanel(open) {
+        const panel = $('s3-create-bucket-panel');
+        const toggle = $('s3-toggle-create-bucket');
+        if (!panel || !toggle) return;
+        panel.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        if (open) $('s3-create-bucket-name')?.focus();
+    }
+
     async function createS3Bucket() {
         const mount = activeMount();
         const btn = $('s3-create-bucket');
@@ -297,6 +345,7 @@
             renderBucketSelect(state.s3.buckets, bucket.name);
             $('s3-bucket-name').value = bucket.name;
             input.value = '';
+            setCreateBucketPanel(false);
             toast.ok(t('s3_bucket_created'));
         } catch (err) {
             toast.err(t('s3_bucket_create_failed') + ': ' + err.message);
@@ -560,19 +609,25 @@
         $('s3-new-mount')?.addEventListener('click', createS3Mount);
         $('s3-delete-mount')?.addEventListener('click', deleteS3Mount);
         $('s3-provider')?.addEventListener('change', () => updateProviderUI());
+        $('s3-account-id')?.addEventListener('input', renderR2TokenPath);
         $('s3-account-id')?.addEventListener('blur', applyR2EndpointPreset);
         $('s3-jurisdiction')?.addEventListener('change', () => {
             const endpoint = $('s3-endpoint-url');
             const accountID = $('s3-account-id')?.value.trim();
             if (endpoint && accountID && $('s3-provider')?.value === PROVIDER_R2) endpoint.value = r2EndpointFor(accountID, $('s3-jurisdiction').value);
+            renderR2TokenPath();
         });
         $('s3-mount-path')?.addEventListener('input', () => {
-            $('s3-webdav-endpoint').value = $('s3-mount-path').value.trim() || DEFAULT_MOUNT;
+            updateWebDAVEndpoint();
         });
         $('s3-bucket-select')?.addEventListener('change', () => {
             $('s3-bucket-name').value = $('s3-bucket-select').value;
         });
         $('s3-refresh-buckets')?.addEventListener('click', loadS3Buckets);
+        $('s3-toggle-create-bucket')?.addEventListener('click', () => {
+            const panel = $('s3-create-bucket-panel');
+            setCreateBucketPanel(!!panel?.hidden);
+        });
         $('s3-create-bucket')?.addEventListener('click', createS3Bucket);
         $('s3-save-settings')?.addEventListener('click', saveS3Settings);
         $('s3-test-connection')?.addEventListener('click', testS3Connection);
@@ -584,7 +639,8 @@
             uploadS3File(file);
         });
         $('s3-copy-endpoint')?.addEventListener('click', () => {
-            const v = $('s3-webdav-endpoint')?.value || DEFAULT_MOUNT;
+            updateWebDAVEndpoint();
+            const v = webDAVEndpointFor($('s3-webdav-endpoint')?.value || DEFAULT_MOUNT);
             navigator.clipboard?.writeText(v).then(() => toast.ok(t('copied_to_clipboard')), () => toast.err(t('copy_failed')));
         });
         bindVisibility('s3-secret-toggle', 's3-secret-access-key');

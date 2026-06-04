@@ -1120,7 +1120,7 @@ other = "Optional R2 bucket management"
 other = "Only needed if you want cfui to list or create buckets. WebDAV file access does not use this Cloudflare API token."
 
 [s3_account_help]
-other = "Used to build the R2 endpoint and to call the optional bucket list/create API. Leave empty to reuse Remote Tunnel Manager's Account ID."
+other = "Used to build the R2 endpoint and to call the optional bucket list/create API. Leave it empty to use the Account ID from Remote Tunnel Manager or the local tunnel token."
 
 [s3_jurisdiction]
 other = "Jurisdiction"
@@ -1148,6 +1148,9 @@ other = "R2 bucket management is available."
 
 [s3_bucket_choose]
 other = "Choose a bucket"
+
+[s3_refresh_buckets]
+other = "Refresh R2 buckets"
 
 [s3_create_bucket]
 other = "Create R2 bucket"
@@ -1224,8 +1227,14 @@ other = "No WebDAV password saved."
 [s3_webdav_endpoint]
 other = "WebDAV endpoint"
 
+[s3_webdav_host]
+other = "Current host"
+
+[s3_webdav_path]
+other = "WebDAV path"
+
 [s3_endpoint_help]
-other = "Use this path with the WebDAV username and password after the feature is enabled."
+other = "The first field is the current host, and the second is the WebDAV path. The copy button copies the full URL."
 
 [s3_test_connection]
 other = "Test connection"
