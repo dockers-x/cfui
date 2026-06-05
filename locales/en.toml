@@ -1074,6 +1074,18 @@ other = "Mount name"
 [s3_mount_name_help]
 other = "Shown only inside cfui so you can tell multiple mounts apart."
 
+[s3_config_enabled]
+other = "Enable S3 config"
+
+[s3_config_enabled_help]
+other = "When off, the config is saved but cannot browse files or serve WebDAV."
+
+[s3_config_status]
+other = "S3 config"
+
+[s3_config_disabled]
+other = "This mount is disabled."
+
 [s3_provider_help]
 other = "Use generic S3 for most services. Choose Cloudflare R2 only when you want cfui to help list or create R2 buckets."
 
@@ -1209,6 +1221,36 @@ other = "WebDAV login"
 [s3_webdav_credentials_help]
 other = "These credentials are only for WebDAV clients connecting to cfui."
 
+[s3_webdav_enabled]
+other = "Enable WebDAV endpoint"
+
+[s3_webdav_enabled_help]
+other = "Turn this off to keep the S3 file manager available without exposing a WebDAV path."
+
+[s3_webdav_status]
+other = "WebDAV endpoint"
+
+[s3_webdav_disabled]
+other = "WebDAV endpoint is disabled."
+
+[s3_webdav_disabled_help]
+other = "WebDAV endpoint is disabled, so username and password are not used right now."
+
+[s3_webdav_auth_enabled]
+other = "Require WebDAV login"
+
+[s3_webdav_auth_enabled_help]
+other = "When off, anyone who can reach this endpoint can access the mounted files."
+
+[s3_webdav_auth_status]
+other = "WebDAV authentication"
+
+[s3_webdav_auth_disabled]
+other = "WebDAV authentication is off"
+
+[s3_webdav_auth_disabled_help]
+other = "WebDAV username and password are not required right now."
+
 [s3_webdav_username]
 other = "WebDAV username"
 
@@ -1252,7 +1294,7 @@ other = "Folders map to object prefixes. Changes apply inside the configured buc
 other = "Complete S3 setup first"
 
 [s3_files_disabled_help]
-other = "Set endpoint, bucket, S3 credentials, and WebDAV login before using the file manager."
+other = "Set endpoint, bucket, S3 credentials, and keep the S3 config enabled before using the file manager."
 
 [s3_new_folder]
 other = "New Folder"
@@ -1348,7 +1390,7 @@ other = "WebDAV path must start with /webdav/."
 other = "Enter a bucket name."
 
 [s3_webdav_credentials_required]
-other = "Set a WebDAV username and password."
+other = "Set a WebDAV username and password, or turn off WebDAV authentication."
 
 [s3_configuration_incomplete]
 other = "S3 WebDAV settings are incomplete."
@@ -1395,6 +1437,24 @@ other = "Failed to load S3 files"
 [s3_files_empty]
 other = "This bucket path is empty."
 
+[s3_files_loading]
+other = "Loading files..."
+
+[s3_file_object]
+other = "Object"
+
+[s3_file_type]
+other = "Type"
+
+[s3_file_size]
+other = "Size"
+
+[s3_file_modified]
+other = "Modified"
+
+[s3_file_actions]
+other = "Actions"
+
 [s3_folder]
 other = "Folder"
 
@@ -1436,6 +1496,9 @@ other = "Delete failed"
 
 [ready]
 other = "Ready"
+
+[enabled]
+other = "Enabled"
 
 [disabled]
 other = "Disabled"

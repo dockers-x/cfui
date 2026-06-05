@@ -130,6 +130,8 @@ var (
 		{Name: "name", Type: field.TypeString, Default: "Default S3"},
 		{Name: "sort_order", Type: field.TypeInt, Default: 0},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "webdav_enabled", Type: field.TypeBool, Default: true},
+		{Name: "webdav_auth_enabled", Type: field.TypeBool, Default: true},
 		{Name: "provider", Type: field.TypeString, Default: "generic_s3"},
 		{Name: "endpoint_url", Type: field.TypeString, Default: ""},
 		{Name: "region", Type: field.TypeString, Default: "auto"},

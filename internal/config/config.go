@@ -153,6 +153,8 @@ type S3WebDAVMountConfig struct {
 	Key                string `json:"key"`
 	Name               string `json:"name"`
 	Enabled            bool   `json:"enabled"`
+	WebDAVEnabled      bool   `json:"webdav_enabled"`
+	WebDAVAuthEnabled  bool   `json:"webdav_auth_enabled"`
 	Provider           string `json:"provider"`
 	EndpointURL        string `json:"endpoint_url"`
 	Region             string `json:"region"`
@@ -202,14 +204,16 @@ func DefaultConfig() Config {
 
 func DefaultS3WebDAVMountConfig() S3WebDAVMountConfig {
 	return S3WebDAVMountConfig{
-		Key:          "default",
-		Name:         "Default S3",
-		Enabled:      true,
-		Provider:     "generic_s3",
-		Region:       "auto",
-		PathStyle:    true,
-		MountPath:    "/webdav/s3/",
-		Jurisdiction: "default",
+		Key:               "default",
+		Name:              "Default S3",
+		Enabled:           true,
+		WebDAVEnabled:     true,
+		WebDAVAuthEnabled: true,
+		Provider:          "generic_s3",
+		Region:            "auto",
+		PathStyle:         true,
+		MountPath:         "/webdav/s3/",
+		Jurisdiction:      "default",
 	}
 }
 

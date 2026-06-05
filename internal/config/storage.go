@@ -172,6 +172,8 @@ func (m *Manager) loadStructuredConfig(ctx context.Context) (Config, bool, error
 			Key:                row.Key,
 			Name:               row.Name,
 			Enabled:            row.Enabled,
+			WebDAVEnabled:      row.WebdavEnabled,
+			WebDAVAuthEnabled:  row.WebdavAuthEnabled,
 			Provider:           normalizeS3Provider(row.Provider),
 			EndpointURL:        row.EndpointURL,
 			Region:             normalizeS3Region(row.Region),
@@ -370,6 +372,8 @@ func saveS3WebDAVSettings(ctx context.Context, tx *ent.Tx, cfg S3WebDAVConfig) e
 			SetName(mount.Name).
 			SetSortOrder(i).
 			SetEnabled(mount.Enabled).
+			SetWebdavEnabled(mount.WebDAVEnabled).
+			SetWebdavAuthEnabled(mount.WebDAVAuthEnabled).
 			SetProvider(mount.Provider).
 			SetEndpointURL(mount.EndpointURL).
 			SetRegion(mount.Region).
@@ -418,6 +422,14 @@ func normalizeS3WebDAVConfig(cfg S3WebDAVConfig) S3WebDAVConfig {
 }
 
 func normalizeS3MountConfig(mount S3WebDAVMountConfig, index int) S3WebDAVMountConfig {
+	emptyMount := strings.TrimSpace(mount.Provider) == "" &&
+		strings.TrimSpace(mount.EndpointURL) == "" &&
+		strings.TrimSpace(mount.BucketName) == "" &&
+		strings.TrimSpace(mount.AccessKeyID) == "" &&
+		strings.TrimSpace(mount.SecretAccessKey) == "" &&
+		strings.TrimSpace(mount.WebDAVUsername) == "" &&
+		strings.TrimSpace(mount.WebDAVPasswordHash) == "" &&
+		strings.TrimSpace(mount.MountPath) == ""
 	mount.Key = normalizeS3Key(mount.Key)
 	if mount.Key == "" {
 		if index == 0 {
@@ -429,6 +441,10 @@ func normalizeS3MountConfig(mount S3WebDAVMountConfig, index int) S3WebDAVMountC
 	mount.Name = strings.TrimSpace(mount.Name)
 	if mount.Name == "" {
 		mount.Name = "S3 Mount " + strconv.Itoa(index+1)
+	}
+	if emptyMount {
+		mount.WebDAVEnabled = true
+		mount.WebDAVAuthEnabled = true
 	}
 	mount.Provider = normalizeS3Provider(mount.Provider)
 	mount.Region = normalizeS3Region(mount.Region)

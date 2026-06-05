@@ -58,21 +58,27 @@ func newTestService(t *testing.T, client CloudflareClient, fs afero.Fs) *Service
 
 func validMountRequest() MountRequest {
 	return MountRequest{
-		Key:             "my-s3",
-		Name:            "My S3",
-		Enabled:         true,
-		Provider:        ProviderGenericS3,
-		EndpointURL:     "https://s3.example.com",
-		Region:          "us-east-1",
-		PathStyle:       true,
-		BucketName:      "bucket",
-		RootPrefix:      "backups/cfui",
-		MountPath:       "/webdav/my_s3/",
-		AccessKeyID:     "access-key",
-		SecretAccessKey: "secret-key",
-		WebDAVUsername:  "dav",
-		WebDAVPassword:  "secret",
+		Key:               "my-s3",
+		Name:              "My S3",
+		Enabled:           boolPtr(true),
+		WebDAVEnabled:     boolPtr(true),
+		WebDAVAuthEnabled: boolPtr(true),
+		Provider:          ProviderGenericS3,
+		EndpointURL:       "https://s3.example.com",
+		Region:            "us-east-1",
+		PathStyle:         true,
+		BucketName:        "bucket",
+		RootPrefix:        "backups/cfui",
+		MountPath:         "/webdav/my_s3/",
+		AccessKeyID:       "access-key",
+		SecretAccessKey:   "secret-key",
+		WebDAVUsername:    "dav",
+		WebDAVPassword:    "secret",
 	}
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
 
 func TestSaveMountHashesPasswordAndKeepsExistingHash(t *testing.T) {
@@ -137,7 +143,7 @@ func TestFeatureAvailabilityDoesNotDependOnCloudflareToken(t *testing.T) {
 	}
 }
 
-func TestAvailabilityRequiresS3AndWebDAVConfig(t *testing.T) {
+func TestAvailabilityRequiresS3Config(t *testing.T) {
 	svc := newTestService(t, fakeCloudflareClient{}, afero.NewMemMapFs())
 	mount := config.S3WebDAVMountConfig{Enabled: true, MountPath: "/webdav/s3/"}
 	if got := svc.Availability(context.Background(), mount); got.Status != StatusEndpointRequired {
@@ -153,13 +159,34 @@ func TestAvailabilityRequiresS3AndWebDAVConfig(t *testing.T) {
 	}
 	mount.AccessKeyID = "ak"
 	mount.SecretAccessKey = "sk"
-	if got := svc.Availability(context.Background(), mount); got.Status != StatusWebDAVCredentialsRequired {
-		t.Fatalf("expected WebDAV credentials status, got %#v", got)
-	}
-	mount.WebDAVUsername = "dav"
-	mount.WebDAVPasswordHash = "$2a$10$hash"
 	if got := svc.Availability(context.Background(), mount); !got.CanEnable || got.Status != StatusReady {
 		t.Fatalf("expected ready status, got %#v", got)
+	}
+}
+
+func TestWebDAVAvailabilitySeparatesEndpointAndAuthState(t *testing.T) {
+	svc := newTestService(t, fakeCloudflareClient{}, afero.NewMemMapFs())
+	mount := config.S3WebDAVMountConfig{
+		Enabled:           true,
+		WebDAVEnabled:     true,
+		WebDAVAuthEnabled: true,
+		EndpointURL:       "https://s3.example.com",
+		BucketName:        "bucket",
+		MountPath:         "/webdav/s3/",
+		AccessKeyID:       "ak",
+		SecretAccessKey:   "sk",
+	}
+
+	if got := svc.WebDAVAvailability(context.Background(), mount); got.Status != StatusWebDAVCredentialsRequired {
+		t.Fatalf("expected WebDAV credentials status, got %#v", got)
+	}
+	mount.WebDAVAuthEnabled = false
+	if got := svc.WebDAVAvailability(context.Background(), mount); !got.CanEnable || got.Status != StatusWebDAVAuthDisabled {
+		t.Fatalf("expected no-auth WebDAV ready status, got %#v", got)
+	}
+	mount.WebDAVEnabled = false
+	if got := svc.WebDAVAvailability(context.Background(), mount); got.Status != StatusWebDAVDisabled {
+		t.Fatalf("expected WebDAV disabled status, got %#v", got)
 	}
 }
 

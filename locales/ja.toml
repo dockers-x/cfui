@@ -1074,6 +1074,18 @@ other = "マウント名"
 [s3_mount_name_help]
 other = "複数のマウントを見分けるために cfui 内だけで表示されます。"
 
+[s3_config_enabled]
+other = "S3 設定を有効化"
+
+[s3_config_enabled_help]
+other = "オフにすると設定は保存されますが、ファイル閲覧と WebDAV 提供は使えません。"
+
+[s3_config_status]
+other = "S3 設定"
+
+[s3_config_disabled]
+other = "このマウントは無効です。"
+
 [s3_provider_help]
 other = "多くのサービスでは汎用 S3 を選びます。cfui で R2 bucket を一覧表示または作成したい場合だけ Cloudflare R2 を選びます。"
 
@@ -1209,6 +1221,36 @@ other = "WebDAV ログイン"
 [s3_webdav_credentials_help]
 other = "このアカウントは WebDAV クライアントが cfui に接続するためだけに使います。"
 
+[s3_webdav_enabled]
+other = "WebDAV endpoint を有効化"
+
+[s3_webdav_enabled_help]
+other = "オフにすると S3 ファイル管理は使えますが、WebDAV パスは公開されません。"
+
+[s3_webdav_status]
+other = "WebDAV endpoint"
+
+[s3_webdav_disabled]
+other = "WebDAV endpoint は無効です。"
+
+[s3_webdav_disabled_help]
+other = "WebDAV endpoint が無効のため、ユーザー名とパスワードは現在使われません。"
+
+[s3_webdav_auth_enabled]
+other = "WebDAV ログインを要求"
+
+[s3_webdav_auth_enabled_help]
+other = "オフにすると、この endpoint に到達できる人はマウントされたファイルにアクセスできます。"
+
+[s3_webdav_auth_status]
+other = "WebDAV 認証"
+
+[s3_webdav_auth_disabled]
+other = "WebDAV 認証はオフです"
+
+[s3_webdav_auth_disabled_help]
+other = "現在 WebDAV ユーザー名とパスワードは要求されません。"
+
 [s3_webdav_username]
 other = "WebDAV ユーザー名"
 
@@ -1252,7 +1294,7 @@ other = "フォルダーはオブジェクト prefix に対応します。操作
 other = "先に S3 設定を完了してください"
 
 [s3_files_disabled_help]
-other = "ファイル管理を使う前に endpoint、bucket、S3 認証情報、WebDAV ログインを設定してください。"
+other = "ファイル管理を使う前に endpoint、bucket、S3 認証情報を設定し、S3 設定を有効にしてください。"
 
 [s3_new_folder]
 other = "新規フォルダー"
@@ -1348,7 +1390,7 @@ other = "WebDAV パスは /webdav/ で始める必要があります。"
 other = "bucket 名を入力してください。"
 
 [s3_webdav_credentials_required]
-other = "WebDAV ユーザー名とパスワードを設定してください。"
+other = "WebDAV ユーザー名とパスワードを設定するか、WebDAV 認証をオフにしてください。"
 
 [s3_configuration_incomplete]
 other = "S3 WebDAV 設定がまだ完了していません。"
@@ -1395,6 +1437,24 @@ other = "S3 ファイルの読み込みに失敗しました"
 [s3_files_empty]
 other = "この bucket パスは空です。"
 
+[s3_files_loading]
+other = "ファイルを読み込み中..."
+
+[s3_file_object]
+other = "オブジェクト"
+
+[s3_file_type]
+other = "種類"
+
+[s3_file_size]
+other = "サイズ"
+
+[s3_file_modified]
+other = "更新日時"
+
+[s3_file_actions]
+other = "操作"
+
 [s3_folder]
 other = "フォルダー"
 
@@ -1436,6 +1496,9 @@ other = "削除失敗"
 
 [ready]
 other = "準備完了"
+
+[enabled]
+other = "有効"
 
 [disabled]
 other = "無効"

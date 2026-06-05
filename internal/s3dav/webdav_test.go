@@ -135,6 +135,61 @@ func TestWebDAVPutWorksWithS3StyleWriteOnlyFiles(t *testing.T) {
 	}
 }
 
+func TestWebDAVHandlerAllowsRequestsWhenAuthDisabled(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	if err := fs.MkdirAll("/docs", 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := afero.WriteFile(fs, "/docs/readme.txt", []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	svc := newTestService(t, fakeCloudflareClient{}, fs)
+	cfg := svc.cfgMgr.Get()
+	cfg.S3WebDAV.Enabled = true
+	cfg.S3WebDAV.Mounts[0].EndpointURL = "https://s3.example.com"
+	cfg.S3WebDAV.Mounts[0].BucketName = "bucket"
+	cfg.S3WebDAV.Mounts[0].MountPath = "/webdav/public/"
+	cfg.S3WebDAV.Mounts[0].AccessKeyID = "ak"
+	cfg.S3WebDAV.Mounts[0].SecretAccessKey = "sk"
+	cfg.S3WebDAV.Mounts[0].WebDAVAuthEnabled = false
+	cfg.S3WebDAV.Mounts[0].WebDAVUsername = ""
+	cfg.S3WebDAV.Mounts[0].WebDAVPasswordHash = ""
+	if err := svc.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/webdav/public/docs/readme.txt", nil)
+	rec := httptest.NewRecorder()
+	svc.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected ok without Basic Auth, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestWebDAVHandlerReturnsNotFoundWhenEndpointDisabled(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	svc := newTestService(t, fakeCloudflareClient{}, fs)
+	cfg := svc.cfgMgr.Get()
+	cfg.S3WebDAV.Enabled = true
+	cfg.S3WebDAV.Mounts[0].EndpointURL = "https://s3.example.com"
+	cfg.S3WebDAV.Mounts[0].BucketName = "bucket"
+	cfg.S3WebDAV.Mounts[0].MountPath = "/webdav/private/"
+	cfg.S3WebDAV.Mounts[0].AccessKeyID = "ak"
+	cfg.S3WebDAV.Mounts[0].SecretAccessKey = "sk"
+	cfg.S3WebDAV.Mounts[0].WebDAVEnabled = false
+	cfg.S3WebDAV.Mounts[0].WebDAVAuthEnabled = false
+	if err := svc.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/webdav/private/readme.txt", nil)
+	rec := httptest.NewRecorder()
+	svc.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected not found, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 var errS3StyleUnsupported = errors.New("s3 does not support read/write open")
 
 type s3StyleWriteOnlyFS struct {

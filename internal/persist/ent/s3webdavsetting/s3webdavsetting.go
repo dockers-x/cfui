@@ -21,6 +21,10 @@ const (
 	FieldSortOrder = "sort_order"
 	// FieldEnabled holds the string denoting the enabled field in the database.
 	FieldEnabled = "enabled"
+	// FieldWebdavEnabled holds the string denoting the webdav_enabled field in the database.
+	FieldWebdavEnabled = "webdav_enabled"
+	// FieldWebdavAuthEnabled holds the string denoting the webdav_auth_enabled field in the database.
+	FieldWebdavAuthEnabled = "webdav_auth_enabled"
 	// FieldProvider holds the string denoting the provider field in the database.
 	FieldProvider = "provider"
 	// FieldEndpointURL holds the string denoting the endpoint_url field in the database.
@@ -62,6 +66,8 @@ var Columns = []string{
 	FieldName,
 	FieldSortOrder,
 	FieldEnabled,
+	FieldWebdavEnabled,
+	FieldWebdavAuthEnabled,
 	FieldProvider,
 	FieldEndpointURL,
 	FieldRegion,
@@ -98,6 +104,10 @@ var (
 	DefaultSortOrder int
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
+	// DefaultWebdavEnabled holds the default value on creation for the "webdav_enabled" field.
+	DefaultWebdavEnabled bool
+	// DefaultWebdavAuthEnabled holds the default value on creation for the "webdav_auth_enabled" field.
+	DefaultWebdavAuthEnabled bool
 	// DefaultProvider holds the default value on creation for the "provider" field.
 	DefaultProvider string
 	// DefaultEndpointURL holds the default value on creation for the "endpoint_url" field.
@@ -158,6 +168,16 @@ func BySortOrder(opts ...sql.OrderTermOption) OrderOption {
 // ByEnabled orders the results by the enabled field.
 func ByEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEnabled, opts...).ToFunc()
+}
+
+// ByWebdavEnabled orders the results by the webdav_enabled field.
+func ByWebdavEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWebdavEnabled, opts...).ToFunc()
+}
+
+// ByWebdavAuthEnabled orders the results by the webdav_auth_enabled field.
+func ByWebdavAuthEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWebdavAuthEnabled, opts...).ToFunc()
 }
 
 // ByProvider orders the results by the provider field.

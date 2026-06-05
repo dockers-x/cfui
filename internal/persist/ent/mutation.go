@@ -4355,6 +4355,8 @@ type S3WebDAVSettingMutation struct {
 	sort_order           *int
 	addsort_order        *int
 	enabled              *bool
+	webdav_enabled       *bool
+	webdav_auth_enabled  *bool
 	provider             *string
 	endpoint_url         *string
 	region               *string
@@ -4636,6 +4638,78 @@ func (m *S3WebDAVSettingMutation) OldEnabled(ctx context.Context) (v bool, err e
 // ResetEnabled resets all changes to the "enabled" field.
 func (m *S3WebDAVSettingMutation) ResetEnabled() {
 	m.enabled = nil
+}
+
+// SetWebdavEnabled sets the "webdav_enabled" field.
+func (m *S3WebDAVSettingMutation) SetWebdavEnabled(b bool) {
+	m.webdav_enabled = &b
+}
+
+// WebdavEnabled returns the value of the "webdav_enabled" field in the mutation.
+func (m *S3WebDAVSettingMutation) WebdavEnabled() (r bool, exists bool) {
+	v := m.webdav_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWebdavEnabled returns the old "webdav_enabled" field's value of the S3WebDAVSetting entity.
+// If the S3WebDAVSetting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *S3WebDAVSettingMutation) OldWebdavEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWebdavEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWebdavEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWebdavEnabled: %w", err)
+	}
+	return oldValue.WebdavEnabled, nil
+}
+
+// ResetWebdavEnabled resets all changes to the "webdav_enabled" field.
+func (m *S3WebDAVSettingMutation) ResetWebdavEnabled() {
+	m.webdav_enabled = nil
+}
+
+// SetWebdavAuthEnabled sets the "webdav_auth_enabled" field.
+func (m *S3WebDAVSettingMutation) SetWebdavAuthEnabled(b bool) {
+	m.webdav_auth_enabled = &b
+}
+
+// WebdavAuthEnabled returns the value of the "webdav_auth_enabled" field in the mutation.
+func (m *S3WebDAVSettingMutation) WebdavAuthEnabled() (r bool, exists bool) {
+	v := m.webdav_auth_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWebdavAuthEnabled returns the old "webdav_auth_enabled" field's value of the S3WebDAVSetting entity.
+// If the S3WebDAVSetting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *S3WebDAVSettingMutation) OldWebdavAuthEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWebdavAuthEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWebdavAuthEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWebdavAuthEnabled: %w", err)
+	}
+	return oldValue.WebdavAuthEnabled, nil
+}
+
+// ResetWebdavAuthEnabled resets all changes to the "webdav_auth_enabled" field.
+func (m *S3WebDAVSettingMutation) ResetWebdavAuthEnabled() {
+	m.webdav_auth_enabled = nil
 }
 
 // SetProvider sets the "provider" field.
@@ -5212,7 +5286,7 @@ func (m *S3WebDAVSettingMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *S3WebDAVSettingMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 21)
 	if m.key != nil {
 		fields = append(fields, s3webdavsetting.FieldKey)
 	}
@@ -5224,6 +5298,12 @@ func (m *S3WebDAVSettingMutation) Fields() []string {
 	}
 	if m.enabled != nil {
 		fields = append(fields, s3webdavsetting.FieldEnabled)
+	}
+	if m.webdav_enabled != nil {
+		fields = append(fields, s3webdavsetting.FieldWebdavEnabled)
+	}
+	if m.webdav_auth_enabled != nil {
+		fields = append(fields, s3webdavsetting.FieldWebdavAuthEnabled)
 	}
 	if m.provider != nil {
 		fields = append(fields, s3webdavsetting.FieldProvider)
@@ -5286,6 +5366,10 @@ func (m *S3WebDAVSettingMutation) Field(name string) (ent.Value, bool) {
 		return m.SortOrder()
 	case s3webdavsetting.FieldEnabled:
 		return m.Enabled()
+	case s3webdavsetting.FieldWebdavEnabled:
+		return m.WebdavEnabled()
+	case s3webdavsetting.FieldWebdavAuthEnabled:
+		return m.WebdavAuthEnabled()
 	case s3webdavsetting.FieldProvider:
 		return m.Provider()
 	case s3webdavsetting.FieldEndpointURL:
@@ -5333,6 +5417,10 @@ func (m *S3WebDAVSettingMutation) OldField(ctx context.Context, name string) (en
 		return m.OldSortOrder(ctx)
 	case s3webdavsetting.FieldEnabled:
 		return m.OldEnabled(ctx)
+	case s3webdavsetting.FieldWebdavEnabled:
+		return m.OldWebdavEnabled(ctx)
+	case s3webdavsetting.FieldWebdavAuthEnabled:
+		return m.OldWebdavAuthEnabled(ctx)
 	case s3webdavsetting.FieldProvider:
 		return m.OldProvider(ctx)
 	case s3webdavsetting.FieldEndpointURL:
@@ -5399,6 +5487,20 @@ func (m *S3WebDAVSettingMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEnabled(v)
+		return nil
+	case s3webdavsetting.FieldWebdavEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWebdavEnabled(v)
+		return nil
+	case s3webdavsetting.FieldWebdavAuthEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWebdavAuthEnabled(v)
 		return nil
 	case s3webdavsetting.FieldProvider:
 		v, ok := value.(string)
@@ -5580,6 +5682,12 @@ func (m *S3WebDAVSettingMutation) ResetField(name string) error {
 		return nil
 	case s3webdavsetting.FieldEnabled:
 		m.ResetEnabled()
+		return nil
+	case s3webdavsetting.FieldWebdavEnabled:
+		m.ResetWebdavEnabled()
+		return nil
+	case s3webdavsetting.FieldWebdavAuthEnabled:
+		m.ResetWebdavAuthEnabled()
 		return nil
 	case s3webdavsetting.FieldProvider:
 		m.ResetProvider()

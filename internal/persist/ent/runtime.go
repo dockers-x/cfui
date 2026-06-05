@@ -255,64 +255,72 @@ func init() {
 	s3webdavsettingDescEnabled := s3webdavsettingFields[3].Descriptor()
 	// s3webdavsetting.DefaultEnabled holds the default value on creation for the enabled field.
 	s3webdavsetting.DefaultEnabled = s3webdavsettingDescEnabled.Default.(bool)
+	// s3webdavsettingDescWebdavEnabled is the schema descriptor for webdav_enabled field.
+	s3webdavsettingDescWebdavEnabled := s3webdavsettingFields[4].Descriptor()
+	// s3webdavsetting.DefaultWebdavEnabled holds the default value on creation for the webdav_enabled field.
+	s3webdavsetting.DefaultWebdavEnabled = s3webdavsettingDescWebdavEnabled.Default.(bool)
+	// s3webdavsettingDescWebdavAuthEnabled is the schema descriptor for webdav_auth_enabled field.
+	s3webdavsettingDescWebdavAuthEnabled := s3webdavsettingFields[5].Descriptor()
+	// s3webdavsetting.DefaultWebdavAuthEnabled holds the default value on creation for the webdav_auth_enabled field.
+	s3webdavsetting.DefaultWebdavAuthEnabled = s3webdavsettingDescWebdavAuthEnabled.Default.(bool)
 	// s3webdavsettingDescProvider is the schema descriptor for provider field.
-	s3webdavsettingDescProvider := s3webdavsettingFields[4].Descriptor()
+	s3webdavsettingDescProvider := s3webdavsettingFields[6].Descriptor()
 	// s3webdavsetting.DefaultProvider holds the default value on creation for the provider field.
 	s3webdavsetting.DefaultProvider = s3webdavsettingDescProvider.Default.(string)
 	// s3webdavsettingDescEndpointURL is the schema descriptor for endpoint_url field.
-	s3webdavsettingDescEndpointURL := s3webdavsettingFields[5].Descriptor()
+	s3webdavsettingDescEndpointURL := s3webdavsettingFields[7].Descriptor()
 	// s3webdavsetting.DefaultEndpointURL holds the default value on creation for the endpoint_url field.
 	s3webdavsetting.DefaultEndpointURL = s3webdavsettingDescEndpointURL.Default.(string)
 	// s3webdavsettingDescRegion is the schema descriptor for region field.
-	s3webdavsettingDescRegion := s3webdavsettingFields[6].Descriptor()
+	s3webdavsettingDescRegion := s3webdavsettingFields[8].Descriptor()
 	// s3webdavsetting.DefaultRegion holds the default value on creation for the region field.
 	s3webdavsetting.DefaultRegion = s3webdavsettingDescRegion.Default.(string)
 	// s3webdavsettingDescPathStyle is the schema descriptor for path_style field.
-	s3webdavsettingDescPathStyle := s3webdavsettingFields[7].Descriptor()
+	s3webdavsettingDescPathStyle := s3webdavsettingFields[9].Descriptor()
 	// s3webdavsetting.DefaultPathStyle holds the default value on creation for the path_style field.
 	s3webdavsetting.DefaultPathStyle = s3webdavsettingDescPathStyle.Default.(bool)
 	// s3webdavsettingDescAccountID is the schema descriptor for account_id field.
-	s3webdavsettingDescAccountID := s3webdavsettingFields[8].Descriptor()
+	s3webdavsettingDescAccountID := s3webdavsettingFields[10].Descriptor()
 	// s3webdavsetting.DefaultAccountID holds the default value on creation for the account_id field.
 	s3webdavsetting.DefaultAccountID = s3webdavsettingDescAccountID.Default.(string)
 	// s3webdavsettingDescBucketName is the schema descriptor for bucket_name field.
-	s3webdavsettingDescBucketName := s3webdavsettingFields[9].Descriptor()
+	s3webdavsettingDescBucketName := s3webdavsettingFields[11].Descriptor()
 	// s3webdavsetting.DefaultBucketName holds the default value on creation for the bucket_name field.
 	s3webdavsetting.DefaultBucketName = s3webdavsettingDescBucketName.Default.(string)
 	// s3webdavsettingDescRootPrefix is the schema descriptor for root_prefix field.
-	s3webdavsettingDescRootPrefix := s3webdavsettingFields[10].Descriptor()
+	s3webdavsettingDescRootPrefix := s3webdavsettingFields[12].Descriptor()
 	// s3webdavsetting.DefaultRootPrefix holds the default value on creation for the root_prefix field.
 	s3webdavsetting.DefaultRootPrefix = s3webdavsettingDescRootPrefix.Default.(string)
 	// s3webdavsettingDescMountPath is the schema descriptor for mount_path field.
-	s3webdavsettingDescMountPath := s3webdavsettingFields[11].Descriptor()
+	s3webdavsettingDescMountPath := s3webdavsettingFields[13].Descriptor()
 	// s3webdavsetting.DefaultMountPath holds the default value on creation for the mount_path field.
 	s3webdavsetting.DefaultMountPath = s3webdavsettingDescMountPath.Default.(string)
 	// s3webdavsettingDescJurisdiction is the schema descriptor for jurisdiction field.
-	s3webdavsettingDescJurisdiction := s3webdavsettingFields[12].Descriptor()
+	s3webdavsettingDescJurisdiction := s3webdavsettingFields[14].Descriptor()
 	// s3webdavsetting.DefaultJurisdiction holds the default value on creation for the jurisdiction field.
 	s3webdavsetting.DefaultJurisdiction = s3webdavsettingDescJurisdiction.Default.(string)
 	// s3webdavsettingDescAccessKeyID is the schema descriptor for access_key_id field.
-	s3webdavsettingDescAccessKeyID := s3webdavsettingFields[13].Descriptor()
+	s3webdavsettingDescAccessKeyID := s3webdavsettingFields[15].Descriptor()
 	// s3webdavsetting.DefaultAccessKeyID holds the default value on creation for the access_key_id field.
 	s3webdavsetting.DefaultAccessKeyID = s3webdavsettingDescAccessKeyID.Default.(string)
 	// s3webdavsettingDescSecretAccessKey is the schema descriptor for secret_access_key field.
-	s3webdavsettingDescSecretAccessKey := s3webdavsettingFields[14].Descriptor()
+	s3webdavsettingDescSecretAccessKey := s3webdavsettingFields[16].Descriptor()
 	// s3webdavsetting.DefaultSecretAccessKey holds the default value on creation for the secret_access_key field.
 	s3webdavsetting.DefaultSecretAccessKey = s3webdavsettingDescSecretAccessKey.Default.(string)
 	// s3webdavsettingDescWebdavUsername is the schema descriptor for webdav_username field.
-	s3webdavsettingDescWebdavUsername := s3webdavsettingFields[15].Descriptor()
+	s3webdavsettingDescWebdavUsername := s3webdavsettingFields[17].Descriptor()
 	// s3webdavsetting.DefaultWebdavUsername holds the default value on creation for the webdav_username field.
 	s3webdavsetting.DefaultWebdavUsername = s3webdavsettingDescWebdavUsername.Default.(string)
 	// s3webdavsettingDescWebdavPasswordHash is the schema descriptor for webdav_password_hash field.
-	s3webdavsettingDescWebdavPasswordHash := s3webdavsettingFields[16].Descriptor()
+	s3webdavsettingDescWebdavPasswordHash := s3webdavsettingFields[18].Descriptor()
 	// s3webdavsetting.DefaultWebdavPasswordHash holds the default value on creation for the webdav_password_hash field.
 	s3webdavsetting.DefaultWebdavPasswordHash = s3webdavsettingDescWebdavPasswordHash.Default.(string)
 	// s3webdavsettingDescCreatedAt is the schema descriptor for created_at field.
-	s3webdavsettingDescCreatedAt := s3webdavsettingFields[17].Descriptor()
+	s3webdavsettingDescCreatedAt := s3webdavsettingFields[19].Descriptor()
 	// s3webdavsetting.DefaultCreatedAt holds the default value on creation for the created_at field.
 	s3webdavsetting.DefaultCreatedAt = s3webdavsettingDescCreatedAt.Default.(func() time.Time)
 	// s3webdavsettingDescUpdatedAt is the schema descriptor for updated_at field.
-	s3webdavsettingDescUpdatedAt := s3webdavsettingFields[18].Descriptor()
+	s3webdavsettingDescUpdatedAt := s3webdavsettingFields[20].Descriptor()
 	// s3webdavsetting.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	s3webdavsetting.DefaultUpdatedAt = s3webdavsettingDescUpdatedAt.Default.(func() time.Time)
 	// s3webdavsetting.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

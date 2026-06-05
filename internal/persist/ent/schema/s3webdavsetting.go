@@ -28,6 +28,8 @@ func (S3WebDAVSetting) Fields() []ent.Field {
 		field.String("name").Default("Default S3"),
 		field.Int("sort_order").Default(0),
 		field.Bool("enabled").Default(true),
+		field.Bool("webdav_enabled").Default(true),
+		field.Bool("webdav_auth_enabled").Default(true),
 		field.String("provider").Default("generic_s3"),
 		field.String("endpoint_url").Default(""),
 		field.String("region").Default("auto"),

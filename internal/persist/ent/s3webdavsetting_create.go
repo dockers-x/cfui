@@ -68,6 +68,34 @@ func (_c *S3WebDAVSettingCreate) SetNillableEnabled(v *bool) *S3WebDAVSettingCre
 	return _c
 }
 
+// SetWebdavEnabled sets the "webdav_enabled" field.
+func (_c *S3WebDAVSettingCreate) SetWebdavEnabled(v bool) *S3WebDAVSettingCreate {
+	_c.mutation.SetWebdavEnabled(v)
+	return _c
+}
+
+// SetNillableWebdavEnabled sets the "webdav_enabled" field if the given value is not nil.
+func (_c *S3WebDAVSettingCreate) SetNillableWebdavEnabled(v *bool) *S3WebDAVSettingCreate {
+	if v != nil {
+		_c.SetWebdavEnabled(*v)
+	}
+	return _c
+}
+
+// SetWebdavAuthEnabled sets the "webdav_auth_enabled" field.
+func (_c *S3WebDAVSettingCreate) SetWebdavAuthEnabled(v bool) *S3WebDAVSettingCreate {
+	_c.mutation.SetWebdavAuthEnabled(v)
+	return _c
+}
+
+// SetNillableWebdavAuthEnabled sets the "webdav_auth_enabled" field if the given value is not nil.
+func (_c *S3WebDAVSettingCreate) SetNillableWebdavAuthEnabled(v *bool) *S3WebDAVSettingCreate {
+	if v != nil {
+		_c.SetWebdavAuthEnabled(*v)
+	}
+	return _c
+}
+
 // SetProvider sets the "provider" field.
 func (_c *S3WebDAVSettingCreate) SetProvider(v string) *S3WebDAVSettingCreate {
 	_c.mutation.SetProvider(v)
@@ -325,6 +353,14 @@ func (_c *S3WebDAVSettingCreate) defaults() {
 		v := s3webdavsetting.DefaultEnabled
 		_c.mutation.SetEnabled(v)
 	}
+	if _, ok := _c.mutation.WebdavEnabled(); !ok {
+		v := s3webdavsetting.DefaultWebdavEnabled
+		_c.mutation.SetWebdavEnabled(v)
+	}
+	if _, ok := _c.mutation.WebdavAuthEnabled(); !ok {
+		v := s3webdavsetting.DefaultWebdavAuthEnabled
+		_c.mutation.SetWebdavAuthEnabled(v)
+	}
 	if _, ok := _c.mutation.Provider(); !ok {
 		v := s3webdavsetting.DefaultProvider
 		_c.mutation.SetProvider(v)
@@ -405,6 +441,12 @@ func (_c *S3WebDAVSettingCreate) check() error {
 	}
 	if _, ok := _c.mutation.Enabled(); !ok {
 		return &ValidationError{Name: "enabled", err: errors.New(`ent: missing required field "S3WebDAVSetting.enabled"`)}
+	}
+	if _, ok := _c.mutation.WebdavEnabled(); !ok {
+		return &ValidationError{Name: "webdav_enabled", err: errors.New(`ent: missing required field "S3WebDAVSetting.webdav_enabled"`)}
+	}
+	if _, ok := _c.mutation.WebdavAuthEnabled(); !ok {
+		return &ValidationError{Name: "webdav_auth_enabled", err: errors.New(`ent: missing required field "S3WebDAVSetting.webdav_auth_enabled"`)}
 	}
 	if _, ok := _c.mutation.Provider(); !ok {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "S3WebDAVSetting.provider"`)}
@@ -492,6 +534,14 @@ func (_c *S3WebDAVSettingCreate) createSpec() (*S3WebDAVSetting, *sqlgraph.Creat
 	if value, ok := _c.mutation.Enabled(); ok {
 		_spec.SetField(s3webdavsetting.FieldEnabled, field.TypeBool, value)
 		_node.Enabled = value
+	}
+	if value, ok := _c.mutation.WebdavEnabled(); ok {
+		_spec.SetField(s3webdavsetting.FieldWebdavEnabled, field.TypeBool, value)
+		_node.WebdavEnabled = value
+	}
+	if value, ok := _c.mutation.WebdavAuthEnabled(); ok {
+		_spec.SetField(s3webdavsetting.FieldWebdavAuthEnabled, field.TypeBool, value)
+		_node.WebdavAuthEnabled = value
 	}
 	if value, ok := _c.mutation.Provider(); ok {
 		_spec.SetField(s3webdavsetting.FieldProvider, field.TypeString, value)

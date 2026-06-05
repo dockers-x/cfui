@@ -24,7 +24,7 @@ func (s *Service) Handler() http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		if !basicAuthOK(r, mount.WebDAVUsername, mount.WebDAVPasswordHash) {
+		if mount.WebDAVAuthEnabled && !basicAuthOK(r, mount.WebDAVUsername, mount.WebDAVPasswordHash) {
 			w.Header().Set("WWW-Authenticate", `Basic realm="cfui S3 WebDAV"`)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return

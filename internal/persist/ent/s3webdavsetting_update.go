@@ -91,6 +91,34 @@ func (_u *S3WebDAVSettingUpdate) SetNillableEnabled(v *bool) *S3WebDAVSettingUpd
 	return _u
 }
 
+// SetWebdavEnabled sets the "webdav_enabled" field.
+func (_u *S3WebDAVSettingUpdate) SetWebdavEnabled(v bool) *S3WebDAVSettingUpdate {
+	_u.mutation.SetWebdavEnabled(v)
+	return _u
+}
+
+// SetNillableWebdavEnabled sets the "webdav_enabled" field if the given value is not nil.
+func (_u *S3WebDAVSettingUpdate) SetNillableWebdavEnabled(v *bool) *S3WebDAVSettingUpdate {
+	if v != nil {
+		_u.SetWebdavEnabled(*v)
+	}
+	return _u
+}
+
+// SetWebdavAuthEnabled sets the "webdav_auth_enabled" field.
+func (_u *S3WebDAVSettingUpdate) SetWebdavAuthEnabled(v bool) *S3WebDAVSettingUpdate {
+	_u.mutation.SetWebdavAuthEnabled(v)
+	return _u
+}
+
+// SetNillableWebdavAuthEnabled sets the "webdav_auth_enabled" field if the given value is not nil.
+func (_u *S3WebDAVSettingUpdate) SetNillableWebdavAuthEnabled(v *bool) *S3WebDAVSettingUpdate {
+	if v != nil {
+		_u.SetWebdavAuthEnabled(*v)
+	}
+	return _u
+}
+
 // SetProvider sets the "provider" field.
 func (_u *S3WebDAVSettingUpdate) SetProvider(v string) *S3WebDAVSettingUpdate {
 	_u.mutation.SetProvider(v)
@@ -357,6 +385,12 @@ func (_u *S3WebDAVSettingUpdate) sqlSave(ctx context.Context) (_node int, err er
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(s3webdavsetting.FieldEnabled, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.WebdavEnabled(); ok {
+		_spec.SetField(s3webdavsetting.FieldWebdavEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.WebdavAuthEnabled(); ok {
+		_spec.SetField(s3webdavsetting.FieldWebdavAuthEnabled, field.TypeBool, value)
+	}
 	if value, ok := _u.mutation.Provider(); ok {
 		_spec.SetField(s3webdavsetting.FieldProvider, field.TypeString, value)
 	}
@@ -478,6 +512,34 @@ func (_u *S3WebDAVSettingUpdateOne) SetEnabled(v bool) *S3WebDAVSettingUpdateOne
 func (_u *S3WebDAVSettingUpdateOne) SetNillableEnabled(v *bool) *S3WebDAVSettingUpdateOne {
 	if v != nil {
 		_u.SetEnabled(*v)
+	}
+	return _u
+}
+
+// SetWebdavEnabled sets the "webdav_enabled" field.
+func (_u *S3WebDAVSettingUpdateOne) SetWebdavEnabled(v bool) *S3WebDAVSettingUpdateOne {
+	_u.mutation.SetWebdavEnabled(v)
+	return _u
+}
+
+// SetNillableWebdavEnabled sets the "webdav_enabled" field if the given value is not nil.
+func (_u *S3WebDAVSettingUpdateOne) SetNillableWebdavEnabled(v *bool) *S3WebDAVSettingUpdateOne {
+	if v != nil {
+		_u.SetWebdavEnabled(*v)
+	}
+	return _u
+}
+
+// SetWebdavAuthEnabled sets the "webdav_auth_enabled" field.
+func (_u *S3WebDAVSettingUpdateOne) SetWebdavAuthEnabled(v bool) *S3WebDAVSettingUpdateOne {
+	_u.mutation.SetWebdavAuthEnabled(v)
+	return _u
+}
+
+// SetNillableWebdavAuthEnabled sets the "webdav_auth_enabled" field if the given value is not nil.
+func (_u *S3WebDAVSettingUpdateOne) SetNillableWebdavAuthEnabled(v *bool) *S3WebDAVSettingUpdateOne {
+	if v != nil {
+		_u.SetWebdavAuthEnabled(*v)
 	}
 	return _u
 }
@@ -777,6 +839,12 @@ func (_u *S3WebDAVSettingUpdateOne) sqlSave(ctx context.Context) (_node *S3WebDA
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(s3webdavsetting.FieldEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.WebdavEnabled(); ok {
+		_spec.SetField(s3webdavsetting.FieldWebdavEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.WebdavAuthEnabled(); ok {
+		_spec.SetField(s3webdavsetting.FieldWebdavAuthEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Provider(); ok {
 		_spec.SetField(s3webdavsetting.FieldProvider, field.TypeString, value)

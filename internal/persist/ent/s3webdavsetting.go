@@ -25,6 +25,10 @@ type S3WebDAVSetting struct {
 	SortOrder int `json:"sort_order,omitempty"`
 	// Enabled holds the value of the "enabled" field.
 	Enabled bool `json:"enabled,omitempty"`
+	// WebdavEnabled holds the value of the "webdav_enabled" field.
+	WebdavEnabled bool `json:"webdav_enabled,omitempty"`
+	// WebdavAuthEnabled holds the value of the "webdav_auth_enabled" field.
+	WebdavAuthEnabled bool `json:"webdav_auth_enabled,omitempty"`
 	// Provider holds the value of the "provider" field.
 	Provider string `json:"provider,omitempty"`
 	// EndpointURL holds the value of the "endpoint_url" field.
@@ -63,7 +67,7 @@ func (*S3WebDAVSetting) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case s3webdavsetting.FieldEnabled, s3webdavsetting.FieldPathStyle:
+		case s3webdavsetting.FieldEnabled, s3webdavsetting.FieldWebdavEnabled, s3webdavsetting.FieldWebdavAuthEnabled, s3webdavsetting.FieldPathStyle:
 			values[i] = new(sql.NullBool)
 		case s3webdavsetting.FieldID, s3webdavsetting.FieldSortOrder:
 			values[i] = new(sql.NullInt64)
@@ -115,6 +119,18 @@ func (_m *S3WebDAVSetting) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field enabled", values[i])
 			} else if value.Valid {
 				_m.Enabled = value.Bool
+			}
+		case s3webdavsetting.FieldWebdavEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field webdav_enabled", values[i])
+			} else if value.Valid {
+				_m.WebdavEnabled = value.Bool
+			}
+		case s3webdavsetting.FieldWebdavAuthEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field webdav_auth_enabled", values[i])
+			} else if value.Valid {
+				_m.WebdavAuthEnabled = value.Bool
 			}
 		case s3webdavsetting.FieldProvider:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -253,6 +269,12 @@ func (_m *S3WebDAVSetting) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))
+	builder.WriteString(", ")
+	builder.WriteString("webdav_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.WebdavEnabled))
+	builder.WriteString(", ")
+	builder.WriteString("webdav_auth_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.WebdavAuthEnabled))
 	builder.WriteString(", ")
 	builder.WriteString("provider=")
 	builder.WriteString(_m.Provider)

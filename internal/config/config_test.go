@@ -93,6 +93,8 @@ func TestS3WebDAVPersistsInDatabase(t *testing.T) {
 			Key:                "my-r2",
 			Name:               "My R2",
 			Enabled:            true,
+			WebDAVEnabled:      true,
+			WebDAVAuthEnabled:  false,
 			Provider:           "cloudflare_r2",
 			EndpointURL:        "https://account-r2.r2.cloudflarestorage.com",
 			Region:             "auto",
@@ -121,7 +123,7 @@ func TestS3WebDAVPersistsInDatabase(t *testing.T) {
 		t.Fatalf("expected persisted S3 WebDAV settings, got %#v", got)
 	}
 	mount := got.Mounts[0]
-	if mount.Provider != "cloudflare_r2" || mount.EndpointURL == "" || mount.AccountID != "account-r2" || mount.BucketName != "cfui-r2" || mount.RootPrefix != "backups/cfui" || mount.MountPath != "/webdav/my_r2/" || mount.Jurisdiction != "eu" || mount.AccessKeyID != "access-key" || mount.SecretAccessKey != "secret-key" || mount.WebDAVUsername != "dav-user" || mount.WebDAVPasswordHash == "" {
+	if mount.Provider != "cloudflare_r2" || !mount.WebDAVEnabled || mount.WebDAVAuthEnabled || mount.EndpointURL == "" || mount.AccountID != "account-r2" || mount.BucketName != "cfui-r2" || mount.RootPrefix != "backups/cfui" || mount.MountPath != "/webdav/my_r2/" || mount.Jurisdiction != "eu" || mount.AccessKeyID != "access-key" || mount.SecretAccessKey != "secret-key" || mount.WebDAVUsername != "dav-user" || mount.WebDAVPasswordHash == "" {
 		t.Fatalf("expected persisted S3 WebDAV mount, got %#v", mount)
 	}
 }
@@ -144,7 +146,7 @@ func TestS3WebDAVDefaults(t *testing.T) {
 		t.Fatalf("NewManager reload: %v", err)
 	}
 	got := reloaded.Get().S3WebDAV
-	if len(got.Mounts) != 1 || got.Mounts[0].Provider != "generic_s3" || got.Mounts[0].Region != "auto" || got.Mounts[0].MountPath != "/webdav/s3/" || got.Mounts[0].Jurisdiction != "default" {
+	if len(got.Mounts) != 1 || got.Mounts[0].Provider != "generic_s3" || got.Mounts[0].Region != "auto" || got.Mounts[0].MountPath != "/webdav/s3/" || got.Mounts[0].Jurisdiction != "default" || !got.Mounts[0].WebDAVEnabled || !got.Mounts[0].WebDAVAuthEnabled {
 		t.Fatalf("expected S3 defaults, got %#v", got)
 	}
 }
@@ -165,6 +167,8 @@ func TestNewManagerMigratesLegacyConfigJSON(t *testing.T) {
 			Key:                "legacy",
 			Name:               "Legacy S3",
 			Enabled:            true,
+			WebDAVEnabled:      true,
+			WebDAVAuthEnabled:  true,
 			Provider:           "generic_s3",
 			EndpointURL:        "https://s3.example.com",
 			Region:             "us-east-1",

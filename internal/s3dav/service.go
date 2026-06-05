@@ -69,6 +69,8 @@ func (s *Service) CreateMount(ctx context.Context, req MountRequest) (SettingsRe
 	current.Key = uniqueMountKey(cfg.Mounts, suggestedMountKey(req))
 	current.Name = strings.TrimSpace(req.Name)
 	current.Enabled = true
+	current.WebDAVEnabled = true
+	current.WebDAVAuthEnabled = true
 	mount, err := s.requestMount(req, current, true)
 	if err != nil {
 		return SettingsResponse{}, err
@@ -209,8 +211,23 @@ func (s *Service) Availability(_ context.Context, mount config.S3WebDAVMountConf
 	if strings.TrimSpace(mount.AccessKeyID) == "" || strings.TrimSpace(mount.SecretAccessKey) == "" {
 		return availability(StatusCredentialsRequired, "S3 Access Key ID and Secret Access Key are required.", nil)
 	}
+	return Availability{CanEnable: true, Status: StatusReady, Message: "S3 storage is ready."}
+}
+
+func (s *Service) WebDAVAvailability(ctx context.Context, mount config.S3WebDAVMountConfig) Availability {
+	s3Availability := s.Availability(ctx, mount)
+	if !s3Availability.CanEnable {
+		return s3Availability
+	}
+	mount = s.normalizeMount(mount)
+	if !mount.WebDAVEnabled {
+		return availability(StatusWebDAVDisabled, "WebDAV endpoint is disabled.", nil)
+	}
+	if !mount.WebDAVAuthEnabled {
+		return Availability{CanEnable: true, Status: StatusWebDAVAuthDisabled, Message: "WebDAV endpoint is enabled without authentication."}
+	}
 	if strings.TrimSpace(mount.WebDAVUsername) == "" || strings.TrimSpace(mount.WebDAVPasswordHash) == "" {
-		return availability(StatusWebDAVCredentialsRequired, "Set a WebDAV username and password.", nil)
+		return availability(StatusWebDAVCredentialsRequired, "Set a WebDAV username and password, or disable WebDAV authentication.", nil)
 	}
 	return Availability{CanEnable: true, Status: StatusReady, Message: "S3 WebDAV is ready."}
 }
@@ -418,7 +435,11 @@ func (s *Service) WebDAVMountForPath(requestPath string) (config.S3WebDAVMountCo
 		return len(mounts[i].MountPath) > len(mounts[j].MountPath)
 	})
 	for _, mount := range mounts {
-		if !mount.Enabled || strings.TrimSpace(mount.WebDAVUsername) == "" || strings.TrimSpace(mount.WebDAVPasswordHash) == "" {
+		mount = s.normalizeMount(mount)
+		if !mount.Enabled || !mount.WebDAVEnabled {
+			continue
+		}
+		if mount.WebDAVAuthEnabled && (strings.TrimSpace(mount.WebDAVUsername) == "" || strings.TrimSpace(mount.WebDAVPasswordHash) == "") {
 			continue
 		}
 		mountPath, err := NormalizeMountPath(mount.MountPath)
@@ -463,7 +484,21 @@ func (s *Service) requestMount(req MountRequest, current config.S3WebDAVMountCon
 	if strings.TrimSpace(req.Name) != "" || create {
 		next.Name = strings.TrimSpace(req.Name)
 	}
-	next.Enabled = req.Enabled || create
+	if req.Enabled != nil {
+		next.Enabled = *req.Enabled
+	} else if create {
+		next.Enabled = true
+	}
+	if req.WebDAVEnabled != nil {
+		next.WebDAVEnabled = *req.WebDAVEnabled
+	} else if create {
+		next.WebDAVEnabled = true
+	}
+	if req.WebDAVAuthEnabled != nil {
+		next.WebDAVAuthEnabled = *req.WebDAVAuthEnabled
+	} else if create {
+		next.WebDAVAuthEnabled = true
+	}
 	next.Provider = normalizeProvider(req.Provider)
 	next.AccountID = strings.TrimSpace(req.AccountID)
 	if next.AccountID == "" && next.Provider == ProviderCloudflareR2 {
@@ -580,10 +615,13 @@ func (s *Service) settingsResponse(ctx context.Context, cfg config.S3WebDAVConfi
 
 func (s *Service) mountResponse(ctx context.Context, mount config.S3WebDAVMountConfig) MountResponse {
 	availability := s.Availability(ctx, mount)
+	webDAVAvailability := s.WebDAVAvailability(ctx, mount)
 	return MountResponse{
 		Key:                mount.Key,
 		Name:               mount.Name,
 		Enabled:            mount.Enabled,
+		WebDAVEnabled:      mount.WebDAVEnabled,
+		WebDAVAuthEnabled:  mount.WebDAVAuthEnabled,
 		Provider:           mount.Provider,
 		EndpointURL:        mount.EndpointURL,
 		Region:             mount.Region,
@@ -600,6 +638,7 @@ func (s *Service) mountResponse(ctx context.Context, mount config.S3WebDAVMountC
 		Endpoint:           mount.MountPath,
 		R2BucketManagement: s.R2Management(ctx, mount),
 		Availability:       availability,
+		WebDAVAvailability: webDAVAvailability,
 	}
 }
 

@@ -1074,6 +1074,18 @@ other = "挂载名称"
 [s3_mount_name_help]
 other = "只在 cfui 内显示，用来区分多个挂载配置。"
 
+[s3_config_enabled]
+other = "启用 S3 配置"
+
+[s3_config_enabled_help]
+other = "关闭后配置会保留，但不能浏览文件，也不会提供 WebDAV。"
+
+[s3_config_status]
+other = "S3 配置"
+
+[s3_config_disabled]
+other = "这个挂载已禁用。"
+
 [s3_provider_help]
 other = "大多数服务选择通用 S3。只有需要 cfui 帮你列出或创建 R2 bucket 时，才选择 Cloudflare R2。"
 
@@ -1209,6 +1221,36 @@ other = "WebDAV 登录账户"
 [s3_webdav_credentials_help]
 other = "这组账户只用于 WebDAV 客户端连接 cfui。"
 
+[s3_webdav_enabled]
+other = "启用 WebDAV endpoint"
+
+[s3_webdav_enabled_help]
+other = "关闭后仍可在这里管理 S3 文件，但不会暴露 WebDAV 路径。"
+
+[s3_webdav_status]
+other = "WebDAV endpoint"
+
+[s3_webdav_disabled]
+other = "WebDAV endpoint 已关闭。"
+
+[s3_webdav_disabled_help]
+other = "WebDAV endpoint 已关闭，账号和密码暂时不会使用。"
+
+[s3_webdav_auth_enabled]
+other = "要求 WebDAV 登录"
+
+[s3_webdav_auth_enabled_help]
+other = "关闭后，能访问这个 endpoint 的人都能访问挂载文件。"
+
+[s3_webdav_auth_status]
+other = "WebDAV 认证"
+
+[s3_webdav_auth_disabled]
+other = "WebDAV 认证已关闭"
+
+[s3_webdav_auth_disabled_help]
+other = "当前不会要求 WebDAV 用户名和密码。"
+
 [s3_webdav_username]
 other = "WebDAV 用户名"
 
@@ -1252,7 +1294,7 @@ other = "文件夹对应对象前缀。这里的操作只影响配置的 bucket 
 other = "先完成 S3 设置"
 
 [s3_files_disabled_help]
-other = "请先填写 endpoint、bucket、S3 凭证和 WebDAV 登录账户。"
+other = "请先填写 endpoint、bucket、S3 凭证，并保持 S3 配置启用。"
 
 [s3_new_folder]
 other = "新建文件夹"
@@ -1348,7 +1390,7 @@ other = "WebDAV 路径必须以 /webdav/ 开头。"
 other = "请填写 bucket 名称。"
 
 [s3_webdav_credentials_required]
-other = "请设置 WebDAV 用户名和密码。"
+other = "请设置 WebDAV 用户名和密码，或关闭 WebDAV 认证。"
 
 [s3_configuration_incomplete]
 other = "S3 WebDAV 设置还不完整。"
@@ -1395,6 +1437,24 @@ other = "加载 S3 文件失败"
 [s3_files_empty]
 other = "这个 bucket 路径为空。"
 
+[s3_files_loading]
+other = "正在加载文件..."
+
+[s3_file_object]
+other = "对象"
+
+[s3_file_type]
+other = "类型"
+
+[s3_file_size]
+other = "大小"
+
+[s3_file_modified]
+other = "已修改"
+
+[s3_file_actions]
+other = "操作"
+
 [s3_folder]
 other = "文件夹"
 
@@ -1436,6 +1496,9 @@ other = "删除失败"
 
 [ready]
 other = "就绪"
+
+[enabled]
+other = "已启用"
 
 [disabled]
 other = "已禁用"

@@ -16,6 +16,8 @@ const (
 	StatusMountPathInvalid          = "S3_MOUNT_PATH_INVALID"
 	StatusBucketRequired            = "BUCKET_REQUIRED"
 	StatusWebDAVCredentialsRequired = "WEBDAV_CREDENTIALS_REQUIRED"
+	StatusWebDAVDisabled            = "WEBDAV_DISABLED"
+	StatusWebDAVAuthDisabled        = "WEBDAV_AUTH_DISABLED"
 	StatusS3ConfigurationIncomplete = "S3_CONFIGURATION_INCOMPLETE"
 	StatusS3FilesystemUnavailable   = "S3_FILESYSTEM_UNAVAILABLE"
 )
@@ -40,28 +42,32 @@ type SettingsResponse struct {
 }
 
 type MountRequest struct {
-	Key             string `json:"key"`
-	Name            string `json:"name"`
-	Enabled         bool   `json:"enabled"`
-	Provider        string `json:"provider"`
-	EndpointURL     string `json:"endpoint_url"`
-	Region          string `json:"region"`
-	PathStyle       bool   `json:"path_style"`
-	AccountID       string `json:"account_id"`
-	BucketName      string `json:"bucket_name"`
-	RootPrefix      string `json:"root_prefix"`
-	MountPath       string `json:"mount_path"`
-	Jurisdiction    string `json:"jurisdiction"`
-	AccessKeyID     string `json:"access_key_id"`
-	SecretAccessKey string `json:"secret_access_key"`
-	WebDAVUsername  string `json:"webdav_username"`
-	WebDAVPassword  string `json:"webdav_password"`
+	Key               string `json:"key"`
+	Name              string `json:"name"`
+	Enabled           *bool  `json:"enabled"`
+	WebDAVEnabled     *bool  `json:"webdav_enabled"`
+	WebDAVAuthEnabled *bool  `json:"webdav_auth_enabled"`
+	Provider          string `json:"provider"`
+	EndpointURL       string `json:"endpoint_url"`
+	Region            string `json:"region"`
+	PathStyle         bool   `json:"path_style"`
+	AccountID         string `json:"account_id"`
+	BucketName        string `json:"bucket_name"`
+	RootPrefix        string `json:"root_prefix"`
+	MountPath         string `json:"mount_path"`
+	Jurisdiction      string `json:"jurisdiction"`
+	AccessKeyID       string `json:"access_key_id"`
+	SecretAccessKey   string `json:"secret_access_key"`
+	WebDAVUsername    string `json:"webdav_username"`
+	WebDAVPassword    string `json:"webdav_password"`
 }
 
 type MountResponse struct {
 	Key                string       `json:"key"`
 	Name               string       `json:"name"`
 	Enabled            bool         `json:"enabled"`
+	WebDAVEnabled      bool         `json:"webdav_enabled"`
+	WebDAVAuthEnabled  bool         `json:"webdav_auth_enabled"`
 	Provider           string       `json:"provider"`
 	EndpointURL        string       `json:"endpoint_url"`
 	Region             string       `json:"region"`
@@ -78,6 +84,7 @@ type MountResponse struct {
 	Endpoint           string       `json:"endpoint"`
 	R2BucketManagement R2Management `json:"r2_bucket_management"`
 	Availability       Availability `json:"availability"`
+	WebDAVAvailability Availability `json:"webdav_availability"`
 }
 
 type TestConnectionResponse struct {

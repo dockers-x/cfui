@@ -74,6 +74,16 @@ func Enabled(v bool) predicate.S3WebDAVSetting {
 	return predicate.S3WebDAVSetting(sql.FieldEQ(FieldEnabled, v))
 }
 
+// WebdavEnabled applies equality check predicate on the "webdav_enabled" field. It's identical to WebdavEnabledEQ.
+func WebdavEnabled(v bool) predicate.S3WebDAVSetting {
+	return predicate.S3WebDAVSetting(sql.FieldEQ(FieldWebdavEnabled, v))
+}
+
+// WebdavAuthEnabled applies equality check predicate on the "webdav_auth_enabled" field. It's identical to WebdavAuthEnabledEQ.
+func WebdavAuthEnabled(v bool) predicate.S3WebDAVSetting {
+	return predicate.S3WebDAVSetting(sql.FieldEQ(FieldWebdavAuthEnabled, v))
+}
+
 // Provider applies equality check predicate on the "provider" field. It's identical to ProviderEQ.
 func Provider(v string) predicate.S3WebDAVSetting {
 	return predicate.S3WebDAVSetting(sql.FieldEQ(FieldProvider, v))
@@ -327,6 +337,26 @@ func EnabledEQ(v bool) predicate.S3WebDAVSetting {
 // EnabledNEQ applies the NEQ predicate on the "enabled" field.
 func EnabledNEQ(v bool) predicate.S3WebDAVSetting {
 	return predicate.S3WebDAVSetting(sql.FieldNEQ(FieldEnabled, v))
+}
+
+// WebdavEnabledEQ applies the EQ predicate on the "webdav_enabled" field.
+func WebdavEnabledEQ(v bool) predicate.S3WebDAVSetting {
+	return predicate.S3WebDAVSetting(sql.FieldEQ(FieldWebdavEnabled, v))
+}
+
+// WebdavEnabledNEQ applies the NEQ predicate on the "webdav_enabled" field.
+func WebdavEnabledNEQ(v bool) predicate.S3WebDAVSetting {
+	return predicate.S3WebDAVSetting(sql.FieldNEQ(FieldWebdavEnabled, v))
+}
+
+// WebdavAuthEnabledEQ applies the EQ predicate on the "webdav_auth_enabled" field.
+func WebdavAuthEnabledEQ(v bool) predicate.S3WebDAVSetting {
+	return predicate.S3WebDAVSetting(sql.FieldEQ(FieldWebdavAuthEnabled, v))
+}
+
+// WebdavAuthEnabledNEQ applies the NEQ predicate on the "webdav_auth_enabled" field.
+func WebdavAuthEnabledNEQ(v bool) predicate.S3WebDAVSetting {
+	return predicate.S3WebDAVSetting(sql.FieldNEQ(FieldWebdavAuthEnabled, v))
 }
 
 // ProviderEQ applies the EQ predicate on the "provider" field.

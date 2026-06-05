@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path"
 	"sort"
 	"strings"
 
@@ -61,12 +62,16 @@ func listFiles(fs afero.Fs, rawPath string) (FilesResponse, error) {
 	}
 	entries := make([]FileEntry, 0, len(infos))
 	for _, info := range infos {
-		p := JoinPath(cleaned, info.Name())
+		name, ok := listEntryName(info.Name())
+		if !ok {
+			continue
+		}
+		p := JoinPath(cleaned, name)
 		if info.IsDir() && !strings.HasSuffix(p, "/") {
 			p += "/"
 		}
 		entries = append(entries, FileEntry{
-			Name:    info.Name(),
+			Name:    name,
 			Path:    p,
 			IsDir:   info.IsDir(),
 			Size:    info.Size(),
@@ -84,6 +89,21 @@ func listFiles(fs afero.Fs, rawPath string) (FilesResponse, error) {
 		Parent:  ParentPath(cleaned),
 		Entries: entries,
 	}, nil
+}
+
+func listEntryName(raw string) (string, bool) {
+	name := strings.TrimSpace(raw)
+	name = strings.Trim(name, "/")
+	if name == "" || name == "." {
+		return "", false
+	}
+	if strings.Contains(name, "/") {
+		name = path.Base(name)
+	}
+	if name == "" || name == "." || name == "/" {
+		return "", false
+	}
+	return name, true
 }
 
 func writeFile(fs afero.Fs, rawPath string, body io.Reader) error {
