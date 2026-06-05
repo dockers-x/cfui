@@ -1653,6 +1653,75 @@ other = "已删除"
 [s3_delete_failed]
 other = "删除失败"
 
+[s3_sync]
+other = "同步"
+
+[s3_sync_title]
+other = "在 S3 挂载之间同步"
+
+[s3_sync_subtitle]
+other = "左侧选择源对象，右侧选择目标文件夹。方向固定为左到右。"
+
+[s3_sync_source]
+other = "源"
+
+[s3_sync_target]
+other = "目标"
+
+[s3_sync_target_mount]
+other = "目标挂载"
+
+[s3_sync_destination]
+other = "最终目标路径"
+
+[s3_sync_overwrite]
+other = "覆盖已存在文件"
+
+[s3_sync_overwrite_warning]
+other = "覆盖会替换目标路径相同的文件，不会删除目标端多余文件。"
+
+[s3_sync_overwrite_title]
+other = "覆盖目标文件？"
+
+[s3_sync_overwrite_confirm]
+other = "这会替换目标端同名文件。目标端多余文件不会被删除。"
+
+[s3_sync_start]
+other = "开始同步"
+
+[s3_sync_running]
+other = "正在同步"
+
+[s3_sync_completed]
+other = "同步完成"
+
+[s3_sync_waiting]
+other = "等待开始"
+
+[s3_sync_failed]
+other = "同步失败"
+
+[s3_sync_done]
+other = "同步完成：复制 {copied}，跳过 {skipped}，失败 {failed}"
+
+[s3_sync_current]
+other = "正在复制到 {mount}: {source} → {target}"
+
+[s3_sync_result_line]
+other = "{mount}: 复制 {copied}，跳过 {skipped}，失败 {failed}"
+
+[s3_sync_no_targets]
+other = "没有可用的目标挂载"
+
+[s3_sync_tree_load_failed]
+other = "加载目录树失败"
+
+[s3_sync_expand]
+other = "展开目录"
+
+[s3_sync_collapse]
+other = "收起目录"
+
 [ready]
 other = "就绪"
 

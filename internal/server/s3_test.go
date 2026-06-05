@@ -206,6 +206,126 @@ func TestS3FileUploadAndListWithFakeFS(t *testing.T) {
 	}
 }
 
+func TestS3SyncEndpointStartsJobAndReportsCompletion(t *testing.T) {
+	s := newServerTestServer(t)
+	cfg := s.cfgMgr.Get()
+	cfg.S3WebDAV = config.S3WebDAVConfig{
+		Enabled:   true,
+		ActiveKey: "source",
+		Mounts: []config.S3WebDAVMountConfig{
+			{
+				Key:               "source",
+				Name:              "Source S3",
+				Enabled:           true,
+				WebDAVEnabled:     true,
+				WebDAVAuthEnabled: false,
+				Provider:          s3dav.ProviderGenericS3,
+				EndpointURL:       "https://s3.example.com",
+				Region:            "us-east-1",
+				PathStyle:         true,
+				BucketName:        "source-bucket",
+				MountPath:         "/webdav/source/",
+				AccessKeyID:       "ak-source",
+				SecretAccessKey:   "sk-source",
+			},
+			{
+				Key:               "target",
+				Name:              "Target S3",
+				Enabled:           true,
+				WebDAVEnabled:     true,
+				WebDAVAuthEnabled: false,
+				Provider:          s3dav.ProviderGenericS3,
+				EndpointURL:       "https://s3.example.com",
+				Region:            "us-east-1",
+				PathStyle:         true,
+				BucketName:        "target-bucket",
+				MountPath:         "/webdav/target/",
+				AccessKeyID:       "ak-target",
+				SecretAccessKey:   "sk-target",
+			},
+		},
+	}
+	if err := s.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+	sourceFS := afero.NewMemMapFs()
+	targetFS := afero.NewMemMapFs()
+	if err := sourceFS.MkdirAll("/docs", 0755); err != nil {
+		t.Fatalf("MkdirAll source: %v", err)
+	}
+	if err := afero.WriteFile(sourceFS, "/docs/readme.txt", []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile source: %v", err)
+	}
+	filesystems := map[string]afero.Fs{
+		"source-bucket": sourceFS,
+		"target-bucket": targetFS,
+	}
+	s.s3Svc = s3dav.NewServiceForTest(
+		s.cfgMgr,
+		func(string) (s3dav.CloudflareClient, error) {
+			return serverFakeR2Client{}, nil
+		},
+		func(_ context.Context, cfg s3dav.FSConfig, _ s3dav.Credentials) (afero.Fs, error) {
+			return filesystems[cfg.BucketName], nil
+		},
+	)
+
+	startReq := httptest.NewRequest(http.MethodPost, "/api/s3/files/sync", strings.NewReader(`{
+		"source_mount_key": "source",
+		"target_mount_keys": ["target"],
+		"source_path": "/docs/readme.txt",
+		"destination_path": "/backup/readme.txt"
+	}`))
+	startReq.Header.Set("Content-Type", "application/json")
+	startRec := httptest.NewRecorder()
+	s.handleS3Sync(startRec, startReq)
+	if startRec.Code != http.StatusOK {
+		t.Fatalf("sync start status %d: %s", startRec.Code, startRec.Body.String())
+	}
+	var started s3dav.SyncJobResponse
+	if err := json.NewDecoder(startRec.Body).Decode(&started); err != nil {
+		t.Fatalf("decode started job: %v", err)
+	}
+	if started.JobID == "" {
+		t.Fatalf("expected job id in response: %#v", started)
+	}
+
+	done := waitForServerSyncJob(t, s, started.JobID)
+	if done.Status != s3dav.SyncJobCompleted || done.Copied != 1 || done.Total != 1 || done.Processed != 1 {
+		t.Fatalf("unexpected sync job completion: %#v", done)
+	}
+	got, err := afero.ReadFile(targetFS, "/backup/readme.txt")
+	if err != nil {
+		t.Fatalf("read synced file: %v", err)
+	}
+	if string(got) != "hello" {
+		t.Fatalf("unexpected synced content %q", string(got))
+	}
+}
+
+func waitForServerSyncJob(t *testing.T, s *Server, id string) s3dav.SyncJobResponse {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		req := httptest.NewRequest(http.MethodGet, "/api/s3/files/sync/"+id, nil)
+		rec := httptest.NewRecorder()
+		s.handleS3SyncJob(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("sync job status %d: %s", rec.Code, rec.Body.String())
+		}
+		var job s3dav.SyncJobResponse
+		if err := json.NewDecoder(rec.Body).Decode(&job); err != nil {
+			t.Fatalf("decode job: %v", err)
+		}
+		if job.Status == s3dav.SyncJobCompleted || job.Status == s3dav.SyncJobFailed {
+			return job
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("sync job %s did not finish", id)
+	return s3dav.SyncJobResponse{}
+}
+
 func TestWebDAVPutThroughServerRouteCreatesNestedObject(t *testing.T) {
 	s := newServerTestServer(t)
 	hash, err := s3dav.HashPassword("secret")

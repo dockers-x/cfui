@@ -170,6 +170,8 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/s3/files/download", s.handleS3Download)
 	mux.HandleFunc("/api/s3/files/mkdir", s.handleS3Mkdir)
 	mux.HandleFunc("/api/s3/files/rename", s.handleS3Rename)
+	mux.HandleFunc("/api/s3/files/sync/", s.handleS3SyncJob)
+	mux.HandleFunc("/api/s3/files/sync", s.handleS3Sync)
 	mux.HandleFunc("/api/s3/files/", s.handleS3FileObject)
 	mux.HandleFunc("/api/s3/files", s.handleS3Files)
 
@@ -545,6 +547,42 @@ func (s *Server) handleS3Rename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]bool{"success": true})
+}
+
+func (s *Server) handleS3Sync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req s3dav.SyncRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	resp, err := s.s3Svc.StartSync(r.Context(), req)
+	if err != nil {
+		writeS3Error(w, err)
+		return
+	}
+	writeJSON(w, resp)
+}
+
+func (s *Server) handleS3SyncJob(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	id := strings.TrimPrefix(r.URL.Path, "/api/s3/files/sync/")
+	if strings.TrimSpace(id) == "" || id == r.URL.Path {
+		writeAPIError(w, http.StatusBadRequest, fmt.Errorf("sync job id is required"))
+		return
+	}
+	resp, err := s.s3Svc.SyncJob(id)
+	if err != nil {
+		writeS3Error(w, err)
+		return
+	}
+	writeJSON(w, resp)
 }
 
 func s3ObjectPath(requestPath string) (string, error) {

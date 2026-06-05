@@ -167,6 +167,61 @@ type RenameRequest struct {
 	To       string `json:"to"`
 }
 
+type SyncRequest struct {
+	SourceMountKey  string   `json:"source_mount_key"`
+	TargetMountKeys []string `json:"target_mount_keys"`
+	SourcePath      string   `json:"source_path"`
+	DestinationPath string   `json:"destination_path"`
+	Overwrite       bool     `json:"overwrite"`
+}
+
+type SyncResponse struct {
+	SourceMountKey  string             `json:"source_mount_key"`
+	SourcePath      string             `json:"source_path"`
+	DestinationPath string             `json:"destination_path"`
+	Results         []SyncTargetResult `json:"results"`
+	Copied          int                `json:"copied"`
+	Skipped         int                `json:"skipped"`
+	Failed          int                `json:"failed"`
+	BytesCopied     int64              `json:"bytes_copied"`
+	BytesTotal      int64              `json:"bytes_total"`
+}
+
+type SyncTargetResult struct {
+	MountKey    string   `json:"mount_key"`
+	Copied      int      `json:"copied"`
+	Skipped     int      `json:"skipped"`
+	Failed      int      `json:"failed"`
+	BytesCopied int64    `json:"bytes_copied"`
+	Errors      []string `json:"errors,omitempty"`
+}
+
+type SyncJobResponse struct {
+	JobID                  string             `json:"job_id"`
+	Status                 string             `json:"status"`
+	SourceMountKey         string             `json:"source_mount_key"`
+	TargetMountKeys        []string           `json:"target_mount_keys"`
+	SourcePath             string             `json:"source_path"`
+	DestinationPath        string             `json:"destination_path"`
+	CurrentMountKey        string             `json:"current_mount_key,omitempty"`
+	CurrentSourcePath      string             `json:"current_source_path,omitempty"`
+	CurrentDestinationPath string             `json:"current_destination_path,omitempty"`
+	Total                  int                `json:"total"`
+	Processed              int                `json:"processed"`
+	BytesTotal             int64              `json:"bytes_total"`
+	BytesCopied            int64              `json:"bytes_copied"`
+	CurrentSize            int64              `json:"current_size"`
+	CurrentBytes           int64              `json:"current_bytes"`
+	Copied                 int                `json:"copied"`
+	Skipped                int                `json:"skipped"`
+	Failed                 int                `json:"failed"`
+	Results                []SyncTargetResult `json:"results"`
+	Error                  string             `json:"error,omitempty"`
+	StartedAt              time.Time          `json:"started_at"`
+	UpdatedAt              time.Time          `json:"updated_at"`
+	FinishedAt             *time.Time         `json:"finished_at,omitempty"`
+}
+
 type Credentials struct {
 	AccessKeyID     string
 	SecretAccessKey string

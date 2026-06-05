@@ -3,7 +3,7 @@
    ========================================================================= */
 (() => {
     'use strict';
-    const { state, $, t, API_BASE, apiGet, apiSend, toast, setBusy } = window.cfui;
+    const { state, $, t, API_BASE, apiGet, apiSend, toast, setBusy, sleep } = window.cfui;
 
     const PROVIDER_R2 = 'cloudflare_r2';
     const DEFAULT_MOUNT = '/webdav/s3/';
@@ -457,11 +457,13 @@
         upload.className = 'btn btn--sm';
         upload.setAttribute('for', 's3-upload-input');
         upload.innerHTML = uploadIcon() + `<span>${escapeHTML(t('upload'))}</span>`;
+        const sync = iconTextButton(t('s3_sync'), syncIcon(), 'btn--sm');
+        sync.addEventListener('click', () => openS3Sync({ path: state.s3.path || '/', is_dir: true, name: pathName(state.s3.path || '/') || '/' }));
         const folder = iconTextButton(t('s3_new_folder'), plusIcon(), 'btn--sm btn--primary');
         folder.addEventListener('click', createS3Folder);
         const refresh = iconButton('refresh', refreshIcon());
         refresh.addEventListener('click', () => loadS3Files(state.s3.path || '/'));
-        tools.append(upload, folder, refresh);
+        tools.append(upload, sync, folder, refresh);
         toolbar.append(title);
         if (ready) toolbar.appendChild(tools);
         wrap.appendChild(toolbar);
@@ -1001,6 +1003,7 @@
         actionWrap.className = 's3-file-actions';
         if (!entry.is_dir) actionWrap.append(actionIconLink('download', downloadIcon(), `${API_BASE}/s3/files/download?${fileQuery(entry.path)}`));
         actionWrap.append(
+            actionIconButton('s3_sync', syncIcon(), () => openS3Sync(entry)),
             actionIconButton('rename', editIcon(), () => renameS3Path(entry)),
             actionIconButton('delete', trashIcon(), () => deleteS3Path(entry), 'danger')
         );
@@ -1119,6 +1122,372 @@
         }
     }
 
+    async function openS3Sync(entry) {
+        const sourceMount = activeMount();
+        if (!sourceMount || !canBrowseFiles(state.s3.settings, sourceMount)) {
+            toast.err(t('s3_files_disabled_title'));
+            return;
+        }
+        const targets = syncTargetMounts(sourceMount.key);
+        const sourcePath = cleanClientPath(entry?.path || state.s3.path || '/');
+        const sourceIsDir = entry ? !!entry.is_dir : true;
+        state.s3.sync = {
+            sourceMountKey: sourceMount.key,
+            sourcePath,
+            sourceIsDir,
+            targetMountKey: targets[0]?.key || '',
+            targetDir: '/',
+            overwrite: false,
+            running: false,
+            job: null,
+            source: syncTreeState(),
+            target: syncTreeState(),
+        };
+        const overwrite = $('s3-sync-overwrite');
+        if (overwrite) overwrite.checked = false;
+        renderS3SyncDialog();
+        window.cfui.openDialog?.($('s3-sync-dialog'));
+        try {
+            await Promise.all([
+                expandSyncPath('source', sourceMount.key, sourcePath, sourceIsDir),
+                targets[0] ? loadSyncTreeNode('target', targets[0].key, '/') : Promise.resolve(),
+            ]);
+        } catch (err) {
+            toast.err(t('s3_sync_tree_load_failed') + ': ' + err.message);
+        }
+        renderS3SyncDialog();
+    }
+
+    function syncTreeState() {
+        return { entries: new Map(), expanded: new Set(['/']), loading: new Set() };
+    }
+
+    function syncTargetMounts(sourceKey = state.s3.sync?.sourceMountKey) {
+        return (state.s3.settings?.mounts || []).filter((mount) => mount.key !== sourceKey && canBrowseFiles(state.s3.settings, mount));
+    }
+
+    async function expandSyncPath(role, mountKey, selectedPath, selectedIsDir) {
+        const parts = cleanClientPath(selectedPath).split('/').filter(Boolean);
+        await loadSyncTreeNode(role, mountKey, '/');
+        let acc = '';
+        const limit = selectedIsDir ? parts.length : Math.max(0, parts.length - 1);
+        for (let i = 0; i < limit; i += 1) {
+            acc = joinPath(acc || '/', parts[i]);
+            state.s3.sync?.[role]?.expanded.add(acc);
+            await loadSyncTreeNode(role, mountKey, acc);
+        }
+    }
+
+    async function loadSyncTreeNode(role, mountKey, path) {
+        const sync = state.s3.sync;
+        if (!sync || !mountKey) return;
+        const tree = sync[role];
+        const cleaned = cleanClientPath(path);
+        if (tree.entries.has(cleaned) || tree.loading.has(cleaned)) return;
+        tree.loading.add(cleaned);
+        renderS3SyncTree(role);
+        try {
+            const data = await apiGet('/s3/files?mount_key=' + encodeURIComponent(mountKey) + '&path=' + encodeURIComponent(cleaned));
+            tree.entries.set(cleaned, sanitizeEntries(data.entries || []));
+        } finally {
+            tree.loading.delete(cleaned);
+        }
+    }
+
+    function renderS3SyncDialog() {
+        const sync = state.s3.sync;
+        if (!sync) return;
+        const sourceMount = mountByKey(sync.sourceMountKey);
+        const targetMount = mountByKey(sync.targetMountKey);
+        const targets = syncTargetMounts(sync.sourceMountKey);
+        const sourceLabel = $('s3-sync-source-label');
+        const targetLabel = $('s3-sync-target-label');
+        if (sourceLabel) sourceLabel.textContent = `${mountDisplayName(sourceMount)}: ${sync.sourcePath}`;
+        if (targetLabel) targetLabel.textContent = sync.targetMountKey ? `${mountDisplayName(targetMount)}: ${sync.targetDir}` : t('s3_sync_no_targets');
+        const sourcePath = $('s3-sync-source-path');
+        const targetPath = $('s3-sync-target-path');
+        if (sourcePath) sourcePath.textContent = sync.sourcePath;
+        if (targetPath) targetPath.textContent = sync.targetDir || '/';
+        renderSyncTargetOptions(targets);
+        renderS3SyncTree('source');
+        renderS3SyncTree('target');
+        renderS3SyncDestination();
+        renderS3SyncProgress(sync.job);
+        const start = $('s3-sync-start');
+        if (start) {
+            start.disabled = sync.running || !sync.targetMountKey || !sync.sourcePath || !sync.targetDir;
+            start.title = !sync.targetMountKey ? t('s3_sync_no_targets') : '';
+        }
+    }
+
+    function renderSyncTargetOptions(targets) {
+        const select = $('s3-sync-target-mount');
+        const sync = state.s3.sync;
+        if (!select || !sync) return;
+        const current = sync.targetMountKey;
+        select.innerHTML = '';
+        if (!targets.length) {
+            sync.targetMountKey = '';
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = t('s3_sync_no_targets');
+            select.appendChild(opt);
+            select.disabled = true;
+            return;
+        }
+        for (const mount of targets) {
+            const opt = document.createElement('option');
+            opt.value = mount.key;
+            opt.textContent = `${mountDisplayName(mount)} · ${mount.bucket_name || ''}`;
+            select.appendChild(opt);
+        }
+        select.disabled = sync.running;
+        select.value = targets.some((mount) => mount.key === current) ? current : targets[0].key;
+        sync.targetMountKey = select.value;
+    }
+
+    function renderS3SyncTree(role) {
+        const sync = state.s3.sync;
+        const container = $(role === 'source' ? 's3-sync-source-tree' : 's3-sync-target-tree');
+        if (!sync || !container) return;
+        container.innerHTML = '';
+        const mountKey = role === 'source' ? sync.sourceMountKey : sync.targetMountKey;
+        if (!mountKey) {
+            const empty = document.createElement('div');
+            empty.className = 's3-file-empty';
+            empty.textContent = t('s3_sync_no_targets');
+            container.appendChild(empty);
+            return;
+        }
+        container.appendChild(syncTreeNode(role, '/', 0, true));
+    }
+
+    function syncTreeNode(role, path, depth, isDir, entry = null) {
+        const sync = state.s3.sync;
+        const tree = sync[role];
+        const cleaned = cleanClientPath(path);
+        const expanded = tree.expanded.has(cleaned);
+        const selected = role === 'source' ? sync.sourcePath === cleaned : sync.targetDir === cleaned;
+        const disabled = role === 'target' && !isDir;
+        const wrap = document.createElement('div');
+        wrap.className = 's3-sync-tree__children';
+
+        const row = document.createElement('div');
+        row.className = 's3-sync-tree-row';
+        row.dataset.selected = String(selected);
+        row.dataset.disabled = String(disabled);
+        row.style.paddingLeft = `${Math.min(depth * 16, 96)}px`;
+        row.setAttribute('role', 'treeitem');
+        row.setAttribute('aria-selected', String(selected));
+        if (isDir) row.setAttribute('aria-expanded', String(expanded));
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 's3-sync-tree-toggle';
+        toggle.innerHTML = chevronRightIcon();
+        toggle.dataset.expanded = String(expanded);
+        toggle.hidden = !isDir;
+        toggle.setAttribute('aria-label', expanded ? t('s3_sync_collapse') : t('s3_sync_expand'));
+        toggle.addEventListener('click', async () => {
+            if (!isDir) return;
+            if (expanded) tree.expanded.delete(cleaned);
+            else {
+                tree.expanded.add(cleaned);
+                await loadSyncTreeNode(role, role === 'source' ? sync.sourceMountKey : sync.targetMountKey, cleaned);
+            }
+            renderS3SyncDialog();
+        });
+
+        const name = document.createElement('button');
+        name.type = 'button';
+        name.className = 's3-sync-tree-name';
+        name.disabled = disabled || sync.running;
+        name.innerHTML = (isDir ? folderIcon() : fileIcon()) + `<span>${escapeHTML(treeLabel(role, cleaned, entry))}</span>`;
+        name.addEventListener('click', () => {
+            if (role === 'source') {
+                sync.sourcePath = cleaned;
+                sync.sourceIsDir = isDir;
+            } else if (isDir) {
+                sync.targetDir = cleaned;
+            }
+            renderS3SyncDialog();
+        });
+        row.append(toggle, name);
+        wrap.appendChild(row);
+
+        if (isDir && expanded) {
+            const loading = tree.loading.has(cleaned);
+            const entries = tree.entries.get(cleaned);
+            if (loading) {
+                wrap.appendChild(syncTreeMessage(t('s3_files_loading'), depth + 1));
+            } else if (!entries) {
+                loadSyncTreeNode(role, role === 'source' ? sync.sourceMountKey : sync.targetMountKey, cleaned).then(() => renderS3SyncDialog()).catch((err) => toast.err(t('s3_sync_tree_load_failed') + ': ' + err.message));
+            } else if (!entries.length) {
+                wrap.appendChild(syncTreeMessage(t('s3_files_empty'), depth + 1));
+            } else {
+                for (const child of entries) {
+                    wrap.appendChild(syncTreeNode(role, child.path, depth + 1, !!child.is_dir, child));
+                }
+            }
+        }
+        return wrap;
+    }
+
+    function syncTreeMessage(text, depth) {
+        const msg = document.createElement('div');
+        msg.className = 's3-sync-progress__current';
+        msg.style.paddingLeft = `${Math.min(depth * 16 + 30, 126)}px`;
+        msg.textContent = text;
+        return msg;
+    }
+
+    function treeLabel(role, path, entry) {
+        if (path === '/') {
+            const key = role === 'source' ? state.s3.sync?.sourceMountKey : state.s3.sync?.targetMountKey;
+            return breadcrumbRootLabel(mountByKey(key));
+        }
+        return entry?.name || pathName(path);
+    }
+
+    function renderS3SyncDestination() {
+        const sync = state.s3.sync;
+        const el = $('s3-sync-destination');
+        const warning = $('s3-sync-warning');
+        if (!sync || !el) return;
+        el.textContent = syncDestinationPath(sync);
+        if (warning) warning.hidden = !$('s3-sync-overwrite')?.checked;
+    }
+
+    function syncDestinationPath(sync) {
+        const targetDir = cleanClientPath(sync.targetDir || '/');
+        if (sync.sourcePath === '/') return targetDir;
+        return joinPath(targetDir, pathName(sync.sourcePath));
+    }
+
+    async function startS3Sync(control) {
+        const sync = state.s3.sync;
+        if (!sync || sync.running) return;
+        const overwrite = !!$('s3-sync-overwrite')?.checked;
+        if (overwrite) {
+            const ok = await window.cfui.confirm({
+                title: t('s3_sync_overwrite_title'),
+                message: t('s3_sync_overwrite_confirm'),
+                okText: t('continue'),
+                okClass: 'btn--primary',
+            });
+            if (!ok) return;
+        }
+        sync.overwrite = overwrite;
+        sync.running = true;
+        setBusy(control, true, t('s3_sync_running'));
+        renderS3SyncDialog();
+        try {
+            const job = await apiSend('/s3/files/sync', 'POST', {
+                source_mount_key: sync.sourceMountKey,
+                target_mount_keys: [sync.targetMountKey],
+                source_path: sync.sourcePath,
+                destination_path: syncDestinationPath(sync),
+                overwrite,
+            });
+            sync.job = job;
+            renderS3SyncDialog();
+            await pollS3SyncJob(job.job_id);
+        } catch (err) {
+            toast.err(t('s3_sync_failed') + ': ' + err.message);
+        } finally {
+            if (state.s3.sync === sync) {
+                sync.running = false;
+                setBusy(control, false);
+                renderS3SyncDialog();
+            }
+        }
+    }
+
+    async function pollS3SyncJob(jobID) {
+        const sync = state.s3.sync;
+        if (!sync || !jobID) return;
+        for (;;) {
+            await sleep(700);
+            if (!state.s3.sync || state.s3.sync.job?.job_id !== jobID) return;
+            const job = await apiGet('/s3/files/sync/' + encodeURIComponent(jobID));
+            state.s3.sync.job = job;
+            renderS3SyncDialog();
+            if (job.status === 'completed') {
+                const message = t('s3_sync_done', { copied: job.copied, skipped: job.skipped, failed: job.failed });
+                if (job.failed > 0) toast.warn(message);
+                else toast.ok(message);
+                await loadS3Files(state.s3.path || '/');
+                return;
+            }
+            if (job.status === 'failed') {
+                toast.err(t('s3_sync_failed') + ': ' + (job.error || t('s3_sync_failed')));
+                return;
+            }
+        }
+    }
+
+    function renderS3SyncProgress(job) {
+        const panel = $('s3-sync-progress');
+        if (!panel) return;
+        panel.hidden = !job;
+        if (!job) return;
+        const total = Number(job.total || 0);
+        const processed = Number(job.processed || 0);
+        const percent = total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : (job.status === 'completed' ? 100 : 0);
+        const status = $('s3-sync-progress-status');
+        const count = $('s3-sync-progress-count');
+        const fill = $('s3-sync-progress-fill');
+        const current = $('s3-sync-progress-current');
+        const bytes = $('s3-sync-progress-bytes');
+        const results = $('s3-sync-result-list');
+        if (status) status.textContent = syncJobStatusText(job);
+        if (count) count.textContent = `${processed} / ${total}`;
+        if (fill) fill.style.width = `${percent}%`;
+        if (current) {
+            current.textContent = job.current_source_path
+                ? t('s3_sync_current', { source: job.current_source_path, target: job.current_destination_path || '/', mount: mountDisplayName(mountByKey(job.current_mount_key)) })
+                : '';
+        }
+        if (bytes) {
+            const currentBytes = job.current_size > 0 ? ` · ${formatBytes(job.current_bytes || 0)} / ${formatBytes(job.current_size)}` : '';
+            bytes.textContent = `${formatBytes(job.bytes_copied || 0)} / ${formatBytes(job.bytes_total || 0)}${currentBytes}`;
+        }
+        if (results) {
+            results.innerHTML = '';
+            for (const result of job.results || []) {
+                const line = document.createElement('div');
+                line.textContent = t('s3_sync_result_line', {
+                    mount: mountDisplayName(mountByKey(result.mount_key)),
+                    copied: result.copied || 0,
+                    skipped: result.skipped || 0,
+                    failed: result.failed || 0,
+                });
+                results.appendChild(line);
+                for (const err of result.errors || []) {
+                    const errLine = document.createElement('div');
+                    errLine.textContent = err;
+                    errLine.dataset.state = 'error';
+                    results.appendChild(errLine);
+                }
+            }
+        }
+    }
+
+    function syncJobStatusText(job) {
+        if (job.status === 'completed') return t('s3_sync_completed');
+        if (job.status === 'failed') return t('s3_sync_failed');
+        return t('s3_sync_running');
+    }
+
+    function mountByKey(key) {
+        return (state.s3.settings?.mounts || []).find((mount) => mount.key === key) || null;
+    }
+
+    function mountDisplayName(mount) {
+        if (!mount) return '';
+        return mount.name || mount.key || '';
+    }
+
     function fileQuery(path) {
         const mount = activeMount();
         return `mount_key=${encodeURIComponent(mount?.key || '')}&path=${encodeURIComponent(path)}`;
@@ -1138,6 +1507,16 @@
         const parts = path.split('/').filter(Boolean);
         parts.pop();
         return parts.length ? '/' + parts.join('/') : '/';
+    }
+
+    function cleanClientPath(path) {
+        const parts = String(path || '/').split('/').filter(Boolean);
+        return parts.length ? '/' + parts.join('/') : '/';
+    }
+
+    function pathName(path) {
+        const parts = cleanClientPath(path).split('/').filter(Boolean);
+        return parts[parts.length - 1] || '';
     }
 
     function normalizeHost(value) {
@@ -1261,6 +1640,10 @@
         return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M3 21v-5h5"></path><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M16 8h5V3"></path></svg>';
     }
 
+    function syncIcon() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h11"></path><path d="m12 4 3 3-3 3"></path><path d="M20 17H9"></path><path d="m12 14-3 3 3 3"></path></svg>';
+    }
+
     function folderIcon() {
         return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.2a2 2 0 0 1-1.6-.8L10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"></path></svg>';
     }
@@ -1308,6 +1691,21 @@
             e.target.value = '';
             uploadS3File(file);
         });
+        $('s3-sync-target-mount')?.addEventListener('change', async (e) => {
+            if (!state.s3.sync) return;
+            state.s3.sync.targetMountKey = e.target.value;
+            state.s3.sync.targetDir = '/';
+            state.s3.sync.target = syncTreeState();
+            renderS3SyncDialog();
+            try {
+                await loadSyncTreeNode('target', e.target.value, '/');
+                renderS3SyncDialog();
+            } catch (err) {
+                toast.err(t('s3_sync_tree_load_failed') + ': ' + err.message);
+            }
+        });
+        $('s3-sync-overwrite')?.addEventListener('change', renderS3SyncDestination);
+        $('s3-sync-start')?.addEventListener('click', (e) => startS3Sync(e.currentTarget));
         window.cfui.wireS3Wizard?.();
     }
 

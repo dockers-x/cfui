@@ -439,6 +439,11 @@ func writeFile(fs afero.Fs, rawPath string, body io.Reader) error {
 	if err != nil {
 		return err
 	}
+	if parent := ParentPath(cleaned); parent != "" && parent != "/" {
+		if err := fs.MkdirAll(parent, 0755); err != nil {
+			return err
+		}
+	}
 	file, err := fs.OpenFile(cleaned, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err

@@ -1653,6 +1653,75 @@ other = "削除しました"
 [s3_delete_failed]
 other = "削除失敗"
 
+[s3_sync]
+other = "同期"
+
+[s3_sync_title]
+other = "S3 マウント間で同期"
+
+[s3_sync_subtitle]
+other = "左で同期元オブジェクト、右で同期先フォルダーを選びます。方向は左から右で固定です。"
+
+[s3_sync_source]
+other = "同期元"
+
+[s3_sync_target]
+other = "同期先"
+
+[s3_sync_target_mount]
+other = "同期先マウント"
+
+[s3_sync_destination]
+other = "最終同期先パス"
+
+[s3_sync_overwrite]
+other = "既存ファイルを上書き"
+
+[s3_sync_overwrite_warning]
+other = "上書きは同じ同期先パスのファイルを置き換えます。同期先の余分なファイルは削除されません。"
+
+[s3_sync_overwrite_title]
+other = "同期先ファイルを上書きしますか？"
+
+[s3_sync_overwrite_confirm]
+other = "同期先の同一パスのファイルを置き換えます。同期先の余分なファイルは削除されません。"
+
+[s3_sync_start]
+other = "同期開始"
+
+[s3_sync_running]
+other = "同期中"
+
+[s3_sync_completed]
+other = "同期完了"
+
+[s3_sync_waiting]
+other = "開始待ち"
+
+[s3_sync_failed]
+other = "同期失敗"
+
+[s3_sync_done]
+other = "同期完了: コピー {copied}、スキップ {skipped}、失敗 {failed}"
+
+[s3_sync_current]
+other = "{mount} にコピー中: {source} → {target}"
+
+[s3_sync_result_line]
+other = "{mount}: コピー {copied}、スキップ {skipped}、失敗 {failed}"
+
+[s3_sync_no_targets]
+other = "利用可能な同期先マウントがありません"
+
+[s3_sync_tree_load_failed]
+other = "ツリーの読み込みに失敗しました"
+
+[s3_sync_expand]
+other = "フォルダーを展開"
+
+[s3_sync_collapse]
+other = "フォルダーを折りたたむ"
+
 [ready]
 other = "準備完了"
 

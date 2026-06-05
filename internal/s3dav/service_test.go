@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"cfui/internal/config"
 
@@ -54,6 +56,55 @@ func newTestService(t *testing.T, client CloudflareClient, fs afero.Fs) *Service
 		func(string) (CloudflareClient, error) { return client, nil },
 		func(context.Context, FSConfig, Credentials) (afero.Fs, error) { return fs, nil },
 	)
+}
+
+func newSyncTestService(t *testing.T, filesystems map[string]afero.Fs) *Service {
+	t.Helper()
+	cfgMgr, err := config.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("NewManager: %v", err)
+	}
+	cfg := cfgMgr.Get()
+	cfg.S3WebDAV = config.S3WebDAVConfig{
+		Enabled:   true,
+		ActiveKey: "source",
+		Mounts: []config.S3WebDAVMountConfig{
+			syncTestMount("source", "Source", "source-bucket", true),
+			syncTestMount("target", "Target", "target-bucket", true),
+		},
+	}
+	if err := cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+	return NewServiceForTest(
+		cfgMgr,
+		func(string) (CloudflareClient, error) { return fakeCloudflareClient{}, nil },
+		func(_ context.Context, cfg FSConfig, _ Credentials) (afero.Fs, error) {
+			fs, ok := filesystems[cfg.BucketName]
+			if !ok {
+				return nil, errors.New("missing test filesystem for " + cfg.BucketName)
+			}
+			return fs, nil
+		},
+	)
+}
+
+func syncTestMount(key, name, bucket string, enabled bool) config.S3WebDAVMountConfig {
+	return config.S3WebDAVMountConfig{
+		Key:               key,
+		Name:              name,
+		Enabled:           enabled,
+		WebDAVEnabled:     true,
+		WebDAVAuthEnabled: false,
+		Provider:          ProviderGenericS3,
+		EndpointURL:       "https://s3.example.com",
+		Region:            "us-east-1",
+		PathStyle:         true,
+		BucketName:        bucket,
+		MountPath:         "/webdav/" + key + "/",
+		AccessKeyID:       "ak-" + key,
+		SecretAccessKey:   "sk-" + key,
+	}
 }
 
 func validMountRequest() MountRequest {
@@ -409,5 +460,340 @@ func TestListFilesUsesSelectedAferoFilesystem(t *testing.T) {
 	}
 	if len(resp.Entries) != 1 || resp.Entries[0].Name != "readme.txt" {
 		t.Fatalf("unexpected entries: %#v", resp.Entries)
+	}
+}
+
+func TestSyncCopiesSingleFileToTargetMount(t *testing.T) {
+	source := afero.NewMemMapFs()
+	target := afero.NewMemMapFs()
+	if err := source.MkdirAll("/docs", 0755); err != nil {
+		t.Fatalf("MkdirAll source: %v", err)
+	}
+	if err := afero.WriteFile(source, "/docs/readme.txt", []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile source: %v", err)
+	}
+	svc := newSyncTestService(t, map[string]afero.Fs{
+		"source-bucket": source,
+		"target-bucket": target,
+	})
+
+	resp, err := svc.Sync(context.Background(), SyncRequest{
+		SourceMountKey:  "source",
+		TargetMountKeys: []string{"target"},
+		SourcePath:      "/docs/readme.txt",
+		DestinationPath: "/backup/readme.txt",
+	})
+	if err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if resp.Copied != 1 || resp.Skipped != 0 || resp.Failed != 0 {
+		t.Fatalf("unexpected sync counts: %#v", resp)
+	}
+	got, err := afero.ReadFile(target, "/backup/readme.txt")
+	if err != nil {
+		t.Fatalf("ReadFile target: %v", err)
+	}
+	if string(got) != "hello" {
+		t.Fatalf("unexpected target content %q", string(got))
+	}
+}
+
+func TestSyncSkipsExistingTargetFileByDefault(t *testing.T) {
+	source := afero.NewMemMapFs()
+	target := afero.NewMemMapFs()
+	if err := source.MkdirAll("/docs", 0755); err != nil {
+		t.Fatalf("MkdirAll source: %v", err)
+	}
+	if err := target.MkdirAll("/backup", 0755); err != nil {
+		t.Fatalf("MkdirAll target: %v", err)
+	}
+	if err := afero.WriteFile(source, "/docs/readme.txt", []byte("new"), 0644); err != nil {
+		t.Fatalf("WriteFile source: %v", err)
+	}
+	if err := afero.WriteFile(target, "/backup/readme.txt", []byte("old"), 0644); err != nil {
+		t.Fatalf("WriteFile target: %v", err)
+	}
+	svc := newSyncTestService(t, map[string]afero.Fs{
+		"source-bucket": source,
+		"target-bucket": target,
+	})
+
+	resp, err := svc.Sync(context.Background(), SyncRequest{
+		SourceMountKey:  "source",
+		TargetMountKeys: []string{"target"},
+		SourcePath:      "/docs/readme.txt",
+		DestinationPath: "/backup/readme.txt",
+	})
+	if err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if resp.Copied != 0 || resp.Skipped != 1 || resp.Failed != 0 {
+		t.Fatalf("unexpected sync counts: %#v", resp)
+	}
+	got, err := afero.ReadFile(target, "/backup/readme.txt")
+	if err != nil {
+		t.Fatalf("ReadFile target: %v", err)
+	}
+	if string(got) != "old" {
+		t.Fatalf("expected target content to be preserved, got %q", string(got))
+	}
+}
+
+func TestSyncOverwritesExistingTargetFileWhenRequested(t *testing.T) {
+	source := afero.NewMemMapFs()
+	target := afero.NewMemMapFs()
+	if err := source.MkdirAll("/docs", 0755); err != nil {
+		t.Fatalf("MkdirAll source: %v", err)
+	}
+	if err := target.MkdirAll("/backup", 0755); err != nil {
+		t.Fatalf("MkdirAll target: %v", err)
+	}
+	if err := afero.WriteFile(source, "/docs/readme.txt", []byte("new"), 0644); err != nil {
+		t.Fatalf("WriteFile source: %v", err)
+	}
+	if err := afero.WriteFile(target, "/backup/readme.txt", []byte("old"), 0644); err != nil {
+		t.Fatalf("WriteFile target: %v", err)
+	}
+	svc := newSyncTestService(t, map[string]afero.Fs{
+		"source-bucket": source,
+		"target-bucket": target,
+	})
+
+	resp, err := svc.Sync(context.Background(), SyncRequest{
+		SourceMountKey:  "source",
+		TargetMountKeys: []string{"target"},
+		SourcePath:      "/docs/readme.txt",
+		DestinationPath: "/backup/readme.txt",
+		Overwrite:       true,
+	})
+	if err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if resp.Copied != 1 || resp.Skipped != 0 || resp.Failed != 0 {
+		t.Fatalf("unexpected sync counts: %#v", resp)
+	}
+	got, err := afero.ReadFile(target, "/backup/readme.txt")
+	if err != nil {
+		t.Fatalf("ReadFile target: %v", err)
+	}
+	if string(got) != "new" {
+		t.Fatalf("expected target content to be overwritten, got %q", string(got))
+	}
+}
+
+func TestSyncRecursivelyCopiesDirectory(t *testing.T) {
+	source := afero.NewMemMapFs()
+	target := afero.NewMemMapFs()
+	if err := source.MkdirAll("/docs/nested", 0755); err != nil {
+		t.Fatalf("MkdirAll source: %v", err)
+	}
+	if err := source.MkdirAll("/docs/empty", 0755); err != nil {
+		t.Fatalf("MkdirAll empty source: %v", err)
+	}
+	if err := afero.WriteFile(source, "/docs/readme.txt", []byte("readme"), 0644); err != nil {
+		t.Fatalf("WriteFile readme: %v", err)
+	}
+	if err := afero.WriteFile(source, "/docs/nested/config.json", []byte("{}"), 0644); err != nil {
+		t.Fatalf("WriteFile nested: %v", err)
+	}
+	svc := newSyncTestService(t, map[string]afero.Fs{
+		"source-bucket": source,
+		"target-bucket": target,
+	})
+
+	resp, err := svc.Sync(context.Background(), SyncRequest{
+		SourceMountKey:  "source",
+		TargetMountKeys: []string{"target"},
+		SourcePath:      "/docs",
+		DestinationPath: "/mirror/docs",
+	})
+	if err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if resp.Copied != 2 || resp.Skipped != 0 || resp.Failed != 0 {
+		t.Fatalf("unexpected sync counts: %#v", resp)
+	}
+	assertFileContent(t, target, "/mirror/docs/readme.txt", "readme")
+	assertFileContent(t, target, "/mirror/docs/nested/config.json", "{}")
+	if info, err := target.Stat("/mirror/docs/empty"); err != nil || !info.IsDir() {
+		t.Fatalf("expected empty directory to be created, info=%#v err=%v", info, err)
+	}
+}
+
+func TestSyncRootCopiesVisibleTree(t *testing.T) {
+	source := afero.NewMemMapFs()
+	target := afero.NewMemMapFs()
+	if err := source.MkdirAll("/nested/deep", 0755); err != nil {
+		t.Fatalf("MkdirAll source: %v", err)
+	}
+	if err := afero.WriteFile(source, "/root.txt", []byte("root"), 0644); err != nil {
+		t.Fatalf("WriteFile root: %v", err)
+	}
+	if err := afero.WriteFile(source, "/nested/deep/db.sql", []byte("sql"), 0644); err != nil {
+		t.Fatalf("WriteFile nested: %v", err)
+	}
+	svc := newSyncTestService(t, map[string]afero.Fs{
+		"source-bucket": source,
+		"target-bucket": target,
+	})
+
+	resp, err := svc.Sync(context.Background(), SyncRequest{
+		SourceMountKey:  "source",
+		TargetMountKeys: []string{"target"},
+		SourcePath:      "/",
+		DestinationPath: "/",
+	})
+	if err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if resp.Copied != 2 || resp.Skipped != 0 || resp.Failed != 0 {
+		t.Fatalf("unexpected sync counts: %#v", resp)
+	}
+	assertFileContent(t, target, "/root.txt", "root")
+	assertFileContent(t, target, "/nested/deep/db.sql", "sql")
+}
+
+func TestSyncRejectsSourceMountAsTarget(t *testing.T) {
+	source := afero.NewMemMapFs()
+	if err := afero.WriteFile(source, "/readme.txt", []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile source: %v", err)
+	}
+	svc := newSyncTestService(t, map[string]afero.Fs{
+		"source-bucket": source,
+		"target-bucket": afero.NewMemMapFs(),
+	})
+
+	_, err := svc.Sync(context.Background(), SyncRequest{
+		SourceMountKey:  "source",
+		TargetMountKeys: []string{"source"},
+		SourcePath:      "/readme.txt",
+		DestinationPath: "/readme.txt",
+	})
+	if err == nil || !strings.Contains(err.Error(), "cannot sync to itself") {
+		t.Fatalf("expected same-mount target to be rejected, got %v", err)
+	}
+}
+
+func TestStartSyncTracksJobProgressAndCompletion(t *testing.T) {
+	source := afero.NewMemMapFs()
+	target := afero.NewMemMapFs()
+	if err := source.MkdirAll("/docs", 0755); err != nil {
+		t.Fatalf("MkdirAll source: %v", err)
+	}
+	if err := afero.WriteFile(source, "/docs/readme.txt", []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile source: %v", err)
+	}
+	svc := newSyncTestService(t, map[string]afero.Fs{
+		"source-bucket": source,
+		"target-bucket": target,
+	})
+
+	started, err := svc.StartSync(context.Background(), SyncRequest{
+		SourceMountKey:  "source",
+		TargetMountKeys: []string{"target"},
+		SourcePath:      "/docs/readme.txt",
+		DestinationPath: "/backup/readme.txt",
+	})
+	if err != nil {
+		t.Fatalf("StartSync: %v", err)
+	}
+	if started.JobID == "" || started.Status != SyncJobRunning {
+		t.Fatalf("unexpected initial job: %#v", started)
+	}
+
+	done := waitForSyncJob(t, svc, started.JobID)
+	if done.Status != SyncJobCompleted || done.Total != 1 || done.Processed != 1 || done.Copied != 1 || done.Skipped != 0 || done.Failed != 0 {
+		t.Fatalf("unexpected completed job: %#v", done)
+	}
+	if done.BytesTotal != 5 || done.BytesCopied != 5 {
+		t.Fatalf("expected byte progress, got %#v", done)
+	}
+	assertFileContent(t, target, "/backup/readme.txt", "hello")
+}
+
+func TestSyncReportsCurrentCopyProgress(t *testing.T) {
+	source := afero.NewMemMapFs()
+	target := afero.NewMemMapFs()
+	if err := source.MkdirAll("/docs", 0755); err != nil {
+		t.Fatalf("MkdirAll source: %v", err)
+	}
+	if err := afero.WriteFile(source, "/docs/readme.txt", []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile source: %v", err)
+	}
+	svc := newSyncTestService(t, map[string]afero.Fs{
+		"source-bucket": source,
+		"target-bucket": target,
+	})
+
+	var updates []syncProgressUpdate
+	resp, err := svc.runSync(context.Background(), SyncRequest{
+		SourceMountKey:  "source",
+		TargetMountKeys: []string{"target"},
+		SourcePath:      "/docs/readme.txt",
+		DestinationPath: "/backup/readme.txt",
+	}, func(update syncProgressUpdate) {
+		updates = append(updates, update)
+	})
+	if err != nil {
+		t.Fatalf("runSync: %v", err)
+	}
+	if resp.Copied != 1 || resp.BytesCopied != 5 || resp.BytesTotal != 5 {
+		t.Fatalf("unexpected sync response: %#v", resp)
+	}
+
+	var sawCurrent bool
+	for _, update := range updates {
+		if update.CurrentMountKey != "target" ||
+			update.CurrentSourcePath != "/docs/readme.txt" ||
+			update.CurrentDestinationPath != "/backup/readme.txt" {
+			continue
+		}
+		if update.CurrentSize != 5 {
+			t.Fatalf("expected current size 5, got %#v", update)
+		}
+		if update.CurrentBytes > 0 {
+			sawCurrent = true
+			break
+		}
+	}
+	if !sawCurrent {
+		t.Fatalf("expected current copy progress update, got %#v", updates)
+	}
+}
+
+func waitForSyncJob(t *testing.T, svc *Service, id string) SyncJobResponse {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		job, err := svc.SyncJob(id)
+		if err != nil {
+			t.Fatalf("SyncJob: %v", err)
+		}
+		if job.Status == SyncJobCompleted || job.Status == SyncJobFailed {
+			return job
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	job, err := svc.SyncJob(id)
+	if err != nil {
+		t.Fatalf("SyncJob after timeout: %v", err)
+	}
+	t.Fatalf("sync job did not finish: %#v", job)
+	return SyncJobResponse{}
+}
+
+func assertFileContent(t *testing.T, fs afero.Fs, name, want string) {
+	t.Helper()
+	file, err := fs.Open(name)
+	if err != nil {
+		t.Fatalf("Open %s: %v", name, err)
+	}
+	defer file.Close()
+	got, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatalf("ReadAll %s: %v", name, err)
+	}
+	if string(got) != want {
+		t.Fatalf("unexpected content for %s: got %q want %q", name, string(got), want)
 	}
 }

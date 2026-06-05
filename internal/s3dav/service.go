@@ -25,6 +25,8 @@ type Service struct {
 	newFS         FSFactory
 	webDAVLocksMu sync.Mutex
 	webDAVLocks   map[string]webdav.LockSystem
+	syncJobsMu    sync.RWMutex
+	syncJobs      map[string]*syncJob
 }
 
 func NewService(cfgMgr *config.Manager) *Service {
@@ -33,6 +35,7 @@ func NewService(cfgMgr *config.Manager) *Service {
 		newClient:   defaultClientFactory,
 		newFS:       newS3FS,
 		webDAVLocks: make(map[string]webdav.LockSystem),
+		syncJobs:    make(map[string]*syncJob),
 	}
 }
 

@@ -1653,6 +1653,75 @@ other = "Deleted"
 [s3_delete_failed]
 other = "Delete failed"
 
+[s3_sync]
+other = "Sync"
+
+[s3_sync_title]
+other = "Sync between S3 mounts"
+
+[s3_sync_subtitle]
+other = "Choose a source object on the left and a target folder on the right. Direction is fixed left to right."
+
+[s3_sync_source]
+other = "Source"
+
+[s3_sync_target]
+other = "Target"
+
+[s3_sync_target_mount]
+other = "Target mount"
+
+[s3_sync_destination]
+other = "Final target path"
+
+[s3_sync_overwrite]
+other = "Overwrite existing files"
+
+[s3_sync_overwrite_warning]
+other = "Overwrite replaces files with the same target path. Extra target files are not deleted."
+
+[s3_sync_overwrite_title]
+other = "Overwrite target files?"
+
+[s3_sync_overwrite_confirm]
+other = "This will replace same-path files on the target. Extra target files will not be deleted."
+
+[s3_sync_start]
+other = "Start sync"
+
+[s3_sync_running]
+other = "Syncing"
+
+[s3_sync_completed]
+other = "Sync complete"
+
+[s3_sync_waiting]
+other = "Waiting to start"
+
+[s3_sync_failed]
+other = "Sync failed"
+
+[s3_sync_done]
+other = "Sync complete: copied {copied}, skipped {skipped}, failed {failed}"
+
+[s3_sync_current]
+other = "Copying to {mount}: {source} → {target}"
+
+[s3_sync_result_line]
+other = "{mount}: copied {copied}, skipped {skipped}, failed {failed}"
+
+[s3_sync_no_targets]
+other = "No available target mounts"
+
+[s3_sync_tree_load_failed]
+other = "Failed to load tree"
+
+[s3_sync_expand]
+other = "Expand folder"
+
+[s3_sync_collapse]
+other = "Collapse folder"
+
 [ready]
 other = "Ready"
 

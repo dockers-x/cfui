@@ -768,6 +768,79 @@
                 </div>
             </section>
 
+            <!-- S3 WebDAV sync dialog -->
+            <div id="s3-sync-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="s3-sync-title" hidden>
+                <div class="modal modal--wide">
+                    <div class="modal-head">
+                        <div>
+                            <h2 id="s3-sync-title" data-i18n="s3_sync_title">Sync between S3 mounts</h2>
+                            <p class="subtitle" data-i18n="s3_sync_subtitle">Choose a source object on the left and a target folder on the right.</p>
+                        </div>
+                        <button type="button" class="icon-btn" data-close-dialog aria-label="Close" title="Close" data-i18n-attr="aria-label|toast_close;title|toast_close">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="modal-body s3-sync">
+                        <div class="s3-sync-direction" aria-live="polite">
+                            <span id="s3-sync-source-label">Source</span>
+                            <span class="s3-sync-direction__arrow" aria-hidden="true">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+                            </span>
+                            <span id="s3-sync-target-label">Target</span>
+                        </div>
+                        <div class="s3-sync-grid">
+                            <section class="s3-sync-pane" aria-labelledby="s3-sync-source-pane-title">
+                                <div class="s3-sync-pane__head">
+                                    <div>
+                                        <div id="s3-sync-source-pane-title" class="s3-mount-label" data-i18n="s3_sync_source">Source</div>
+                                        <div id="s3-sync-source-path" class="s3-sync-path">/</div>
+                                    </div>
+                                </div>
+                                <div id="s3-sync-source-tree" class="s3-sync-tree" role="tree"></div>
+                            </section>
+                            <section class="s3-sync-pane" aria-labelledby="s3-sync-target-pane-title">
+                                <div class="s3-sync-pane__head">
+                                    <div>
+                                        <div id="s3-sync-target-pane-title" class="s3-mount-label" data-i18n="s3_sync_target">Target</div>
+                                        <div id="s3-sync-target-path" class="s3-sync-path">/</div>
+                                    </div>
+                                    <select id="s3-sync-target-mount" class="form-select" aria-label="Target mount" data-i18n-attr="aria-label|s3_sync_target_mount"></select>
+                                </div>
+                                <div id="s3-sync-target-tree" class="s3-sync-tree" role="tree"></div>
+                            </section>
+                        </div>
+                        <div class="s3-sync-options">
+                            <div>
+                                <div class="s3-mount-label" data-i18n="s3_sync_destination">Final target path</div>
+                                <code id="s3-sync-destination" class="s3-sync-destination">/</code>
+                            </div>
+                            <label class="checkbox-row" for="s3-sync-overwrite">
+                                <input type="checkbox" id="s3-sync-overwrite">
+                                <span data-i18n="s3_sync_overwrite">Overwrite existing files</span>
+                            </label>
+                        </div>
+                        <div id="s3-sync-warning" class="notice" data-state="warn" hidden data-i18n="s3_sync_overwrite_warning">Overwrite will replace files with the same target path. Extra target files are not deleted.</div>
+                        <div id="s3-sync-progress" class="s3-sync-progress" hidden>
+                            <div class="s3-sync-progress__head">
+                                <span id="s3-sync-progress-status" data-i18n="s3_sync_waiting">Waiting to start</span>
+                                <span id="s3-sync-progress-count">0 / 0</span>
+                            </div>
+                            <div class="s3-sync-progress__bar" aria-hidden="true"><span id="s3-sync-progress-fill"></span></div>
+                            <div id="s3-sync-progress-current" class="s3-sync-progress__current"></div>
+                            <div id="s3-sync-progress-bytes" class="s3-sync-progress__bytes"></div>
+                            <div id="s3-sync-result-list" class="s3-sync-results"></div>
+                        </div>
+                    </div>
+                    <div class="modal-foot">
+                        <button type="button" class="btn" data-close-dialog data-i18n="cancel">Cancel</button>
+                        <button id="s3-sync-start" type="button" class="btn btn--primary">
+                            <span class="spinner" aria-hidden="true"></span>
+                            <span class="text" data-i18n="s3_sync_start">Start sync</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- S3 WebDAV setup wizard -->
             <div id="s3-wizard-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="s3-wizard-title" hidden>
                 <div class="modal modal--wide">
