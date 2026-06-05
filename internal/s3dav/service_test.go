@@ -711,6 +711,81 @@ func TestStartSyncTracksJobProgressAndCompletion(t *testing.T) {
 	assertFileContent(t, target, "/backup/readme.txt", "hello")
 }
 
+func TestSyncJobListAndControl(t *testing.T) {
+	svc := newSyncTestService(t, map[string]afero.Fs{
+		"source-bucket": afero.NewMemMapFs(),
+		"target-bucket": afero.NewMemMapFs(),
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	job := newSyncJob(SyncJobResponse{
+		JobID:           "sync-test",
+		Status:          SyncJobRunning,
+		SourceMountKey:  "source",
+		TargetMountKeys: []string{"target"},
+		SourcePath:      "/docs",
+		DestinationPath: "/backup",
+		StartedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}, ctx, cancel)
+	svc.syncJobsMu.Lock()
+	svc.syncJobs[job.resp.JobID] = job
+	svc.syncJobsMu.Unlock()
+
+	list := svc.SyncJobs()
+	if len(list.Jobs) != 1 || list.Jobs[0].JobID != "sync-test" {
+		t.Fatalf("expected sync job in list, got %#v", list)
+	}
+	paused, err := svc.ControlSyncJob("sync-test", "pause")
+	if err != nil {
+		t.Fatalf("pause sync job: %v", err)
+	}
+	if paused.Status != SyncJobPaused {
+		t.Fatalf("expected paused job, got %#v", paused)
+	}
+	resumed, err := svc.ControlSyncJob("sync-test", "resume")
+	if err != nil {
+		t.Fatalf("resume sync job: %v", err)
+	}
+	if resumed.Status != SyncJobRunning {
+		t.Fatalf("expected running job, got %#v", resumed)
+	}
+	canceled, err := svc.ControlSyncJob("sync-test", "cancel")
+	if err != nil {
+		t.Fatalf("cancel sync job: %v", err)
+	}
+	if canceled.Status != SyncJobCanceled || canceled.FinishedAt == nil {
+		t.Fatalf("expected canceled job with finish time, got %#v", canceled)
+	}
+	if ctx.Err() == nil {
+		t.Fatalf("expected sync job context to be canceled")
+	}
+
+	pausedCtx, pausedCancel := context.WithCancel(context.Background())
+	pausedJob := newSyncJob(SyncJobResponse{
+		JobID:           "sync-paused",
+		Status:          SyncJobRunning,
+		SourceMountKey:  "source",
+		TargetMountKeys: []string{"target"},
+		SourcePath:      "/docs",
+		DestinationPath: "/backup",
+		StartedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}, pausedCtx, pausedCancel)
+	svc.syncJobsMu.Lock()
+	svc.syncJobs[pausedJob.resp.JobID] = pausedJob
+	svc.syncJobsMu.Unlock()
+	if _, err := svc.ControlSyncJob("sync-paused", "pause"); err != nil {
+		t.Fatalf("pause second sync job: %v", err)
+	}
+	canceledPaused, err := svc.ControlSyncJob("sync-paused", "cancel")
+	if err != nil {
+		t.Fatalf("cancel paused sync job: %v", err)
+	}
+	if canceledPaused.Status != SyncJobCanceled || pausedCtx.Err() == nil {
+		t.Fatalf("expected paused job to cancel, got %#v", canceledPaused)
+	}
+}
+
 func TestSyncReportsCurrentCopyProgress(t *testing.T) {
 	source := afero.NewMemMapFs()
 	target := afero.NewMemMapFs()
@@ -733,7 +808,7 @@ func TestSyncReportsCurrentCopyProgress(t *testing.T) {
 		DestinationPath: "/backup/readme.txt",
 	}, func(update syncProgressUpdate) {
 		updates = append(updates, update)
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("runSync: %v", err)
 	}

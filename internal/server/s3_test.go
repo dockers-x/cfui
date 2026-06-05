@@ -301,6 +301,35 @@ func TestS3SyncEndpointStartsJobAndReportsCompletion(t *testing.T) {
 	if string(got) != "hello" {
 		t.Fatalf("unexpected synced content %q", string(got))
 	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/api/s3/files/sync", nil)
+	listRec := httptest.NewRecorder()
+	s.handleS3Sync(listRec, listReq)
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("sync list status %d: %s", listRec.Code, listRec.Body.String())
+	}
+	var list s3dav.SyncJobsResponse
+	if err := json.NewDecoder(listRec.Body).Decode(&list); err != nil {
+		t.Fatalf("decode sync job list: %v", err)
+	}
+	if len(list.Jobs) != 1 || list.Jobs[0].JobID != started.JobID {
+		t.Fatalf("expected completed job in list, got %#v", list)
+	}
+
+	actionReq := httptest.NewRequest(http.MethodPost, "/api/s3/files/sync/"+started.JobID, strings.NewReader(`{"action":"cancel"}`))
+	actionReq.Header.Set("Content-Type", "application/json")
+	actionRec := httptest.NewRecorder()
+	s.handleS3SyncJob(actionRec, actionReq)
+	if actionRec.Code != http.StatusOK {
+		t.Fatalf("sync action status %d: %s", actionRec.Code, actionRec.Body.String())
+	}
+	var actionResp s3dav.SyncJobResponse
+	if err := json.NewDecoder(actionRec.Body).Decode(&actionResp); err != nil {
+		t.Fatalf("decode sync action response: %v", err)
+	}
+	if actionResp.Status != s3dav.SyncJobCompleted {
+		t.Fatalf("expected completed job to remain terminal after action, got %#v", actionResp)
+	}
 }
 
 func waitForServerSyncJob(t *testing.T, s *Server, id string) s3dav.SyncJobResponse {
@@ -317,7 +346,7 @@ func waitForServerSyncJob(t *testing.T, s *Server, id string) s3dav.SyncJobRespo
 		if err := json.NewDecoder(rec.Body).Decode(&job); err != nil {
 			t.Fatalf("decode job: %v", err)
 		}
-		if job.Status == s3dav.SyncJobCompleted || job.Status == s3dav.SyncJobFailed {
+		if job.Status == s3dav.SyncJobCompleted || job.Status == s3dav.SyncJobFailed || job.Status == s3dav.SyncJobCanceled {
 			return job
 		}
 		time.Sleep(10 * time.Millisecond)

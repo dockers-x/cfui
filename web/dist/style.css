@@ -1000,6 +1000,13 @@ select.form-select {
     .btn--sm {
         min-height: var(--tap);
     }
+
+    .s3-file-toolbar .icon-btn {
+        width: var(--tap);
+        min-width: var(--tap);
+        height: var(--tap);
+        min-height: var(--tap);
+    }
 }
 
 .btn--block {
@@ -1959,7 +1966,7 @@ details.disclosure > .body {
 
 .s3-file-toolbar {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--gap-3);
 }
@@ -1968,9 +1975,101 @@ details.disclosure > .body {
     min-width: 0;
 }
 
+.s3-file-toolbar .btn-row {
+    align-items: center;
+}
+
+.s3-file-toolbar .icon-btn {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+}
+
+.s3-sync-task-slot {
+    display: inline-flex;
+    align-items: center;
+}
+
+.s3-sync-task-btn {
+    position: relative;
+    color: var(--state-info);
+}
+
+.s3-sync-task-badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    display: inline-grid;
+    place-items: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--cf-orange);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 0 0 2px var(--surface-2);
+}
+
 .s3-file-manager {
     display: grid;
     gap: var(--gap-3);
+}
+
+.s3-upload-progress {
+    display: grid;
+    gap: var(--gap-2);
+    padding: 10px var(--gap-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-control);
+    background: var(--surface-2);
+}
+
+.s3-upload-progress[hidden] {
+    display: none;
+}
+
+.s3-upload-progress__head {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--gap-3);
+    color: var(--text);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+}
+
+.s3-upload-progress__head span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.s3-upload-progress__bar {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--state-neutral-soft);
+}
+
+.s3-upload-progress__bar span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--state-info);
+    transition: width 0.18s var(--ease-out);
+}
+
+.s3-upload-progress__bytes {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
 }
 
 .s3-breadcrumb {
@@ -2209,14 +2308,22 @@ details.disclosure > .body {
 .s3-sync-tree__children {
     display: grid;
     gap: 2px;
+    min-width: max-content;
 }
 
 .s3-sync-tree-row {
     display: grid;
-    grid-template-columns: 30px minmax(0, 1fr);
+    grid-template-columns: calc(var(--sync-depth, 0) * 16px) 30px max-content;
     align-items: center;
     min-height: 36px;
+    width: max-content;
+    min-width: 100%;
     border-radius: 7px;
+}
+
+.s3-sync-tree-indent {
+    width: calc(var(--sync-depth, 0) * 16px);
+    height: 1px;
 }
 
 .s3-sync-tree-row[data-selected="true"] {
@@ -2259,13 +2366,13 @@ details.disclosure > .body {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    min-width: 0;
     min-height: 34px;
     padding: 0 8px;
     border-radius: 6px;
     cursor: pointer;
     text-align: left;
     font: inherit;
+    white-space: nowrap;
 }
 
 .s3-sync-tree-name:hover,
@@ -2274,13 +2381,22 @@ details.disclosure > .body {
 }
 
 .s3-sync-tree-name span {
-    min-width: 0;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow-wrap: normal;
 }
 
 .s3-sync-tree-name svg {
     flex: 0 0 auto;
     color: var(--text-muted);
+}
+
+.s3-sync-tree-message {
+    min-width: max-content;
+    padding: 7px 8px 7px calc((var(--sync-depth, 0) * 16px) + 30px);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    line-height: 1.45;
+    white-space: nowrap;
 }
 
 .s3-sync-options {
@@ -2356,6 +2472,151 @@ details.disclosure > .body {
 
 .s3-sync-results [data-state="error"] {
     color: var(--state-error);
+}
+
+.s3-sync-jobs {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.38fr) minmax(0, 1fr);
+    gap: var(--gap-3);
+    min-height: min(520px, 62dvh);
+}
+
+.s3-sync-jobs-list,
+.s3-sync-job-detail-shell {
+    min-height: 360px;
+    max-height: 62dvh;
+    overflow: auto;
+}
+
+.s3-sync-jobs-list {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding-right: 2px;
+}
+
+.s3-sync-job-item {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-control);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.s3-sync-job-item:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-2);
+}
+
+.s3-sync-job-item:focus-visible {
+    outline: none;
+    border-color: var(--cf-orange);
+    box-shadow: var(--focus-ring);
+}
+
+.s3-sync-job-item[data-selected="true"] {
+    border-color: var(--cf-orange);
+    background: var(--state-info-soft);
+}
+
+.s3-sync-job-item__head,
+.s3-sync-job-detail__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--gap-2);
+}
+
+.s3-sync-job-item__head strong,
+.s3-sync-job-detail__head h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: var(--fs-sm);
+    font-weight: 650;
+    line-height: 1.3;
+}
+
+.s3-sync-job-path,
+.s3-sync-job-meta,
+.s3-sync-job-detail__head p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.s3-sync-job-meta {
+    font-variant-numeric: tabular-nums;
+}
+
+.s3-sync-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--state-neutral-soft);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.s3-sync-status[data-state="ok"] {
+    background: var(--state-ok-soft);
+    color: var(--state-ok);
+}
+
+.s3-sync-status[data-state="warn"] {
+    background: var(--state-warn-soft);
+    color: var(--state-warn);
+}
+
+.s3-sync-status[data-state="error"] {
+    background: var(--state-error-soft);
+    color: var(--state-error);
+}
+
+.s3-sync-status[data-state="info"] {
+    background: var(--state-info-soft);
+    color: var(--state-info);
+}
+
+.s3-sync-job-detail {
+    display: grid;
+    gap: var(--gap-3);
+    padding: var(--gap-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-control);
+    background: var(--surface);
+}
+
+.s3-sync-job-detail__head {
+    padding-bottom: var(--gap-2);
+    border-bottom: 1px solid var(--border);
+}
+
+.s3-sync-job-actions {
+    justify-content: flex-end;
+}
+
+.s3-sync-jobs-empty {
+    display: grid;
+    place-items: center;
+    min-height: 160px;
+    padding: var(--gap-4);
+    border: 1px dashed var(--border);
+    border-radius: var(--r-control);
+    color: var(--text-muted);
+    text-align: center;
 }
 
 @media (max-width: 860px) {
@@ -2506,8 +2767,15 @@ details.disclosure > .body {
 
     .s3-sync-grid,
     .s3-sync-options,
-    .s3-sync-direction {
+    .s3-sync-direction,
+    .s3-sync-jobs {
         grid-template-columns: 1fr;
+    }
+
+    .s3-sync-jobs-list,
+    .s3-sync-job-detail-shell {
+        min-height: 0;
+        max-height: none;
     }
 
     .s3-sync-direction__arrow {

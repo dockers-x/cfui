@@ -550,7 +550,12 @@ func (s *Server) handleS3Rename(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleS3Sync(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, s.s3Svc.SyncJobs())
+		return
+	case http.MethodPost:
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -568,21 +573,35 @@ func (s *Server) handleS3Sync(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleS3SyncJob(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	id := strings.TrimPrefix(r.URL.Path, "/api/s3/files/sync/")
 	if strings.TrimSpace(id) == "" || id == r.URL.Path {
 		writeAPIError(w, http.StatusBadRequest, fmt.Errorf("sync job id is required"))
 		return
 	}
-	resp, err := s.s3Svc.SyncJob(id)
-	if err != nil {
-		writeS3Error(w, err)
+	switch r.Method {
+	case http.MethodGet:
+		resp, err := s.s3Svc.SyncJob(id)
+		if err != nil {
+			writeS3Error(w, err)
+			return
+		}
+		writeJSON(w, resp)
+	case http.MethodPost:
+		var req s3dav.SyncJobActionRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		resp, err := s.s3Svc.ControlSyncJob(id, req.Action)
+		if err != nil {
+			writeS3Error(w, err)
+			return
+		}
+		writeJSON(w, resp)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	writeJSON(w, resp)
 }
 
 func s3ObjectPath(requestPath string) (string, error) {

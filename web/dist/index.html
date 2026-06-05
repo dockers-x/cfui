@@ -820,16 +820,6 @@
                             </label>
                         </div>
                         <div id="s3-sync-warning" class="notice" data-state="warn" hidden data-i18n="s3_sync_overwrite_warning">Overwrite will replace files with the same target path. Extra target files are not deleted.</div>
-                        <div id="s3-sync-progress" class="s3-sync-progress" hidden>
-                            <div class="s3-sync-progress__head">
-                                <span id="s3-sync-progress-status" data-i18n="s3_sync_waiting">Waiting to start</span>
-                                <span id="s3-sync-progress-count">0 / 0</span>
-                            </div>
-                            <div class="s3-sync-progress__bar" aria-hidden="true"><span id="s3-sync-progress-fill"></span></div>
-                            <div id="s3-sync-progress-current" class="s3-sync-progress__current"></div>
-                            <div id="s3-sync-progress-bytes" class="s3-sync-progress__bytes"></div>
-                            <div id="s3-sync-result-list" class="s3-sync-results"></div>
-                        </div>
                     </div>
                     <div class="modal-foot">
                         <button type="button" class="btn" data-close-dialog data-i18n="cancel">Cancel</button>
@@ -837,6 +827,30 @@
                             <span class="spinner" aria-hidden="true"></span>
                             <span class="text" data-i18n="s3_sync_start">Start sync</span>
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- S3 WebDAV sync jobs dialog -->
+            <div id="s3-sync-jobs-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="s3-sync-jobs-title" hidden>
+                <div class="modal modal--wide">
+                    <div class="modal-head">
+                        <div>
+                            <h2 id="s3-sync-jobs-title" data-i18n="s3_sync_jobs_title">Sync tasks</h2>
+                            <p class="subtitle" data-i18n="s3_sync_jobs_subtitle">Track background sync progress and control active tasks.</p>
+                        </div>
+                        <button type="button" class="icon-btn" data-close-dialog aria-label="Close" title="Close" data-i18n-attr="aria-label|toast_close;title|toast_close">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="s3-sync-jobs">
+                            <div id="s3-sync-jobs-list" class="s3-sync-jobs-list" aria-label="Sync tasks" data-i18n-attr="aria-label|s3_sync_jobs_title"></div>
+                            <div id="s3-sync-job-detail" class="s3-sync-job-detail-shell"></div>
+                        </div>
+                    </div>
+                    <div class="modal-foot">
+                        <button type="button" class="btn" data-close-dialog data-i18n="close">Close</button>
                     </div>
                 </div>
             </div>

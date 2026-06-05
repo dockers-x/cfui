@@ -972,6 +972,9 @@ other = "WebDAV endpoint をコピー"
 [cancel]
 other = "キャンセル"
 
+[close]
+other = "閉じる"
+
 [status_offline]
 other = "接続切断"
 
@@ -1623,6 +1626,18 @@ other = "アップロード完了"
 [s3_upload_failed]
 other = "アップロード失敗"
 
+[s3_uploading_file]
+other = "{name} をアップロード中"
+
+[s3_upload_in_progress]
+other = "すでにファイルをアップロード中です"
+
+[s3_upload_aborted]
+other = "アップロードをキャンセルしました"
+
+[s3_upload_network_error]
+other = "ネットワークエラー"
+
 [s3_new_folder_prompt]
 other = "フォルダー名"
 
@@ -1721,6 +1736,57 @@ other = "フォルダーを展開"
 
 [s3_sync_collapse]
 other = "フォルダーを折りたたむ"
+
+[s3_sync_started]
+other = "同期タスクを開始しました"
+
+[s3_sync_jobs_title]
+other = "同期タスク"
+
+[s3_sync_jobs_subtitle]
+other = "バックグラウンド同期の進捗を確認し、実行中のタスクを操作します。"
+
+[s3_sync_jobs_count]
+other = "{count} 件の同期タスク"
+
+[s3_sync_jobs_load_failed]
+other = "同期タスクの読み込みに失敗しました"
+
+[s3_sync_no_jobs]
+other = "同期タスクはありません"
+
+[s3_sync_no_jobs_detail]
+other = "ファイル領域から同期を開始すると、進捗がここに表示されます。"
+
+[s3_sync_pause]
+other = "一時停止"
+
+[s3_sync_resume]
+other = "再開"
+
+[s3_sync_cancel]
+other = "タスクをキャンセル"
+
+[s3_sync_pausing]
+other = "一時停止中"
+
+[s3_sync_resuming]
+other = "再開中"
+
+[s3_sync_canceling]
+other = "キャンセル中"
+
+[s3_sync_paused]
+other = "一時停止中"
+
+[s3_sync_canceled]
+other = "キャンセル済み"
+
+[s3_sync_current_idle]
+other = "現在コピー中のオブジェクトはありません"
+
+[s3_sync_job_action_failed]
+other = "同期タスク操作に失敗しました"
 
 [ready]
 other = "準備完了"

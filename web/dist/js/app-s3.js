@@ -3,7 +3,7 @@
    ========================================================================= */
 (() => {
     'use strict';
-    const { state, $, t, API_BASE, apiGet, apiSend, toast, setBusy, sleep } = window.cfui;
+    const { state, $, t, API_BASE, apiGet, apiSend, toast, setBusy } = window.cfui;
 
     const PROVIDER_R2 = 'cloudflare_r2';
     const DEFAULT_MOUNT = '/webdav/s3/';
@@ -39,6 +39,7 @@
             state.s3.settings = data;
             state.s3.activeKey = data.active_key || data.mounts?.[0]?.key || 'default';
             renderS3Settings(data);
+            fetchS3SyncJobs({ silent: true });
             const mount = activeMount();
             if (canBrowseFiles(data, mount)) await loadS3Files(state.s3.path || '/');
         } catch (err) {
@@ -459,11 +460,15 @@
         upload.innerHTML = uploadIcon() + `<span>${escapeHTML(t('upload'))}</span>`;
         const sync = iconTextButton(t('s3_sync'), syncIcon(), 'btn--sm');
         sync.addEventListener('click', () => openS3Sync({ path: state.s3.path || '/', is_dir: true, name: pathName(state.s3.path || '/') || '/' }));
+        const taskSlot = document.createElement('span');
+        taskSlot.id = 's3-sync-task-slot';
+        taskSlot.className = 's3-sync-task-slot';
+        renderS3SyncTaskSlot(taskSlot);
         const folder = iconTextButton(t('s3_new_folder'), plusIcon(), 'btn--sm btn--primary');
         folder.addEventListener('click', createS3Folder);
         const refresh = iconButton('refresh', refreshIcon());
         refresh.addEventListener('click', () => loadS3Files(state.s3.path || '/'));
-        tools.append(upload, sync, folder, refresh);
+        tools.append(upload, sync, taskSlot, folder, refresh);
         toolbar.append(title);
         if (ready) toolbar.appendChild(tools);
         wrap.appendChild(toolbar);
@@ -479,6 +484,12 @@
             wrap.appendChild(disabled);
             return wrap;
         }
+
+        const uploadProgress = document.createElement('div');
+        uploadProgress.id = 's3-upload-progress';
+        uploadProgress.className = 's3-upload-progress';
+        uploadProgress.hidden = !state.s3.upload;
+        wrap.appendChild(uploadProgress);
 
         const manager = document.createElement('div');
         manager.className = 's3-file-manager';
@@ -502,6 +513,7 @@
             </table>`;
         manager.append(crumb, tableWrap);
         wrap.appendChild(manager);
+        renderS3UploadProgress(uploadProgress);
         return wrap;
     }
 
@@ -1071,15 +1083,99 @@
     async function uploadS3File(file) {
         const mount = activeMount();
         if (!mount || !file) return;
+        if (state.s3.upload) {
+            toast.warn(t('s3_upload_in_progress'));
+            return;
+        }
         const target = joinPath(state.s3.path || '/', file.name);
+        state.s3.upload = {
+            name: file.name,
+            loaded: 0,
+            total: file.size || 0,
+            percent: 0,
+        };
+        renderS3UploadProgress();
         try {
-            const res = await fetch(`${API_BASE}/s3/files/${encodeObjectPath(target)}?mount_key=${encodeURIComponent(mount.key)}`, { method: 'PUT', body: file });
-            if (!res.ok) throw new Error(await responseError(res));
+            await uploadS3FileWithProgress(`${API_BASE}/s3/files/${encodeObjectPath(target)}?mount_key=${encodeURIComponent(mount.key)}`, file);
             toast.ok(t('s3_upload_done'));
             await loadS3Files(state.s3.path);
         } catch (err) {
             toast.err(t('s3_upload_failed') + ': ' + err.message);
+        } finally {
+            state.s3.upload = null;
+            renderS3UploadProgress();
         }
+    }
+
+    function uploadS3FileWithProgress(url, file) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', url);
+            xhr.upload.onprogress = (event) => {
+                const total = event.lengthComputable ? event.total : file.size || 0;
+                const loaded = event.loaded || 0;
+                state.s3.upload = {
+                    name: file.name,
+                    loaded,
+                    total,
+                    percent: total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0,
+                };
+                renderS3UploadProgress();
+            };
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    state.s3.upload = {
+                        name: file.name,
+                        loaded: file.size || state.s3.upload?.loaded || 0,
+                        total: file.size || state.s3.upload?.total || 0,
+                        percent: 100,
+                    };
+                    renderS3UploadProgress();
+                    resolve();
+                    return;
+                }
+                reject(new Error(xhrResponseError(xhr)));
+            };
+            xhr.onerror = () => reject(new Error(t('s3_upload_network_error')));
+            xhr.onabort = () => reject(new Error(t('s3_upload_aborted')));
+            xhr.send(file);
+        });
+    }
+
+    function xhrResponseError(xhr) {
+        try {
+            const data = JSON.parse(xhr.responseText || '{}');
+            if (data.error) return data.error;
+        } catch {}
+        return xhr.statusText || `HTTP ${xhr.status}`;
+    }
+
+    function renderS3UploadProgress(panel = $('s3-upload-progress')) {
+        if (!panel) return;
+        const upload = state.s3.upload;
+        panel.hidden = !upload;
+        panel.innerHTML = '';
+        const input = $('s3-upload-input');
+        if (input) input.disabled = !!upload;
+        if (!upload) return;
+        const percent = Number(upload.percent || 0);
+        const head = document.createElement('div');
+        head.className = 's3-upload-progress__head';
+        const name = document.createElement('span');
+        name.textContent = t('s3_uploading_file', { name: upload.name || '' });
+        const count = document.createElement('span');
+        count.textContent = `${percent}%`;
+        head.append(name, count);
+        const bar = document.createElement('div');
+        bar.className = 's3-upload-progress__bar';
+        bar.setAttribute('aria-hidden', 'true');
+        const fill = document.createElement('span');
+        fill.style.width = `${percent}%`;
+        bar.appendChild(fill);
+        const bytes = document.createElement('div');
+        bytes.className = 's3-upload-progress__bytes';
+        bytes.textContent = `${formatBytes(upload.loaded || 0)} / ${formatBytes(upload.total || 0)}`;
+        panel.append(head, bar, bytes);
     }
 
     async function createS3Folder() {
@@ -1122,6 +1218,33 @@
         }
     }
 
+    function ensureS3SyncRuntime() {
+        if (!Array.isArray(state.s3.syncJobs)) state.s3.syncJobs = [];
+        if (!(state.s3.syncJobNotified instanceof Set)) state.s3.syncJobNotified = new Set();
+    }
+
+    function renderS3SyncTaskSlot(slot = $('s3-sync-task-slot')) {
+        ensureS3SyncRuntime();
+        if (!slot) return;
+        slot.innerHTML = '';
+        const count = state.s3.syncJobs.length;
+        if (count <= 0) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 's3-sync-task-button';
+        btn.className = 'icon-btn s3-sync-task-btn';
+        const label = t('s3_sync_jobs_count', { count });
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('title', label);
+        btn.innerHTML = `<span class="s3-sync-task-btn__icon" aria-hidden="true">${syncIcon()}</span><span class="s3-sync-task-badge">${escapeHTML(syncTaskBadge(count))}</span>`;
+        btn.addEventListener('click', openS3SyncJobs);
+        slot.appendChild(btn);
+    }
+
+    function syncTaskBadge(count) {
+        return count > 99 ? '99+' : String(count);
+    }
+
     async function openS3Sync(entry) {
         const sourceMount = activeMount();
         if (!sourceMount || !canBrowseFiles(state.s3.settings, sourceMount)) {
@@ -1139,7 +1262,6 @@
             targetDir: '/',
             overwrite: false,
             running: false,
-            job: null,
             source: syncTreeState(),
             target: syncTreeState(),
         };
@@ -1156,6 +1278,16 @@
             toast.err(t('s3_sync_tree_load_failed') + ': ' + err.message);
         }
         renderS3SyncDialog();
+    }
+
+    async function openS3SyncJobs() {
+        ensureS3SyncRuntime();
+        if (!state.s3.selectedSyncJobID && state.s3.syncJobs.length) {
+            state.s3.selectedSyncJobID = state.s3.syncJobs[0].job_id;
+        }
+        renderS3SyncJobsDialog();
+        window.cfui.openDialog?.($('s3-sync-jobs-dialog'));
+        await fetchS3SyncJobs({ silent: false });
     }
 
     function syncTreeState() {
@@ -1212,7 +1344,6 @@
         renderS3SyncTree('source');
         renderS3SyncTree('target');
         renderS3SyncDestination();
-        renderS3SyncProgress(sync.job);
         const start = $('s3-sync-start');
         if (start) {
             start.disabled = sync.running || !sync.targetMountKey || !sync.sourcePath || !sync.targetDir;
@@ -1276,10 +1407,14 @@
         row.className = 's3-sync-tree-row';
         row.dataset.selected = String(selected);
         row.dataset.disabled = String(disabled);
-        row.style.paddingLeft = `${Math.min(depth * 16, 96)}px`;
+        row.style.setProperty('--sync-depth', String(Math.min(depth, 12)));
         row.setAttribute('role', 'treeitem');
         row.setAttribute('aria-selected', String(selected));
         if (isDir) row.setAttribute('aria-expanded', String(expanded));
+
+        const indent = document.createElement('span');
+        indent.className = 's3-sync-tree-indent';
+        indent.setAttribute('aria-hidden', 'true');
 
         const toggle = document.createElement('button');
         toggle.type = 'button';
@@ -1312,7 +1447,7 @@
             }
             renderS3SyncDialog();
         });
-        row.append(toggle, name);
+        row.append(indent, toggle, name);
         wrap.appendChild(row);
 
         if (isDir && expanded) {
@@ -1335,8 +1470,8 @@
 
     function syncTreeMessage(text, depth) {
         const msg = document.createElement('div');
-        msg.className = 's3-sync-progress__current';
-        msg.style.paddingLeft = `${Math.min(depth * 16 + 30, 126)}px`;
+        msg.className = 's3-sync-tree-message';
+        msg.style.setProperty('--sync-depth', String(Math.min(depth, 12)));
         msg.textContent = text;
         return msg;
     }
@@ -1389,9 +1524,12 @@
                 destination_path: syncDestinationPath(sync),
                 overwrite,
             });
-            sync.job = job;
-            renderS3SyncDialog();
-            await pollS3SyncJob(job.job_id);
+            upsertS3SyncJob(job);
+            state.s3.selectedSyncJobID = job.job_id;
+            renderS3SyncTaskSlot();
+            startS3SyncPolling();
+            window.cfui.closeDialog?.($('s3-sync-dialog'));
+            toast.ok(t('s3_sync_started'));
         } catch (err) {
             toast.err(t('s3_sync_failed') + ': ' + err.message);
         } finally {
@@ -1403,79 +1541,288 @@
         }
     }
 
-    async function pollS3SyncJob(jobID) {
-        const sync = state.s3.sync;
-        if (!sync || !jobID) return;
-        for (;;) {
-            await sleep(700);
-            if (!state.s3.sync || state.s3.sync.job?.job_id !== jobID) return;
-            const job = await apiGet('/s3/files/sync/' + encodeURIComponent(jobID));
-            state.s3.sync.job = job;
-            renderS3SyncDialog();
-            if (job.status === 'completed') {
-                const message = t('s3_sync_done', { copied: job.copied, skipped: job.skipped, failed: job.failed });
-                if (job.failed > 0) toast.warn(message);
-                else toast.ok(message);
-                await loadS3Files(state.s3.path || '/');
-                return;
+    async function fetchS3SyncJobs({ silent = false, schedule = true } = {}) {
+        ensureS3SyncRuntime();
+        const previous = new Map(state.s3.syncJobs.map((job) => [job.job_id, job]));
+        try {
+            const data = await apiGet('/s3/files/sync');
+            state.s3.syncJobs = sortSyncJobs(data.jobs || []);
+            for (const job of state.s3.syncJobs) {
+                const old = previous.get(job.job_id);
+                if (old && isActiveSyncStatus(old.status) && isTerminalSyncStatus(job.status)) {
+                    notifySyncJobFinished(job);
+                }
             }
-            if (job.status === 'failed') {
-                toast.err(t('s3_sync_failed') + ': ' + (job.error || t('s3_sync_failed')));
-                return;
+            if (state.s3.selectedSyncJobID && !state.s3.syncJobs.some((job) => job.job_id === state.s3.selectedSyncJobID)) {
+                state.s3.selectedSyncJobID = '';
             }
+            if (!state.s3.selectedSyncJobID && state.s3.syncJobs.length) {
+                state.s3.selectedSyncJobID = state.s3.syncJobs[0].job_id;
+            }
+            renderS3SyncTaskSlot();
+            renderS3SyncJobsDialog();
+            if (schedule && hasActiveSyncJobs()) startS3SyncPolling();
+        } catch (err) {
+            if (!silent) toast.err(t('s3_sync_jobs_load_failed') + ': ' + err.message);
         }
     }
 
-    function renderS3SyncProgress(job) {
-        const panel = $('s3-sync-progress');
-        if (!panel) return;
-        panel.hidden = !job;
-        if (!job) return;
+    function upsertS3SyncJob(job) {
+        if (!job?.job_id) return;
+        ensureS3SyncRuntime();
+        const jobs = state.s3.syncJobs.filter((item) => item.job_id !== job.job_id);
+        jobs.push(job);
+        state.s3.syncJobs = sortSyncJobs(jobs);
+    }
+
+    function sortSyncJobs(jobs) {
+        return jobs.slice().sort((a, b) => syncJobTime(b.started_at) - syncJobTime(a.started_at));
+    }
+
+    function syncJobTime(value) {
+        const ts = new Date(value || 0).getTime();
+        return Number.isFinite(ts) ? ts : 0;
+    }
+
+    function startS3SyncPolling() {
+        ensureS3SyncRuntime();
+        if (state.s3.syncJobPollTimer) return;
+        state.s3.syncJobPolling = true;
+        const tick = async () => {
+            state.s3.syncJobPollTimer = null;
+            if (!state.s3.syncJobPolling) return;
+            await fetchS3SyncJobs({ silent: true, schedule: false });
+            if (hasActiveSyncJobs()) {
+                state.s3.syncJobPollTimer = window.setTimeout(tick, 900);
+            } else {
+                state.s3.syncJobPolling = false;
+            }
+        };
+        state.s3.syncJobPollTimer = window.setTimeout(tick, 900);
+    }
+
+    function hasActiveSyncJobs() {
+        ensureS3SyncRuntime();
+        return state.s3.syncJobs.some((job) => isActiveSyncStatus(job.status));
+    }
+
+    function isActiveSyncStatus(status) {
+        return status === 'running' || status === 'paused';
+    }
+
+    function isTerminalSyncStatus(status) {
+        return status === 'completed' || status === 'failed' || status === 'canceled';
+    }
+
+    function notifySyncJobFinished(job) {
+        if (!job?.job_id || state.s3.syncJobNotified.has(job.job_id)) return;
+        state.s3.syncJobNotified.add(job.job_id);
+        if (job.status === 'completed') {
+            const message = t('s3_sync_done', { copied: job.copied, skipped: job.skipped, failed: job.failed });
+            if (job.failed > 0) toast.warn(message);
+            else toast.ok(message);
+            loadS3Files(state.s3.path || '/');
+            return;
+        }
+        if (job.status === 'failed') {
+            toast.err(t('s3_sync_failed') + ': ' + (job.error || t('s3_sync_failed')));
+            return;
+        }
+        if (job.status === 'canceled') toast.info(t('s3_sync_canceled'));
+    }
+
+    function renderS3SyncJobsDialog() {
+        const list = $('s3-sync-jobs-list');
+        const detail = $('s3-sync-job-detail');
+        if (!list || !detail) return;
+        ensureS3SyncRuntime();
+        list.innerHTML = '';
+        detail.innerHTML = '';
+        if (!state.s3.syncJobs.length) {
+            const empty = document.createElement('div');
+            empty.className = 's3-sync-jobs-empty';
+            empty.textContent = t('s3_sync_no_jobs');
+            list.appendChild(empty);
+            const detailEmpty = document.createElement('div');
+            detailEmpty.className = 's3-sync-jobs-empty';
+            detailEmpty.textContent = t('s3_sync_no_jobs_detail');
+            detail.appendChild(detailEmpty);
+            return;
+        }
+        if (!state.s3.selectedSyncJobID || !state.s3.syncJobs.some((job) => job.job_id === state.s3.selectedSyncJobID)) {
+            state.s3.selectedSyncJobID = state.s3.syncJobs[0].job_id;
+        }
+        for (const job of state.s3.syncJobs) {
+            list.appendChild(syncJobListItem(job));
+        }
+        const selected = state.s3.syncJobs.find((job) => job.job_id === state.s3.selectedSyncJobID) || state.s3.syncJobs[0];
+        detail.appendChild(syncJobDetailNode(selected));
+    }
+
+    function syncJobListItem(job) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 's3-sync-job-item';
+        item.dataset.selected = String(job.job_id === state.s3.selectedSyncJobID);
+        item.addEventListener('click', () => {
+            state.s3.selectedSyncJobID = job.job_id;
+            renderS3SyncJobsDialog();
+        });
+        const head = document.createElement('span');
+        head.className = 's3-sync-job-item__head';
+        const title = document.createElement('strong');
+        title.textContent = syncJobDirectionText(job);
+        const status = document.createElement('span');
+        status.className = 's3-sync-status';
+        status.dataset.state = syncJobStatusState(job);
+        status.textContent = syncJobStatusText(job);
+        head.append(title, status);
+        const path = document.createElement('span');
+        path.className = 's3-sync-job-path';
+        path.textContent = `${job.source_path || '/'} -> ${job.destination_path || '/'}`;
+        const meta = document.createElement('span');
+        meta.className = 's3-sync-job-meta';
+        meta.textContent = `${syncJobPercent(job)}% · ${Number(job.processed || 0)} / ${Number(job.total || 0)}`;
+        item.append(head, path, meta);
+        return item;
+    }
+
+    function syncJobDetailNode(job) {
+        const wrap = document.createElement('div');
+        wrap.className = 's3-sync-job-detail';
+
+        const head = document.createElement('div');
+        head.className = 's3-sync-job-detail__head';
+        const copy = document.createElement('div');
+        const title = document.createElement('h3');
+        title.textContent = syncJobDirectionText(job);
+        const sub = document.createElement('p');
+        sub.textContent = `${job.source_path || '/'} -> ${job.destination_path || '/'}`;
+        copy.append(title, sub);
+        const status = document.createElement('span');
+        status.className = 's3-sync-status';
+        status.dataset.state = syncJobStatusState(job);
+        status.textContent = syncJobStatusText(job);
+        head.append(copy, status);
+
+        const progress = syncProgressNode(job);
+        const actions = syncJobActions(job);
+        wrap.append(head, progress);
+        if (actions) wrap.appendChild(actions);
+        return wrap;
+    }
+
+    function syncJobActions(job) {
+        if (!job || isTerminalSyncStatus(job.status)) return null;
+        const actions = document.createElement('div');
+        actions.className = 'btn-row btn-row--end s3-sync-job-actions';
+        if (job.status === 'paused') {
+            const resume = iconTextButton(t('s3_sync_resume'), playIcon(), 'btn--sm btn--primary');
+            resume.addEventListener('click', (e) => controlS3SyncJob(job.job_id, 'resume', e.currentTarget));
+            actions.appendChild(resume);
+        } else {
+            const pause = iconTextButton(t('s3_sync_pause'), pauseIcon(), 'btn--sm');
+            pause.addEventListener('click', (e) => controlS3SyncJob(job.job_id, 'pause', e.currentTarget));
+            actions.appendChild(pause);
+        }
+        const cancel = iconTextButton(t('s3_sync_cancel'), xCircleIcon(), 'btn--sm btn--danger');
+        cancel.addEventListener('click', (e) => controlS3SyncJob(job.job_id, 'cancel', e.currentTarget));
+        actions.appendChild(cancel);
+        return actions;
+    }
+
+    async function controlS3SyncJob(jobID, action, control) {
+        if (!jobID || !action) return;
+        const busyText = action === 'pause' ? t('s3_sync_pausing') : action === 'resume' ? t('s3_sync_resuming') : t('s3_sync_canceling');
+        setBusy(control, true, busyText);
+        try {
+            const job = await apiSend('/s3/files/sync/' + encodeURIComponent(jobID), 'POST', { action });
+            upsertS3SyncJob(job);
+            renderS3SyncTaskSlot();
+            renderS3SyncJobsDialog();
+            if (hasActiveSyncJobs()) startS3SyncPolling();
+        } catch (err) {
+            toast.err(t('s3_sync_job_action_failed') + ': ' + err.message);
+        } finally {
+            setBusy(control, false);
+        }
+    }
+
+    function syncProgressNode(job) {
+        const panel = document.createElement('div');
+        panel.className = 's3-sync-progress';
         const total = Number(job.total || 0);
         const processed = Number(job.processed || 0);
-        const percent = total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : (job.status === 'completed' ? 100 : 0);
-        const status = $('s3-sync-progress-status');
-        const count = $('s3-sync-progress-count');
-        const fill = $('s3-sync-progress-fill');
-        const current = $('s3-sync-progress-current');
-        const bytes = $('s3-sync-progress-bytes');
-        const results = $('s3-sync-result-list');
-        if (status) status.textContent = syncJobStatusText(job);
-        if (count) count.textContent = `${processed} / ${total}`;
-        if (fill) fill.style.width = `${percent}%`;
-        if (current) {
-            current.textContent = job.current_source_path
-                ? t('s3_sync_current', { source: job.current_source_path, target: job.current_destination_path || '/', mount: mountDisplayName(mountByKey(job.current_mount_key)) })
-                : '';
-        }
-        if (bytes) {
-            const currentBytes = job.current_size > 0 ? ` · ${formatBytes(job.current_bytes || 0)} / ${formatBytes(job.current_size)}` : '';
-            bytes.textContent = `${formatBytes(job.bytes_copied || 0)} / ${formatBytes(job.bytes_total || 0)}${currentBytes}`;
-        }
-        if (results) {
-            results.innerHTML = '';
-            for (const result of job.results || []) {
-                const line = document.createElement('div');
-                line.textContent = t('s3_sync_result_line', {
-                    mount: mountDisplayName(mountByKey(result.mount_key)),
-                    copied: result.copied || 0,
-                    skipped: result.skipped || 0,
-                    failed: result.failed || 0,
-                });
-                results.appendChild(line);
-                for (const err of result.errors || []) {
-                    const errLine = document.createElement('div');
-                    errLine.textContent = err;
-                    errLine.dataset.state = 'error';
-                    results.appendChild(errLine);
-                }
+        const percent = syncJobPercent(job);
+        const head = document.createElement('div');
+        head.className = 's3-sync-progress__head';
+        const status = document.createElement('span');
+        status.textContent = syncJobStatusText(job);
+        const count = document.createElement('span');
+        count.textContent = `${processed} / ${total}`;
+        head.append(status, count);
+        const bar = document.createElement('div');
+        bar.className = 's3-sync-progress__bar';
+        bar.setAttribute('aria-hidden', 'true');
+        const fill = document.createElement('span');
+        fill.style.width = `${percent}%`;
+        bar.appendChild(fill);
+        const current = document.createElement('div');
+        current.className = 's3-sync-progress__current';
+        current.textContent = job.current_source_path
+            ? t('s3_sync_current', { source: job.current_source_path, target: job.current_destination_path || '/', mount: mountDisplayName(mountByKey(job.current_mount_key)) })
+            : t('s3_sync_current_idle');
+        const bytes = document.createElement('div');
+        bytes.className = 's3-sync-progress__bytes';
+        const currentBytes = job.current_size > 0 ? ` · ${formatBytes(job.current_bytes || 0)} / ${formatBytes(job.current_size)}` : '';
+        bytes.textContent = `${formatBytes(job.bytes_copied || 0)} / ${formatBytes(job.bytes_total || 0)}${currentBytes}`;
+        const results = document.createElement('div');
+        results.className = 's3-sync-results';
+        for (const result of job.results || []) {
+            const line = document.createElement('div');
+            line.textContent = t('s3_sync_result_line', {
+                mount: mountDisplayName(mountByKey(result.mount_key)),
+                copied: result.copied || 0,
+                skipped: result.skipped || 0,
+                failed: result.failed || 0,
+            });
+            results.appendChild(line);
+            for (const err of result.errors || []) {
+                const errLine = document.createElement('div');
+                errLine.textContent = err;
+                errLine.dataset.state = 'error';
+                results.appendChild(errLine);
             }
         }
+        panel.append(head, bar, current, bytes, results);
+        return panel;
+    }
+
+    function syncJobPercent(job) {
+        const total = Number(job.total || 0);
+        const processed = Number(job.processed || 0);
+        if (total > 0) return Math.min(100, Math.round((processed / total) * 100));
+        return job.status === 'completed' ? 100 : 0;
+    }
+
+    function syncJobDirectionText(job) {
+        const source = mountDisplayName(mountByKey(job.source_mount_key)) || job.source_mount_key || t('s3_sync_source');
+        const targets = (job.target_mount_keys || []).map((key) => mountDisplayName(mountByKey(key)) || key).filter(Boolean).join(', ');
+        return `${source} -> ${targets || t('s3_sync_target')}`;
+    }
+
+    function syncJobStatusState(job) {
+        if (job.status === 'completed') return Number(job.failed || 0) > 0 ? 'warn' : 'ok';
+        if (job.status === 'failed' || job.status === 'canceled') return 'error';
+        if (job.status === 'paused') return 'warn';
+        return 'info';
     }
 
     function syncJobStatusText(job) {
         if (job.status === 'completed') return t('s3_sync_completed');
         if (job.status === 'failed') return t('s3_sync_failed');
+        if (job.status === 'paused') return t('s3_sync_paused');
+        if (job.status === 'canceled') return t('s3_sync_canceled');
         return t('s3_sync_running');
     }
 
@@ -1642,6 +1989,18 @@
 
     function syncIcon() {
         return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h11"></path><path d="m12 4 3 3-3 3"></path><path d="M20 17H9"></path><path d="m12 14-3 3 3 3"></path></svg>';
+    }
+
+    function pauseIcon() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v16"></path><path d="M14 4v16"></path></svg>';
+    }
+
+    function playIcon() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 3 14 9-14 9V3Z"></path></svg>';
+    }
+
+    function xCircleIcon() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>';
     }
 
     function folderIcon() {

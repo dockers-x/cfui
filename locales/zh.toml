@@ -972,6 +972,9 @@ other = "复制 WebDAV endpoint"
 [cancel]
 other = "取消"
 
+[close]
+other = "关闭"
+
 [status_offline]
 other = "连接断开"
 
@@ -1623,6 +1626,18 @@ other = "上传完成"
 [s3_upload_failed]
 other = "上传失败"
 
+[s3_uploading_file]
+other = "正在上传 {name}"
+
+[s3_upload_in_progress]
+other = "已有文件正在上传"
+
+[s3_upload_aborted]
+other = "上传已取消"
+
+[s3_upload_network_error]
+other = "网络错误"
+
 [s3_new_folder_prompt]
 other = "文件夹名称"
 
@@ -1721,6 +1736,57 @@ other = "展开目录"
 
 [s3_sync_collapse]
 other = "收起目录"
+
+[s3_sync_started]
+other = "同步任务已开始"
+
+[s3_sync_jobs_title]
+other = "同步任务"
+
+[s3_sync_jobs_subtitle]
+other = "查看后台同步进度，并控制正在运行的任务。"
+
+[s3_sync_jobs_count]
+other = "{count} 个同步任务"
+
+[s3_sync_jobs_load_failed]
+other = "加载同步任务失败"
+
+[s3_sync_no_jobs]
+other = "暂无同步任务"
+
+[s3_sync_no_jobs_detail]
+other = "从文件区发起同步后，任务进度会显示在这里。"
+
+[s3_sync_pause]
+other = "暂停"
+
+[s3_sync_resume]
+other = "继续"
+
+[s3_sync_cancel]
+other = "取消任务"
+
+[s3_sync_pausing]
+other = "正在暂停"
+
+[s3_sync_resuming]
+other = "正在继续"
+
+[s3_sync_canceling]
+other = "正在取消"
+
+[s3_sync_paused]
+other = "已暂停"
+
+[s3_sync_canceled]
+other = "已取消"
+
+[s3_sync_current_idle]
+other = "当前没有正在复制的对象"
+
+[s3_sync_job_action_failed]
+other = "同步任务操作失败"
 
 [ready]
 other = "就绪"

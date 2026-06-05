@@ -175,6 +175,14 @@ type SyncRequest struct {
 	Overwrite       bool     `json:"overwrite"`
 }
 
+type SyncJobActionRequest struct {
+	Action string `json:"action"`
+}
+
+type SyncJobsResponse struct {
+	Jobs []SyncJobResponse `json:"jobs"`
+}
+
 type SyncResponse struct {
 	SourceMountKey  string             `json:"source_mount_key"`
 	SourcePath      string             `json:"source_path"`

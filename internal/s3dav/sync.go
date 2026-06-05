@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -17,15 +19,23 @@ import (
 
 const (
 	SyncJobRunning   = "running"
+	SyncJobPaused    = "paused"
 	SyncJobCompleted = "completed"
 	SyncJobFailed    = "failed"
+	SyncJobCanceled  = "canceled"
 
 	syncJobRetention = time.Hour
 )
 
 type syncJob struct {
-	mu   sync.RWMutex
-	resp SyncJobResponse
+	mu     sync.RWMutex
+	resp   SyncJobResponse
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	stateMu sync.Mutex
+	paused  bool
+	cond    *sync.Cond
 }
 
 type syncFileTask struct {
@@ -54,11 +64,17 @@ type syncProgressUpdate struct {
 type syncProgressFunc func(syncProgressUpdate)
 
 type progressReader struct {
-	reader io.Reader
-	onRead func(int64)
+	reader     io.Reader
+	beforeRead func() error
+	onRead     func(int64)
 }
 
 func (r progressReader) Read(p []byte) (int, error) {
+	if r.beforeRead != nil {
+		if err := r.beforeRead(); err != nil {
+			return 0, err
+		}
+	}
 	n, err := r.reader.Read(p)
 	if n > 0 && r.onRead != nil {
 		r.onRead(int64(n))
@@ -71,8 +87,9 @@ func (s *Service) StartSync(ctx context.Context, req SyncRequest) (SyncJobRespon
 	if err != nil {
 		return SyncJobResponse{}, err
 	}
+	jobCtx, cancel := context.WithCancel(context.Background())
 	now := time.Now()
-	job := &syncJob{resp: SyncJobResponse{
+	job := newSyncJob(SyncJobResponse{
 		JobID:           newSyncJobID(),
 		Status:          SyncJobRunning,
 		SourceMountKey:  normalized.SourceMountKey,
@@ -81,15 +98,19 @@ func (s *Service) StartSync(ctx context.Context, req SyncRequest) (SyncJobRespon
 		DestinationPath: normalized.DestinationPath,
 		StartedAt:       now,
 		UpdatedAt:       now,
-	}}
+	}, jobCtx, cancel)
 	s.syncJobsMu.Lock()
 	s.pruneSyncJobsLocked(now)
 	s.syncJobs[job.resp.JobID] = job
 	s.syncJobsMu.Unlock()
 
 	go func() {
-		resp, err := s.runSync(context.Background(), normalized, job.update)
+		resp, err := s.runSync(job.ctx, normalized, job.update, job.waitIfPaused)
 		if err != nil {
+			if errors.Is(err, context.Canceled) && job.isCanceled() {
+				job.finishCanceled(resp)
+				return
+			}
 			job.fail(err)
 			return
 		}
@@ -97,6 +118,27 @@ func (s *Service) StartSync(ctx context.Context, req SyncRequest) (SyncJobRespon
 	}()
 
 	return job.snapshot(), nil
+}
+
+func newSyncJob(resp SyncJobResponse, ctx context.Context, cancel context.CancelFunc) *syncJob {
+	job := &syncJob{resp: resp, ctx: ctx, cancel: cancel}
+	job.cond = sync.NewCond(&job.stateMu)
+	return job
+}
+
+func (s *Service) SyncJobs() SyncJobsResponse {
+	now := time.Now()
+	s.syncJobsMu.Lock()
+	s.pruneSyncJobsLocked(now)
+	jobs := make([]SyncJobResponse, 0, len(s.syncJobs))
+	for _, job := range s.syncJobs {
+		jobs = append(jobs, job.snapshot())
+	}
+	s.syncJobsMu.Unlock()
+	sort.SliceStable(jobs, func(i, j int) bool {
+		return jobs[i].StartedAt.After(jobs[j].StartedAt)
+	})
+	return SyncJobsResponse{Jobs: jobs}
 }
 
 func (s *Service) SyncJob(id string) (SyncJobResponse, error) {
@@ -110,12 +152,33 @@ func (s *Service) SyncJob(id string) (SyncJobResponse, error) {
 	return job.snapshot(), nil
 }
 
+func (s *Service) ControlSyncJob(id, action string) (SyncJobResponse, error) {
+	id = strings.TrimSpace(id)
+	action = strings.TrimSpace(strings.ToLower(action))
+	s.syncJobsMu.RLock()
+	job, ok := s.syncJobs[id]
+	s.syncJobsMu.RUnlock()
+	if !ok {
+		return SyncJobResponse{}, fmt.Errorf("sync job %q was not found", id)
+	}
+	switch action {
+	case "pause":
+		return job.pause()
+	case "resume":
+		return job.resume()
+	case "cancel":
+		return job.cancelJob()
+	default:
+		return SyncJobResponse{}, fmt.Errorf("unsupported sync job action %q", action)
+	}
+}
+
 func (s *Service) Sync(ctx context.Context, req SyncRequest) (SyncResponse, error) {
 	normalized, err := s.normalizeSyncRequest(ctx, req)
 	if err != nil {
 		return SyncResponse{}, err
 	}
-	return s.runSync(ctx, normalized, nil)
+	return s.runSync(ctx, normalized, nil, nil)
 }
 
 func (s *Service) normalizeSyncRequest(ctx context.Context, req SyncRequest) (SyncRequest, error) {
@@ -169,7 +232,10 @@ func (s *Service) normalizeSyncRequest(ctx context.Context, req SyncRequest) (Sy
 	}, nil
 }
 
-func (s *Service) runSync(ctx context.Context, req SyncRequest, progress syncProgressFunc) (SyncResponse, error) {
+func (s *Service) runSync(ctx context.Context, req SyncRequest, progress syncProgressFunc, waitIfPaused func(context.Context) error) (SyncResponse, error) {
+	if err := waitForSyncTurn(ctx, waitIfPaused); err != nil {
+		return SyncResponse{}, err
+	}
 	sourceFS, err := s.Filesystem(ctx, req.SourceMountKey)
 	if err != nil {
 		return SyncResponse{}, err
@@ -208,6 +274,9 @@ func (s *Service) runSync(ctx context.Context, req SyncRequest, progress syncPro
 	report("", "", "", 0, 0)
 
 	for _, targetKey := range req.TargetMountKeys {
+		if err := waitForSyncTurn(ctx, waitIfPaused); err != nil {
+			return resp, err
+		}
 		targetFS, err := s.Filesystem(ctx, targetKey)
 		result := SyncTargetResult{MountKey: targetKey}
 		if err != nil {
@@ -230,6 +299,9 @@ func (s *Service) runSync(ctx context.Context, req SyncRequest, progress syncPro
 			}
 		}
 		for _, task := range plan.Files {
+			if err := waitForSyncTurn(ctx, waitIfPaused); err != nil {
+				return resp, err
+			}
 			report(targetKey, task.SourcePath, task.DestinationPath, task.Size, 0)
 			currentBytes := int64(0)
 			copiedBytes, status, err := copySyncTask(ctx, sourceFS, targetFS, task, req.Overwrite, func(n int64) {
@@ -237,7 +309,7 @@ func (s *Service) runSync(ctx context.Context, req SyncRequest, progress syncPro
 				resp.BytesCopied += n
 				result.BytesCopied += n
 				report(targetKey, task.SourcePath, task.DestinationPath, task.Size, currentBytes)
-			})
+			}, waitIfPaused)
 			if copiedBytes > 0 && currentBytes == 0 {
 				resp.BytesCopied += copiedBytes
 				result.BytesCopied += copiedBytes
@@ -258,6 +330,10 @@ func (s *Service) runSync(ctx context.Context, req SyncRequest, progress syncPro
 			}
 			processed++
 			report(targetKey, task.SourcePath, task.DestinationPath, task.Size, currentBytes)
+			if err != nil && errors.Is(err, context.Canceled) {
+				resp.Results = append(resp.Results, result)
+				return resp, err
+			}
 		}
 		resp.Results = append(resp.Results, result)
 	}
@@ -344,8 +420,18 @@ func syncTotalBytes(tasks []syncFileTask, targetCount int) int64 {
 	return total * int64(targetCount)
 }
 
-func copySyncTask(ctx context.Context, sourceFS, targetFS afero.Fs, task syncFileTask, overwrite bool, onRead func(int64)) (int64, string, error) {
+func waitForSyncTurn(ctx context.Context, waitIfPaused func(context.Context) error) error {
 	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if waitIfPaused != nil {
+		return waitIfPaused(ctx)
+	}
+	return nil
+}
+
+func copySyncTask(ctx context.Context, sourceFS, targetFS afero.Fs, task syncFileTask, overwrite bool, onRead func(int64), waitIfPaused func(context.Context) error) (int64, string, error) {
+	if err := waitForSyncTurn(ctx, waitIfPaused); err != nil {
 		return 0, "failed", err
 	}
 	if !overwrite {
@@ -362,7 +448,8 @@ func copySyncTask(ctx context.Context, sourceFS, targetFS afero.Fs, task syncFil
 	defer file.Close()
 	copied := int64(0)
 	reader := progressReader{
-		reader: file,
+		reader:     file,
+		beforeRead: func() error { return waitForSyncTurn(ctx, waitIfPaused) },
 		onRead: func(n int64) {
 			copied += n
 			if onRead != nil {
@@ -376,6 +463,18 @@ func copySyncTask(ctx context.Context, sourceFS, targetFS afero.Fs, task syncFil
 	return copied, "copied", nil
 }
 
+func (j *syncJob) waitIfPaused(ctx context.Context) error {
+	j.stateMu.Lock()
+	defer j.stateMu.Unlock()
+	for j.paused {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		j.cond.Wait()
+	}
+	return ctx.Err()
+}
+
 func (j *syncJob) snapshot() SyncJobResponse {
 	j.mu.RLock()
 	defer j.mu.RUnlock()
@@ -385,6 +484,9 @@ func (j *syncJob) snapshot() SyncJobResponse {
 func (j *syncJob) update(update syncProgressUpdate) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
+	if isTerminalSyncStatus(j.resp.Status) {
+		return
+	}
 	j.resp.Total = update.Total
 	j.resp.Processed = update.Processed
 	j.resp.CurrentMountKey = update.CurrentMountKey
@@ -405,6 +507,9 @@ func (j *syncJob) complete(resp SyncResponse) {
 	now := time.Now()
 	j.mu.Lock()
 	defer j.mu.Unlock()
+	if isTerminalSyncStatus(j.resp.Status) {
+		return
+	}
 	j.resp.Status = SyncJobCompleted
 	j.resp.CurrentMountKey = ""
 	j.resp.CurrentSourcePath = ""
@@ -426,10 +531,100 @@ func (j *syncJob) fail(err error) {
 	now := time.Now()
 	j.mu.Lock()
 	defer j.mu.Unlock()
+	if isTerminalSyncStatus(j.resp.Status) {
+		return
+	}
 	j.resp.Status = SyncJobFailed
 	j.resp.Error = err.Error()
 	j.resp.UpdatedAt = now
 	j.resp.FinishedAt = &now
+}
+
+func (j *syncJob) finishCanceled(resp SyncResponse) {
+	now := time.Now()
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.resp.Status = SyncJobCanceled
+	j.resp.CurrentMountKey = ""
+	j.resp.CurrentSourcePath = ""
+	j.resp.CurrentDestinationPath = ""
+	j.resp.CurrentSize = 0
+	j.resp.CurrentBytes = 0
+	j.resp.Copied = resp.Copied
+	j.resp.Skipped = resp.Skipped
+	j.resp.Failed = resp.Failed
+	j.resp.BytesCopied = resp.BytesCopied
+	j.resp.BytesTotal = resp.BytesTotal
+	j.resp.Results = cloneSyncResults(resp.Results)
+	j.resp.UpdatedAt = now
+	j.resp.FinishedAt = &now
+}
+
+func (j *syncJob) pause() (SyncJobResponse, error) {
+	j.stateMu.Lock()
+	defer j.stateMu.Unlock()
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if isTerminalSyncStatus(j.resp.Status) {
+		return cloneSyncJobResponse(j.resp), nil
+	}
+	if j.resp.Status == SyncJobRunning {
+		j.paused = true
+		j.resp.Status = SyncJobPaused
+		j.resp.UpdatedAt = time.Now()
+	}
+	return cloneSyncJobResponse(j.resp), nil
+}
+
+func (j *syncJob) resume() (SyncJobResponse, error) {
+	j.stateMu.Lock()
+	defer j.stateMu.Unlock()
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if isTerminalSyncStatus(j.resp.Status) {
+		return cloneSyncJobResponse(j.resp), nil
+	}
+	if j.resp.Status == SyncJobPaused {
+		j.paused = false
+		j.resp.Status = SyncJobRunning
+		j.resp.UpdatedAt = time.Now()
+		j.cond.Broadcast()
+	}
+	return cloneSyncJobResponse(j.resp), nil
+}
+
+func (j *syncJob) cancelJob() (SyncJobResponse, error) {
+	j.stateMu.Lock()
+	j.paused = false
+	j.cond.Broadcast()
+	j.stateMu.Unlock()
+	if j.cancel != nil {
+		j.cancel()
+	}
+	now := time.Now()
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if !isTerminalSyncStatus(j.resp.Status) {
+		j.resp.Status = SyncJobCanceled
+		j.resp.CurrentMountKey = ""
+		j.resp.CurrentSourcePath = ""
+		j.resp.CurrentDestinationPath = ""
+		j.resp.CurrentSize = 0
+		j.resp.CurrentBytes = 0
+		j.resp.UpdatedAt = now
+		j.resp.FinishedAt = &now
+	}
+	return cloneSyncJobResponse(j.resp), nil
+}
+
+func (j *syncJob) isCanceled() bool {
+	j.mu.RLock()
+	defer j.mu.RUnlock()
+	return j.resp.Status == SyncJobCanceled
+}
+
+func isTerminalSyncStatus(status string) bool {
+	return status == SyncJobCompleted || status == SyncJobFailed || status == SyncJobCanceled
 }
 
 func cloneSyncJobResponse(resp SyncJobResponse) SyncJobResponse {
