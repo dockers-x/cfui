@@ -229,6 +229,30 @@ func TestWebDAVPutUsesSlashlessS3ObjectKey(t *testing.T) {
 	}
 }
 
+func TestWebDAVPropfindMountRootWorksWhenS3RootHasNoDirectoryObject(t *testing.T) {
+	fs := rootStatNotFoundFS{Fs: afero.NewMemMapFs()}
+	svc := newTestService(t, fakeCloudflareClient{}, fs)
+	cfg := svc.cfgMgr.Get()
+	cfg.S3WebDAV.Enabled = true
+	cfg.S3WebDAV.Mounts[0].EndpointURL = "https://s3.example.com"
+	cfg.S3WebDAV.Mounts[0].BucketName = "bucket"
+	cfg.S3WebDAV.Mounts[0].MountPath = "/webdav/datasync/"
+	cfg.S3WebDAV.Mounts[0].AccessKeyID = "ak"
+	cfg.S3WebDAV.Mounts[0].SecretAccessKey = "sk"
+	cfg.S3WebDAV.Mounts[0].WebDAVAuthEnabled = false
+	if err := svc.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	req := httptest.NewRequest("PROPFIND", "/webdav/datasync/", nil)
+	req.Header.Set("Depth", "0")
+	rec := httptest.NewRecorder()
+	svc.Handler().ServeHTTP(rec, req)
+	if rec.Code != webDAVMultiStatus {
+		t.Fatalf("expected mount root PROPFIND to succeed, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestWebDAVHandlerAllowsRequestsWhenAuthDisabled(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	if err := fs.MkdirAll("/docs", 0755); err != nil {
@@ -321,3 +345,16 @@ func (f *s3StyleWriteOnlyFile) Close() error {
 	f.closed = true
 	return f.File.Close()
 }
+
+type rootStatNotFoundFS struct {
+	afero.Fs
+}
+
+func (fs rootStatNotFoundFS) Stat(name string) (os.FileInfo, error) {
+	if name == "/" {
+		return nil, &os.PathError{Op: "stat", Path: name, Err: os.ErrNotExist}
+	}
+	return fs.Fs.Stat(name)
+}
+
+const webDAVMultiStatus = 207

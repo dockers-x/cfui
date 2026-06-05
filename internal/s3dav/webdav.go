@@ -97,7 +97,20 @@ func (a aferoWebDAVFS) Stat(_ context.Context, name string) (os.FileInfo, error)
 	if err != nil {
 		return nil, err
 	}
-	return a.fs.Stat(cleaned)
+	if cleaned == "/" {
+		return s3ListFileInfo{name: "/", dir: true, modTime: time.Unix(0, 0)}, nil
+	}
+	info, err := a.fs.Stat(cleaned)
+	if err == nil {
+		return info, nil
+	}
+	if os.IsNotExist(err) {
+		entries, listErr := listFiles(a.fs, cleaned)
+		if listErr == nil && len(entries.Entries) > 0 {
+			return s3ListFileInfo{name: path.Base(cleaned), dir: true, modTime: time.Unix(0, 0)}, nil
+		}
+	}
+	return nil, err
 }
 
 type webDAVWriteFile struct {
