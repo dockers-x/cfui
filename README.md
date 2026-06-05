@@ -1,342 +1,393 @@
-# CloudFlared UI
+# cfui
 
-A modern web-based control panel for managing Cloudflare Tunnel (cloudflared) with an intuitive interface.
+[中文说明](README.zh-CN.md) | English
+
+cfui is a web control panel for Cloudflare Tunnel (`cloudflared`). It runs the local tunnel process, manages selected Cloudflare Tunnel ingress rules through the Cloudflare API, updates DNS records for DDNS use cases, exposes S3-compatible storage through WebDAV, and provides an MCP endpoint for AI clients.
+
+The web UI is built into the binary. Configuration is stored in a local SQLite database under the data directory.
 
 ## Features
 
-- **Easy Management**: Start, stop, and monitor your Cloudflare Tunnel from a web interface
-- **Multi-language Support**: Available in English, Chinese (中文), and Japanese (日本語)
-- **Auto-restart**: Automatically restart tunnel on failure with configurable options
-- **Advanced Configuration**: Support for all major cloudflared parameters
-  - Protocol selection (Auto, HTTP/2, QUIC)
-  - Region selection
-  - Custom tunnel identifiers
-  - Metrics server
-  - Post-quantum cryptography
-  - And more...
-- **Real-time Logs**: View system logs and tunnel status in real-time
-- **Remote Tunnel Manager**: Optional Cloudflare API-backed manager for published application/public hostname rules
-  - Load existing remote tunnel config by Account ID/App ID and Tunnel ID
-  - Add, edit, and delete ingress rules for the selected tunnel
-  - Cloudflare-like "Add published application" form for subdomain, domain, path, service type, and origin settings
-  - Credentials can be configured in the UI or injected by environment variables
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Local Cloudflare Tunnel runner**
+  - Paste a Cloudflare Tunnel token and start or stop the local tunnel from the browser.
+  - Configure auto-start, auto-restart, protocol, region, retries, graceful shutdown, metrics, post-quantum mode, edge IP version, edge bind address, TLS verification, and extra cloudflared arguments.
+  - Show tunnel status, active protocol, last error, and version/build information.
+
+- **Remote Tunnel Manager**
+  - Optional feature for managing Cloudflare-hosted tunnel ingress configuration.
+  - Load an existing tunnel by Account ID and Tunnel ID.
+  - Add, edit, and delete public hostname rules with hostname, path, service type, service URL, host header, origin server name, and TLS verification options.
+  - Decode Account ID and Tunnel ID from the local tunnel token when possible.
+  - Verify Cloudflare API permissions before using Cloudflare-managed operations.
+
+- **DDNS**
+  - Optional feature that reuses Remote Tunnel Manager Cloudflare credentials.
+  - Detect public IPv4 and IPv6 from configurable IP source URLs.
+  - Create and update Cloudflare `A` and `AAAA` records.
+  - Supports Cloudflare proxy mode, TTL, DNS comments, retry settings, manual sync, and recent sync history.
+
+- **S3 WebDAV**
+  - Mount one or more S3-compatible bucket paths as WebDAV endpoints.
+  - Supports generic S3-compatible services and Cloudflare R2 presets.
+  - Each mount can use its own endpoint, region, bucket, root prefix, mount path, Access Key ID, Secret Access Key, WebDAV username/password, and auth toggle.
+  - Includes S3 connection testing and WebDAV connection testing.
+  - Includes a browser file panel for listing, uploading, downloading, deleting, renaming, and creating folders.
+  - WebDAV can be served from the main HTTP service or from a dedicated HTTP port. These modes are mutually exclusive.
+  - Dedicated WebDAV mode supports manual start/stop, optional auto-start, direct-port endpoints, custom public URLs, and Cloudflare Tunnel rule handoff.
+  - Browser `GET` requests on a WebDAV path show a read-only file listing or file download. WebDAV methods such as `PROPFIND`, `PUT`, `DELETE`, `MKCOL`, `MOVE`, `COPY`, `LOCK`, and `UNLOCK` keep WebDAV behavior.
+
+- **MCP access**
+  - Optional Model Context Protocol endpoint at `/mcp`.
+  - Uses bearer tokens generated in the UI.
+  - Exposes tools for tunnel status/configuration, tunnel start/stop, recent logs, Remote Tunnel Manager operations, and DDNS operations when DDNS is enabled.
+
+- **Logs and operations**
+  - Recent logs API and optional real-time log streaming in the UI.
+  - Log filtering, copying, downloading, and clearing from the browser.
+  - Panic recovery and request logging middleware.
+
+- **Feature switches**
+  - Remote Tunnel Manager, DDNS, MCP, and S3 WebDAV are optional tabs.
+  - Disabled features stay hidden in the UI.
+  - DDNS depends on Remote Tunnel Manager because it reuses the same Cloudflare API credentials.
+
+- **Internationalized UI**
+  - English, Chinese, and Japanese UI translations are included.
 
 ## Quick Start
 
-### Using Docker (Recommended)
+### Docker
 
 ```bash
 docker run -d \
   --name cfui \
   -p 14333:14333 \
-  -v cloudflared-data:/app/data \
+  -v cfui-data:/app/data \
+  -v cfui-logs:/app/logs \
+  --restart unless-stopped \
+  ghcr.io/dockers-x/cfui:latest
+```
+
+Open:
+
+```text
+http://localhost:14333
+```
+
+Docker Hub image:
+
+```bash
+docker run -d \
+  --name cfui \
+  -p 14333:14333 \
+  -v cfui-data:/app/data \
+  -v cfui-logs:/app/logs \
   --restart unless-stopped \
   czyt/cfui:latest
 ```
 
-Access the web interface at `http://localhost:14333`
-
-### Using Docker Compose
+### Docker Compose
 
 ```yaml
-version: '3.8'
-
 services:
   cfui:
     image: ghcr.io/dockers-x/cfui:latest
-    # Or use Docker Hub:
-    # image: czyt/cfui:latest
     container_name: cfui
     restart: unless-stopped
     ports:
       - "14333:14333"
+      # Optional: expose this if you use dedicated S3 WebDAV mode.
+      # - "14334:14334"
     volumes:
-      # Persist configuration and data
-      - cloudflared-data:/app/data
+      - cfui-data:/app/data
+      - cfui-logs:/app/logs
     environment:
-      # Optional: Override default bind address (default is 0.0.0.0)
-      - BIND_HOST=0.0.0.0
-      # Optional: Override default port (default is 14333)
-      - PORT=14333
-      # Optional: Set timezone
-      - TZ=UTC
-      # Optional: Enable remote Cloudflare Tunnel configuration management.
-      # Prefer environment variables for credentials in container deployments.
-      # - CFUI_TUNNEL_MGMT_ENABLED=true
-      # - CLOUDFLARE_ACCOUNT_ID=your-account-id
-      # - CLOUDFLARE_TUNNEL_ID=your-tunnel-id
-      # - CLOUDFLARE_API_TOKEN=your-api-token
+      BIND_HOST: 0.0.0.0
+      PORT: 14333
+      TZ: UTC
+      # Optional: inject Cloudflare API credentials without saving them in the UI.
+      # CFUI_TUNNEL_MGMT_ENABLED: "true"
+      # CLOUDFLARE_ACCOUNT_ID: your-account-id
+      # CLOUDFLARE_TUNNEL_ID: your-tunnel-id
+      # CLOUDFLARE_API_TOKEN: your-api-token
     healthcheck:
       test: ["CMD", "sh", "-c", "wget --no-verbose --tries=1 --spider http://localhost:$$PORT/ || exit 1"]
       interval: 30s
       timeout: 3s
       start_period: 5s
       retries: 3
-    # Optional: Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 512M
-        reservations:
-          cpus: '0.5'
-          memory: 256M
 
 volumes:
-  cloudflared-data:
-    driver: local
-
+  cfui-data:
+  cfui-logs:
 ```
 
-### Manual Installation
+### Binary
 
-1. Download the latest release from [GitHub Releases](https://github.com/yourusername/cloudflared-ui/releases)
-2. Extract and run:
-
-```bash
-# Linux/macOS
-chmod +x cloudflared-web
-./cloudflared-web
-
-# Windows
-cloudflared-web.exe
-```
-
-3. Open your browser and navigate to `http://localhost:14333`
-
-## Building from Source
-
-### Prerequisites
-
-- Go 1.25 or higher
-- Git
-- Make (optional, for easier building)
-
-### Build Steps
-
-#### Using Make (Recommended)
+Download a release binary, then run:
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/cloudflared-ui.git
-cd cloudflared-ui
-
-# Build with version info injected
-make build
-
-# Or build specific version
-VERSION=v1.0.0 make build
-
-# Run
+chmod +x cfui
 ./cfui
 ```
 
-#### Manual Build
+Open:
+
+```text
+http://localhost:14333
+```
+
+## First Setup
+
+1. Create or select a Cloudflare Tunnel in Cloudflare Zero Trust.
+2. Copy the tunnel token from the tunnel install command.
+3. Paste the token into the Tunnel Configuration page.
+4. Save the configuration.
+5. Start the tunnel from the UI.
+
+The local tunnel runner does not require Cloudflare API credentials. API credentials are only needed for Remote Tunnel Manager, DDNS, and optional R2 bucket management.
+
+## Cloudflare API Permissions
+
+Remote Tunnel Manager and DDNS use Cloudflare API credentials. An API Token is recommended.
+
+Required permissions for Remote Tunnel Manager and DDNS:
+
+- `Account -> Argo Tunnel (Legacy) -> Edit`
+- `Zone -> Zone -> Read`
+- `Zone -> DNS -> Edit`
+
+Optional permission for R2 bucket list/create:
+
+- `Account -> Workers R2 Storage -> Edit`
+
+S3 WebDAV file access does not use the Cloudflare API token. It uses the S3-compatible Access Key ID and Secret Access Key configured on the S3 WebDAV page.
+
+## S3 WebDAV
+
+S3 WebDAV is a feature-gated module. Enable it from the Features page, then create a mount from the S3 WebDAV page.
+
+### Generic S3
+
+Use Generic S3 for most S3-compatible providers. cfui does not manage buckets in this mode. Provide:
+
+- Endpoint URL
+- Region
+- Bucket name
+- Access Key ID
+- Secret Access Key
+- Path-style setting if your provider requires it
+- Optional root prefix
+- WebDAV mount path, for example `/webdav/my_s3/`
+
+### Cloudflare R2
+
+Use Cloudflare R2 when you want R2 endpoint presets or optional bucket list/create from cfui.
+
+For file access, create an R2 API token from the R2 console and copy:
+
+- Access Key ID
+- Secret Access Key
+- S3 endpoint, for example `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
+
+For optional bucket list/create, configure Remote Tunnel Manager with a Cloudflare API token that has `Workers R2 Storage -> Edit`.
+
+### WebDAV Endpoint
+
+If a mount path is `/webdav/datasync/`, the WebDAV endpoint is:
+
+```text
+https://your-cfui-host/webdav/datasync/
+```
+
+File example:
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/cloudflared-ui.git
-cd cloudflared-ui
+curl -u 'user:password' \
+  -o db.sql \
+  'https://your-cfui-host/webdav/datasync/path/to/db.sql'
+```
 
-# Build with version info
+Check a WebDAV object:
+
+```bash
+curl -u 'user:password' \
+  -X PROPFIND \
+  -H 'Depth: 0' \
+  'https://your-cfui-host/webdav/datasync/path/to/db.sql'
+```
+
+Range download:
+
+```bash
+curl -u 'user:password' \
+  -H 'Range: bytes=0-1023' \
+  -o part.bin \
+  'https://your-cfui-host/webdav/datasync/path/to/db.sql'
+```
+
+## MCP
+
+Enable MCP from the Features page, then create a bearer token from the MCP page. Connect MCP clients to:
+
+```text
+/mcp
+```
+
+The MCP token is shown only when it is created. Saved tokens are listed in masked form.
+
+## Environment Variables
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `BIND_HOST` | HTTP server bind address | `0.0.0.0` |
+| `PORT` | Main HTTP server port | `14333` |
+| `DATA_DIR` | Data directory | `./data` |
+| `LOG_DIR` | Log directory | `${DATA_DIR}/logs` |
+| `LOG_LEVEL` | `debug`, `info`, `warn`, `error` | `info` |
+| `CFUI_TUNNEL_MGMT_ENABLED` / `CFUI_TUNNEL_MANAGEMENT_ENABLED` | Enable Remote Tunnel Manager | unset |
+| `CFUI_TUNNEL_ACCOUNT_ID` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_APP_ID` | Cloudflare account ID | unset |
+| `CFUI_TUNNEL_ID` / `CLOUDFLARE_TUNNEL_ID` | Cloudflare tunnel ID | unset |
+| `CFUI_TUNNEL_API_TOKEN` / `CLOUDFLARE_API_TOKEN` | Cloudflare API token | unset |
+| `CFUI_TUNNEL_API_EMAIL` / `CLOUDFLARE_API_EMAIL` | Cloudflare account email for global API key auth | unset |
+| `CFUI_TUNNEL_API_KEY` / `CLOUDFLARE_API_KEY` | Cloudflare global API key | unset |
+
+Environment-provided Cloudflare credentials override saved UI values at runtime.
+
+## Data and Migration
+
+cfui stores configuration in SQLite:
+
+```text
+${DATA_DIR}/data.db
+```
+
+Logs are stored under:
+
+```text
+${LOG_DIR}
+```
+
+Old `config.json` and legacy `app_configs` database data are migrated into structured SQLite tables automatically. A migrated `config.json` is renamed to `config.json.migrated`.
+
+## API Overview
+
+Main endpoints:
+
+- `GET /api/status`
+- `POST /api/control`
+- `GET /api/config`
+- `POST /api/config`
+- `GET /api/logs/recent`
+- `GET /api/logs/stream`
+- `GET /api/features`
+- `POST /api/features`
+- `GET /api/version`
+
+Optional module endpoints:
+
+- `/api/tunnel-manager/*`
+- `/api/ddns/*`
+- `/api/mcp/*`
+- `/api/s3/*`
+- `/mcp`
+- `/webdav/*`
+
+## Development
+
+Requirements:
+
+- Go 1.26 or newer
+- Git
+- Make, optional
+
+Build:
+
+```bash
+make build
+```
+
+Run:
+
+```bash
+make run
+```
+
+Test:
+
+```bash
+make test
+```
+
+Manual build:
+
+```bash
 VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
 BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S_UTC')
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-go build -trimpath \
+CGO_ENABLED=0 go build -trimpath \
   -ldflags="-s -w \
     -X 'cfui/version.Version=${VERSION}' \
     -X 'cfui/version.BuildTime=${BUILD_TIME}' \
     -X 'cfui/version.GitCommit=${GIT_COMMIT}'" \
   -o cfui .
-
-# Run
-./cfui
 ```
 
-## Configuration
+Project layout:
 
-The application stores its configuration in the `data` directory:
-
-- `data/config.json` - Main configuration file
-- `data/logs/` - Application logs (if configured)
-
-### Environment Variables
-
-- `BIND_HOST` - Server bind address (default: 0.0.0.0)
-- `PORT` - Server port (default: 14333)
-- `DATA_DIR` - Data directory path (default: ./data)
-- `LOG_DIR` - Log directory path (default: {DATA_DIR}/logs)
-- `LOG_LEVEL` - Log level: debug, info, warn, error (default: info)
-- `CFUI_TUNNEL_MGMT_ENABLED` / `CFUI_TUNNEL_MANAGEMENT_ENABLED` - Enable optional remote tunnel manager
-- `CFUI_TUNNEL_ACCOUNT_ID` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_APP_ID` - Cloudflare account ID used by the manager
-- `CFUI_TUNNEL_ID` / `CLOUDFLARE_TUNNEL_ID` - Remote tunnel ID to load/manage
-- `CFUI_TUNNEL_API_TOKEN` / `CLOUDFLARE_API_TOKEN` - Cloudflare API token for the manager
-- `CFUI_TUNNEL_API_EMAIL` / `CLOUDFLARE_API_EMAIL` - Cloudflare account email for global API key auth
-- `CFUI_TUNNEL_API_KEY` / `CLOUDFLARE_API_KEY` - Cloudflare global API key for email/key auth
-
-### Configuration Options
-
-#### Basic Settings
-- **Token**: Your Cloudflare Tunnel token (required)
-- **Auto-start on launch**: Start tunnel automatically when the application starts
-- **Auto-restart on failure**: Automatically restart tunnel on abnormal exit
-- **Custom Tunnel Identifier**: Custom tag shown in Cloudflare dashboard
-
-#### Advanced Settings
-- **Protocol**: Connection protocol (Auto, HTTP/2, QUIC)
-- **Region**: Preferred connection region
-- **Grace Period**: Shutdown grace period (e.g., 30s)
-- **Max Retries**: Maximum connection retry attempts
-- **Metrics**: Enable Prometheus metrics endpoint
-- **Edge Bind IP Address**: Local IP address to bind for outgoing connections to Cloudflare edge (optional)
-- **Disable Backend TLS Verification**: Disable TLS certificate verification for backend services (not recommended for production)
-
-#### Remote Tunnel Manager
-
-The remote tunnel manager is independent from the local token-based cloudflared runner. It is disabled by default; when disabled, existing tunnel start/stop behavior is unchanged.
-
-Use it when you want cfui to manage Cloudflare-hosted tunnel ingress configuration for published applications:
-
-1. Enable **Remote Tunnel Manager** in the UI, or set `CFUI_TUNNEL_MGMT_ENABLED=true`.
-2. Provide **Account ID/App ID** and **Tunnel ID** in the UI or via environment variables. If these fields are left blank, cfui tries to decode them from the configured Cloudflare Tunnel Token (`a` = account tag, `t` = tunnel id).
-3. Authenticate with either:
-   - API Token (recommended): `CLOUDFLARE_API_TOKEN`
-   - Email + Global API Key: `CLOUDFLARE_API_EMAIL` and `CLOUDFLARE_API_KEY`
-4. Click **Load Tunnel Config**. Changing the Tunnel ID loads that tunnel's current remote configuration.
-5. Use **Add published application** to create public hostname routes similar to Cloudflare Zero Trust:
-   - Subdomain + Domain
-   - Optional Path
-   - Service Type (`HTTP`, `HTTPS`, `SSH`, `RDP`, `TCP`, `UNIX socket`, `HTTP status`, or custom)
-   - URL/service target
-   - Optional origin settings such as HTTP Host Header, Origin Server Name, and TLS verification
-
-For least privilege, create a Cloudflare API token scoped to the target account and Cloudflare Tunnel configuration permissions instead of using a global API key.
-
-## Getting a Tunnel Token
-
-1. Go to [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)
-2. Navigate to **Networks** > **Tunnels**
-3. Create a new tunnel or select an existing one
-4. Copy the token from the tunnel configuration
-
-## API Endpoints
-
-- `GET /api/status` - Get tunnel status
-- `GET /api/config` - Get current configuration
-- `POST /api/config` - Update configuration
-- `POST /api/control` - Control tunnel (start/stop)
-- `GET /api/i18n/:lang` - Get translations
-- `GET /api/tunnel-manager/settings` - Get effective remote tunnel manager settings
-- `POST /api/tunnel-manager/settings` - Update remote tunnel manager settings
-- `GET /api/tunnel-manager/config` - Fetch selected remote tunnel configuration
-- `POST /api/tunnel-manager/entries` - Add a public hostname/ingress rule
-- `PUT /api/tunnel-manager/entries/:index` - Update a public hostname/ingress rule
-- `DELETE /api/tunnel-manager/entries/:index` - Delete a public hostname/ingress rule
-
-## Development
-
-### Project Structure
-
-```
-cloudflared-ui/
-├── internal/config/      # Configuration management
-├── internal/server/      # HTTP server and API handlers
-├── internal/service/     # Local cloudflared runner
-├── internal/tunnelmgr/   # Cloudflare API-backed remote tunnel manager
-├── locales/        # Translation files
-├── web/            # Frontend files
-│   └── dist/       # Built frontend assets
-├── main.go         # Application entry point
-└── README.md
+```text
+cfui/
+├── internal/config/       # SQLite-backed configuration and migration
+├── internal/ddns/         # DDNS detection and Cloudflare DNS sync
+├── internal/mcpbridge/    # MCP endpoint and token store
+├── internal/s3dav/        # S3-compatible filesystem, file API, WebDAV adapter
+├── internal/server/       # HTTP server, API handlers, dedicated WebDAV server
+├── internal/service/      # Local cloudflared runner
+├── internal/tunnelmgr/    # Cloudflare Tunnel ingress management
+├── locales/               # UI translations
+├── web/dist/              # Embedded frontend
+├── version/               # Build-time version metadata
+└── main.go
 ```
 
-### Running in Development Mode
+## Security Notes
 
-```bash
-go run main.go
-```
-
-## Docker Build
-
-### Using Make
-
-```bash
-# Build Docker image with version info
-make build-docker
-
-# Or build specific version
-VERSION=v1.0.0 make build-docker
-```
-
-### Manual Docker Build
-
-```bash
-# Build image with version info
-VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S_UTC')
-GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-
-docker build \
-  --build-arg VERSION=${VERSION} \
-  --build-arg BUILD_TIME=${BUILD_TIME} \
-  --build-arg GIT_COMMIT=${GIT_COMMIT} \
-  -t cfui:${VERSION} \
-  -t cfui:latest \
-  .
-
-# Run container
-docker run -d -p 14333:14333 -v $(pwd)/data:/app/data cfui:latest
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Security
-
-- Never expose the web interface directly to the internet without proper authentication
-- Keep your tunnel token secure
-- Use HTTPS if exposing the interface externally
-- Regularly update to the latest version for security patches
+- Do not expose cfui directly to the public internet without a trusted access control layer.
+- Treat Tunnel tokens, Cloudflare API tokens, S3 keys, and WebDAV passwords as secrets.
+- Prefer scoped Cloudflare API tokens over global API keys.
+- Disable WebDAV authentication only on trusted networks.
+- Rotate credentials if they were pasted into logs, chat, shell history, or screenshots.
 
 ## Troubleshooting
 
-### Tunnel won't start
+### Tunnel does not start
 
-- Verify your tunnel token is correct
-- Check system logs for error messages
-- Ensure cloudflared binary is accessible
-- Check firewall settings
+- Check that the tunnel token is correct.
+- Review recent logs in the UI.
+- Authentication/configuration errors are not auto-restarted.
+- Metrics registration conflicts may require restarting the cfui process.
 
-### Duplicate metrics error
+### Remote Tunnel Manager cannot load config
 
-- Restart the application (not just the tunnel)
-- Disable metrics if not needed
-- Check for port conflicts
+- Verify Account ID and Tunnel ID.
+- Check API token permissions from the Remote Tunnel Manager page.
+- If Account ID or Tunnel ID are blank, check whether they can be decoded from the local tunnel token.
 
-### Auto-restart not working
+### DDNS does not update records
 
-- Enable "Auto-restart on failure" in settings
-- Check that the error is retryable (authentication errors won't auto-restart)
-- Review system logs for restart attempts
+- Enable Remote Tunnel Manager first.
+- Verify `Zone -> DNS -> Edit` permission.
+- Check configured IP source URLs.
+- Use manual sync to see the latest error.
 
-## Acknowledgments
+### S3 WebDAV cannot list files
 
-- Built with [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)
-- Uses [urfave/cli](https://github.com/urfave/cli) for CLI framework
-- Frontend built with vanilla JavaScript and modern CSS
+- Check S3 endpoint, region, bucket name, path-style mode, and credentials.
+- For R2, use the R2 S3 endpoint and an R2 S3 Access Key ID / Secret Access Key.
+- Confirm the mount and WebDAV endpoint are enabled.
+- Use the S3 test and WebDAV test buttons from the UI.
 
-## Support
+## License
 
-- GitHub Issues: [Report a bug or request a feature](https://github.com/yourusername/cloudflared-ui/issues)
-- Documentation: [Cloudflare Tunnel Docs](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)
-
----
-
-Made with ❤️ for the Cloudflare community
+This project is licensed under the MIT License.
