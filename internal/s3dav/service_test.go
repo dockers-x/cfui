@@ -126,6 +126,26 @@ func TestSaveMountPreservesSecretAccessKeyWhenBlank(t *testing.T) {
 	}
 }
 
+func TestSaveMountPreservesPathStyleFalse(t *testing.T) {
+	svc := newTestService(t, fakeCloudflareClient{}, afero.NewMemMapFs())
+	req := validMountRequest()
+	req.Provider = ProviderCloudflareR2
+	req.AccountID = "account"
+	req.EndpointURL = "https://account.r2.cloudflarestorage.com"
+	req.PathStyle = false
+
+	resp, err := svc.SaveMount(context.Background(), "default", req)
+	if err != nil {
+		t.Fatalf("SaveMount: %v", err)
+	}
+	if resp.Mounts[0].PathStyle {
+		t.Fatalf("expected response to preserve path_style=false: %#v", resp.Mounts[0])
+	}
+	if got := svc.cfgMgr.Get().S3WebDAV.Mounts[0]; got.PathStyle {
+		t.Fatalf("expected stored config to preserve path_style=false: %#v", got)
+	}
+}
+
 func TestCreateMountRejectsDuplicateMountPath(t *testing.T) {
 	svc := newTestService(t, fakeCloudflareClient{}, afero.NewMemMapFs())
 	req := validMountRequest()

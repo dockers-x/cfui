@@ -65,7 +65,6 @@
         $('s3-wizard-r2-buckets').hidden = !isR2;
         if (isR2) {
             if (!value('s3-wizard-region')) setValue('s3-wizard-region', 'auto');
-            $('s3-wizard-path-style').checked = true;
             applyR2EndpointPreset(false);
         }
         renderR2TokenPath();
