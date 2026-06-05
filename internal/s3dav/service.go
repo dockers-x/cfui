@@ -9,25 +9,30 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"cfui/internal/config"
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
 	"github.com/spf13/afero"
+	"golang.org/x/net/webdav"
 )
 
 type Service struct {
-	cfgMgr    *config.Manager
-	newClient ClientFactory
-	newFS     FSFactory
+	cfgMgr        *config.Manager
+	newClient     ClientFactory
+	newFS         FSFactory
+	webDAVLocksMu sync.Mutex
+	webDAVLocks   map[string]webdav.LockSystem
 }
 
 func NewService(cfgMgr *config.Manager) *Service {
 	return &Service{
-		cfgMgr:    cfgMgr,
-		newClient: defaultClientFactory,
-		newFS:     newS3FS,
+		cfgMgr:      cfgMgr,
+		newClient:   defaultClientFactory,
+		newFS:       newS3FS,
+		webDAVLocks: make(map[string]webdav.LockSystem),
 	}
 }
 

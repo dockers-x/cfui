@@ -330,6 +330,54 @@ func TestWebDAVPropfindMountRootWorksWhenS3RootHasNoDirectoryObject(t *testing.T
 	}
 }
 
+func TestWebDAVLockSystemPersistsAcrossRequests(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	if err := afero.WriteFile(fs, "/docs/readme.txt", []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	svc := newTestService(t, fakeCloudflareClient{}, fs)
+	cfg := svc.cfgMgr.Get()
+	cfg.S3WebDAV.Enabled = true
+	cfg.S3WebDAV.Mounts[0].EndpointURL = "https://s3.example.com"
+	cfg.S3WebDAV.Mounts[0].BucketName = "bucket"
+	cfg.S3WebDAV.Mounts[0].MountPath = "/webdav/public/"
+	cfg.S3WebDAV.Mounts[0].AccessKeyID = "ak"
+	cfg.S3WebDAV.Mounts[0].SecretAccessKey = "sk"
+	cfg.S3WebDAV.Mounts[0].WebDAVAuthEnabled = false
+	if err := svc.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+	handler := svc.Handler()
+	lockBody := `<?xml version="1.0" encoding="utf-8"?>
+<D:lockinfo xmlns:D="DAV:">
+  <D:lockscope><D:exclusive/></D:lockscope>
+  <D:locktype><D:write/></D:locktype>
+  <D:owner><D:href>cfui-test</D:href></D:owner>
+</D:lockinfo>`
+
+	lockReq := httptest.NewRequest("LOCK", "/webdav/public/docs/readme.txt", strings.NewReader(lockBody))
+	lockReq.Header.Set("Content-Type", "application/xml")
+	lockReq.Header.Set("Depth", "0")
+	lockReq.Header.Set("Timeout", "Second-60")
+	lockRec := httptest.NewRecorder()
+	handler.ServeHTTP(lockRec, lockReq)
+	if lockRec.Code != http.StatusOK {
+		t.Fatalf("expected LOCK to succeed, got %d: %s", lockRec.Code, lockRec.Body.String())
+	}
+	token := lockRec.Header().Get("Lock-Token")
+	if token == "" {
+		t.Fatalf("expected LOCK response to include Lock-Token")
+	}
+
+	unlockReq := httptest.NewRequest("UNLOCK", "/webdav/public/docs/readme.txt", nil)
+	unlockReq.Header.Set("Lock-Token", token)
+	unlockRec := httptest.NewRecorder()
+	handler.ServeHTTP(unlockRec, unlockReq)
+	if unlockRec.Code != http.StatusNoContent {
+		t.Fatalf("expected UNLOCK to succeed with persisted lock system, got %d: %s", unlockRec.Code, unlockRec.Body.String())
+	}
+}
+
 func TestBrowserGetDirectoryShowsReadOnlyListing(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	if err := fs.MkdirAll("/docs", 0755); err != nil {

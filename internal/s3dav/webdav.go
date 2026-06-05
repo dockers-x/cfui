@@ -44,10 +44,25 @@ func (s *Service) Handler() http.Handler {
 		handler := &webdav.Handler{
 			Prefix:     mountPath,
 			FileSystem: aferoWebDAVFS{fs: fs},
-			LockSystem: webdav.NewMemLS(),
+			LockSystem: s.webDAVLockSystem(mount.Key),
 		}
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func (s *Service) webDAVLockSystem(key string) webdav.LockSystem {
+	key = normalizeMountKey(key)
+	s.webDAVLocksMu.Lock()
+	defer s.webDAVLocksMu.Unlock()
+	if s.webDAVLocks == nil {
+		s.webDAVLocks = make(map[string]webdav.LockSystem)
+	}
+	if ls, ok := s.webDAVLocks[key]; ok {
+		return ls
+	}
+	ls := webdav.NewMemLS()
+	s.webDAVLocks[key] = ls
+	return ls
 }
 
 func serveBrowserReadOnly(w http.ResponseWriter, r *http.Request, mountPath string, fs afero.Fs) bool {
