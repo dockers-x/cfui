@@ -161,6 +161,7 @@ func (s *Server) GetHandler() http.Handler {
 
 	// S3 WebDAV endpoints
 	mux.HandleFunc("/api/s3/settings", s.handleS3Settings)
+	mux.HandleFunc("/api/s3/webdav-control", s.handleS3WebDAVControl)
 	mux.HandleFunc("/api/s3/mounts/", s.handleS3Mount)
 	mux.HandleFunc("/api/s3/mounts", s.handleS3Mounts)
 	mux.HandleFunc("/api/s3/test", s.handleS3Test)
@@ -302,6 +303,36 @@ func (s *Server) handleS3Settings(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func (s *Server) handleS3WebDAVControl(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Action string `json:"action"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	switch strings.TrimSpace(req.Action) {
+	case "start":
+		if err := s.StartS3WebDAVNow(r.Context()); err != nil {
+			writeS3Error(w, err)
+			return
+		}
+	case "stop":
+		if err := s.StopS3WebDAV(r.Context()); err != nil {
+			writeS3Error(w, err)
+			return
+		}
+	default:
+		writeAPIError(w, http.StatusBadRequest, fmt.Errorf("unsupported WebDAV control action %q", req.Action))
+		return
+	}
+	writeJSON(w, s.decorateS3SettingsResponse(s.s3Svc.Settings(r.Context())))
 }
 
 func (s *Server) handleS3Mounts(w http.ResponseWriter, r *http.Request) {
@@ -516,7 +547,7 @@ func writeS3Error(w http.ResponseWriter, err error) {
 		writeAPIError(w, http.StatusForbidden, err)
 	case strings.Contains(msg, "required"), strings.Contains(msg, "not allowed"), strings.Contains(msg, "bucket name"):
 		writeAPIError(w, http.StatusBadRequest, err)
-	case strings.Contains(msg, "disabled"), strings.Contains(msg, "not configured"):
+	case strings.Contains(msg, "disabled"), strings.Contains(msg, "not enabled"), strings.Contains(msg, "not configured"):
 		writeAPIError(w, http.StatusConflict, err)
 	default:
 		writeAPIError(w, http.StatusBadGateway, err)

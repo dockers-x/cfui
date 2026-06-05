@@ -6,6 +6,7 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -79,9 +80,18 @@ type IngressRule struct {
 	Hostname         string `json:"hostname"`
 	Path             string `json:"path"`
 	Service          string `json:"service"`
+	Comment          string `json:"comment,omitempty"`
 	NoTLSVerify      bool   `json:"no_tls_verify"`
 	HTTPHostHeader   string `json:"http_host_header,omitempty"`
 	OriginServerName string `json:"origin_server_name,omitempty"`
+}
+
+type S3WebDAVTunnelStatus struct {
+	Hostname string `json:"hostname"`
+	Service  string `json:"service"`
+	Status   string `json:"status"`
+	Message  string `json:"message"`
+	Synced   bool   `json:"synced"`
 }
 
 // PermissionCheck represents whether a specific permission is granted.
@@ -112,6 +122,14 @@ const (
 	permTunnelEdit = "Argo Tunnel (Legacy)"
 	permZoneRead   = "Zone"
 	permDNSEdit    = "DNS"
+)
+
+const (
+	S3WebDAVTunnelCommentMarker     = "cfui:s3-webdav"
+	S3WebDAVTunnelStatusSynced      = "synced"
+	S3WebDAVTunnelStatusMissing     = "missing"
+	S3WebDAVTunnelStatusUnavailable = "unavailable"
+	S3WebDAVTunnelStatusError       = "error"
 )
 
 func NewManager(cfgMgr *config.Manager) *Manager {
@@ -360,7 +378,7 @@ func (m *Manager) AddEntry(ctx context.Context, entry IngressRule) (Configuratio
 		return nil
 	})
 	if err == nil && strings.TrimSpace(entry.Hostname) != "" {
-		if dnsErr := m.syncDNSForHostname(ctx, entry.Hostname); dnsErr != nil {
+		if dnsErr := m.syncDNSForHostnameWithComment(ctx, entry.Hostname, entry.Comment); dnsErr != nil {
 			logger.Sugar.Warnf("Tunnel config updated but DNS sync failed for %s: %v. Create a CNAME record manually: %s → %s.cfargotunnel.com", entry.Hostname, dnsErr, entry.Hostname, m.cfgMgr.Get().TunnelManagement.TunnelID)
 		}
 	}
@@ -380,7 +398,7 @@ func (m *Manager) UpdateEntry(ctx context.Context, index int, entry IngressRule)
 		return nil
 	})
 	if err == nil && strings.TrimSpace(entry.Hostname) != "" {
-		if dnsErr := m.syncDNSForHostname(ctx, entry.Hostname); dnsErr != nil {
+		if dnsErr := m.syncDNSForHostnameWithComment(ctx, entry.Hostname, entry.Comment); dnsErr != nil {
 			logger.Sugar.Warnf("Tunnel config updated but DNS sync failed for %s: %v. Create a CNAME record manually: %s → %s.cfargotunnel.com", entry.Hostname, dnsErr, entry.Hostname, m.cfgMgr.Get().TunnelManagement.TunnelID)
 		}
 	}
@@ -396,6 +414,70 @@ func (m *Manager) DeleteEntry(ctx context.Context, index int) (ConfigurationResp
 		ensureCatchAll(cfg)
 		return nil
 	})
+}
+
+func (m *Manager) CheckS3WebDAVHostname(ctx context.Context, hostname, service string) S3WebDAVTunnelStatus {
+	hostname = normalizeHostname(hostname)
+	service = strings.TrimSpace(service)
+	status := S3WebDAVTunnelStatus{
+		Hostname: hostname,
+		Service:  service,
+		Status:   S3WebDAVTunnelStatusMissing,
+		Message:  "Tunnel binding is missing.",
+	}
+	if hostname == "" || service == "" {
+		return status
+	}
+
+	cfg, client, err := m.client()
+	if err != nil {
+		status.Status = S3WebDAVTunnelStatusError
+		status.Message = err.Error()
+		if stderrors.Is(err, ErrDisabled) {
+			status.Status = S3WebDAVTunnelStatusUnavailable
+			status.Message = "Tunnel Manager is disabled."
+		}
+		return status
+	}
+
+	current, err := client.GetTunnelConfiguration(ctx, cloudflare.AccountIdentifier(cfg.AccountID), cfg.TunnelID)
+	if err != nil {
+		status.Status = S3WebDAVTunnelStatusError
+		status.Message = err.Error()
+		return status
+	}
+
+	hasRule := false
+	for _, rule := range current.Config.Ingress {
+		if strings.EqualFold(strings.TrimSpace(rule.Hostname), hostname) &&
+			strings.TrimSpace(rule.Path) == "" &&
+			strings.TrimSpace(rule.Service) == service {
+			hasRule = true
+			break
+		}
+	}
+
+	hasDNSBinding, err := m.s3WebDAVDNSBindingExists(ctx, hostname)
+	if err != nil {
+		status.Status = S3WebDAVTunnelStatusError
+		status.Message = err.Error()
+		return status
+	}
+	if hasRule && hasDNSBinding {
+		status.Status = S3WebDAVTunnelStatusSynced
+		status.Message = "Tunnel binding is synced."
+		status.Synced = true
+		return status
+	}
+	switch {
+	case !hasRule && !hasDNSBinding:
+		status.Message = "Tunnel rule and DNS marker are missing."
+	case !hasRule:
+		status.Message = "Tunnel rule is missing."
+	case !hasDNSBinding:
+		status.Message = "DNS marker is missing."
+	}
+	return status
 }
 
 func (m *Manager) mutate(ctx context.Context, mutate func(*cloudflare.TunnelConfiguration) error) (ConfigurationResponse, error) {
@@ -430,6 +512,10 @@ func (m *Manager) mutate(ctx context.Context, mutate func(*cloudflare.TunnelConf
 // syncDNSForHostname creates or updates a CNAME DNS record pointing the
 // hostname to the tunnel's cfargotunnel.com subdomain.
 func (m *Manager) syncDNSForHostname(ctx context.Context, hostname string) error {
+	return m.syncDNSForHostnameWithComment(ctx, hostname, "")
+}
+
+func (m *Manager) syncDNSForHostnameWithComment(ctx context.Context, hostname, comment string) error {
 	cfg, client, err := m.accountClient()
 	if err != nil {
 		return fmt.Errorf("failed to get client for DNS sync: %w", err)
@@ -456,14 +542,18 @@ func (m *Manager) syncDNSForHostname(ctx context.Context, hostname string) error
 	}
 
 	if len(existing) > 0 {
-		_, err = client.UpdateDNSRecord(ctx, cloudflare.ZoneIdentifier(zone.ID), cloudflare.UpdateDNSRecordParams{
+		params := cloudflare.UpdateDNSRecordParams{
 			ID:      existing[0].ID,
 			Type:    "CNAME",
 			Name:    hostname,
 			Content: target,
 			Proxied: cloudflare.BoolPtr(true),
 			TTL:     1,
-		})
+		}
+		if strings.TrimSpace(comment) != "" {
+			params.Comment = cloudflare.StringPtr(strings.TrimSpace(comment))
+		}
+		_, err = client.UpdateDNSRecord(ctx, cloudflare.ZoneIdentifier(zone.ID), params)
 	} else {
 		_, err = client.CreateDNSRecord(ctx, cloudflare.ZoneIdentifier(zone.ID), cloudflare.CreateDNSRecordParams{
 			Type:    "CNAME",
@@ -471,6 +561,7 @@ func (m *Manager) syncDNSForHostname(ctx context.Context, hostname string) error
 			Content: target,
 			Proxied: cloudflare.BoolPtr(true),
 			TTL:     1,
+			Comment: strings.TrimSpace(comment),
 		})
 	}
 	if err != nil {
@@ -479,6 +570,57 @@ func (m *Manager) syncDNSForHostname(ctx context.Context, hostname string) error
 
 	logger.Sugar.Infof("DNS CNAME record synced: %s → %s", hostname, target)
 	return nil
+}
+
+func (m *Manager) s3WebDAVDNSBindingExists(ctx context.Context, hostname string) (bool, error) {
+	cfg, client, err := m.accountClient()
+	if err != nil {
+		return false, err
+	}
+
+	zonesResp, err := client.ListZonesContext(ctx, cloudflare.WithZoneFilters("", cfg.AccountID, ""))
+	if err != nil {
+		return false, fmt.Errorf("failed to list zones: %w", err)
+	}
+
+	zone := findZoneForHostname(hostname, zonesResp.Result)
+	if zone == nil {
+		return false, fmt.Errorf("no matching zone found for %s", hostname)
+	}
+
+	existing, _, err := client.ListDNSRecords(ctx, cloudflare.ZoneIdentifier(zone.ID), cloudflare.ListDNSRecordsParams{
+		Type: "CNAME",
+		Name: hostname,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to list DNS records: %w", err)
+	}
+	target := fmt.Sprintf("%s.cfargotunnel.com", cfg.TunnelID)
+	for _, record := range existing {
+		if strings.EqualFold(strings.TrimSpace(record.Content), target) && strings.Contains(record.Comment, S3WebDAVTunnelCommentMarker) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func S3WebDAVTunnelComment(hostname, service string) string {
+	return fmt.Sprintf("%s hostname=%s service=%s", S3WebDAVTunnelCommentMarker, normalizeHostname(hostname), strings.TrimSpace(service))
+}
+
+func normalizeHostname(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if u, err := url.Parse(value); err == nil && u.Host != "" {
+		value = u.Host
+	}
+	value = strings.Trim(value, "/")
+	if host, _, ok := strings.Cut(value, ":"); ok {
+		value = host
+	}
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 func findZoneForHostname(hostname string, zones []cloudflare.Zone) *cloudflare.Zone {

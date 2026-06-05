@@ -1394,17 +1394,98 @@ details.disclosure > .body {
 
 .s3-dedicated-settings {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 160px auto;
     gap: var(--gap-3);
-    align-items: end;
 }
 
 .s3-dedicated-settings[hidden] {
     display: none;
 }
 
+.s3-dedicated-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 160px auto;
+    gap: var(--gap-3);
+    align-items: end;
+}
+
 .s3-dedicated-settings .form-field {
     margin-bottom: 0;
+}
+
+.s3-dedicated-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-3);
+    min-height: var(--tap);
+}
+
+.s3-dedicated-controls__spacer {
+    flex: 1 1 auto;
+}
+
+.s3-domain-settings {
+    display: grid;
+    gap: var(--gap-3);
+    padding-top: var(--gap-2);
+    border-top: 1px solid var(--border);
+}
+
+.s3-domain-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-3);
+}
+
+.s3-domain-modes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--gap-2);
+}
+
+.s3-domain-choice {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-2);
+    min-height: 42px;
+    padding: 0 var(--gap-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-control);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+
+.s3-domain-choice:has(input:checked) {
+    border-color: var(--cf-orange);
+    background: var(--surface);
+    box-shadow: 0 0 0 1px rgba(246, 130, 31, 0.18);
+}
+
+.s3-domain-choice input {
+    accent-color: var(--cf-orange);
+}
+
+.s3-domain-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 180px auto;
+    gap: var(--gap-3);
+    align-items: end;
+}
+
+.s3-domain-panel[hidden] {
+    display: none;
+}
+
+.s3-domain-panel .form-field {
+    margin-bottom: 0;
+}
+
+.s3-copy-line[data-state="error"] .input {
+    border-color: var(--state-error);
+    color: var(--state-error);
+    background: color-mix(in srgb, var(--state-error) 8%, var(--surface));
 }
 
 .s3-mount-switcher-shell {
@@ -2051,8 +2132,19 @@ details.disclosure > .body {
     .s3-state-grid,
     .s3-toggle-grid,
     .s3-access-modes,
-    .s3-dedicated-settings {
+    .s3-dedicated-fields,
+    .s3-domain-modes,
+    .s3-domain-panel {
         grid-template-columns: 1fr;
+    }
+
+    .s3-dedicated-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .s3-dedicated-controls__spacer {
+        display: none;
     }
 
     .s3-file-table {

@@ -121,12 +121,28 @@ func init() {
 	appsettingDescS3WebdavDedicatedPort := appsettingFields[24].Descriptor()
 	// appsetting.DefaultS3WebdavDedicatedPort holds the default value on creation for the s3_webdav_dedicated_port field.
 	appsetting.DefaultS3WebdavDedicatedPort = appsettingDescS3WebdavDedicatedPort.Default.(int)
+	// appsettingDescS3WebdavDedicatedAutoStart is the schema descriptor for s3_webdav_dedicated_auto_start field.
+	appsettingDescS3WebdavDedicatedAutoStart := appsettingFields[25].Descriptor()
+	// appsetting.DefaultS3WebdavDedicatedAutoStart holds the default value on creation for the s3_webdav_dedicated_auto_start field.
+	appsetting.DefaultS3WebdavDedicatedAutoStart = appsettingDescS3WebdavDedicatedAutoStart.Default.(bool)
+	// appsettingDescS3WebdavDedicatedDomainMode is the schema descriptor for s3_webdav_dedicated_domain_mode field.
+	appsettingDescS3WebdavDedicatedDomainMode := appsettingFields[26].Descriptor()
+	// appsetting.DefaultS3WebdavDedicatedDomainMode holds the default value on creation for the s3_webdav_dedicated_domain_mode field.
+	appsetting.DefaultS3WebdavDedicatedDomainMode = appsettingDescS3WebdavDedicatedDomainMode.Default.(string)
+	// appsettingDescS3WebdavDedicatedCustomDomain is the schema descriptor for s3_webdav_dedicated_custom_domain field.
+	appsettingDescS3WebdavDedicatedCustomDomain := appsettingFields[27].Descriptor()
+	// appsetting.DefaultS3WebdavDedicatedCustomDomain holds the default value on creation for the s3_webdav_dedicated_custom_domain field.
+	appsetting.DefaultS3WebdavDedicatedCustomDomain = appsettingDescS3WebdavDedicatedCustomDomain.Default.(string)
+	// appsettingDescS3WebdavDedicatedTunnelHostname is the schema descriptor for s3_webdav_dedicated_tunnel_hostname field.
+	appsettingDescS3WebdavDedicatedTunnelHostname := appsettingFields[28].Descriptor()
+	// appsetting.DefaultS3WebdavDedicatedTunnelHostname holds the default value on creation for the s3_webdav_dedicated_tunnel_hostname field.
+	appsetting.DefaultS3WebdavDedicatedTunnelHostname = appsettingDescS3WebdavDedicatedTunnelHostname.Default.(string)
 	// appsettingDescCreatedAt is the schema descriptor for created_at field.
-	appsettingDescCreatedAt := appsettingFields[25].Descriptor()
+	appsettingDescCreatedAt := appsettingFields[29].Descriptor()
 	// appsetting.DefaultCreatedAt holds the default value on creation for the created_at field.
 	appsetting.DefaultCreatedAt = appsettingDescCreatedAt.Default.(func() time.Time)
 	// appsettingDescUpdatedAt is the schema descriptor for updated_at field.
-	appsettingDescUpdatedAt := appsettingFields[26].Descriptor()
+	appsettingDescUpdatedAt := appsettingFields[30].Descriptor()
 	// appsetting.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	appsetting.DefaultUpdatedAt = appsettingDescUpdatedAt.Default.(func() time.Time)
 	// appsetting.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

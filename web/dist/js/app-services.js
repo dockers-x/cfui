@@ -211,7 +211,8 @@
             renderTunnelManagerConfig(data);
             setManagerStatus('ok', t('manager_status_loaded'));
             if (!silent) toast.ok(t('manager_config_loaded'));
-        } catch (err) { setManagerStatus('error', err.message); if (!silent) toast.err(t('manager_config_load_failed') + ': ' + err.message); }
+            return data;
+        } catch (err) { setManagerStatus('error', err.message); if (!silent) toast.err(t('manager_config_load_failed') + ': ' + err.message); return null; }
         finally { if (btn) setBusy(btn, false); }
     }
 
@@ -252,7 +253,8 @@
 
     function fillTunnelEntryForm(entry) {
         const host = splitHostname(entry.hostname || ''), svc = splitService(entry.service || '');
-        $('manager-entry-index').value = String(entry.index);
+        $('manager-entry-index').value = entry.index == null ? '' : String(entry.index);
+        $('manager-entry-comment').value = entry.comment || '';
         $('manager-entry-subdomain').value = host.subdomain; $('manager-entry-domain').value = host.domain;
         renderTunnelManagerZones();
         $('manager-entry-path').value = entry.path || '';
@@ -265,6 +267,7 @@
 
     function resetTunnelEntryForm() {
         $('manager-entry-index').value = ''; $('manager-entry-subdomain').value = ''; $('manager-entry-domain').value = '';
+        $('manager-entry-comment').value = '';
         renderTunnelManagerZones();
         $('manager-entry-path').value = ''; $('manager-entry-service-type').value = 'http'; $('manager-entry-service').value = '';
         $('manager-entry-http-host-header').value = ''; $('manager-entry-origin-server-name').value = ''; $('manager-entry-no-tls').checked = false;
@@ -286,7 +289,7 @@
     async function submitTunnelManagerEntry(e) {
         e.preventDefault();
         const index = $('manager-entry-index').value;
-        const entry = { hostname: buildHostname($('manager-entry-subdomain').value, $('manager-entry-domain').value), path: $('manager-entry-path').value.trim(), service: buildService($('manager-entry-service-type').value, $('manager-entry-service').value), no_tls_verify: $('manager-entry-no-tls').checked, http_host_header: $('manager-entry-http-host-header').value.trim(), origin_server_name: $('manager-entry-origin-server-name').value.trim() };
+        const entry = { hostname: buildHostname($('manager-entry-subdomain').value, $('manager-entry-domain').value), path: $('manager-entry-path').value.trim(), service: buildService($('manager-entry-service-type').value, $('manager-entry-service').value), comment: $('manager-entry-comment')?.value.trim() || '', no_tls_verify: $('manager-entry-no-tls').checked, http_host_header: $('manager-entry-http-host-header').value.trim(), origin_server_name: $('manager-entry-origin-server-name').value.trim() };
         if (!entry.service) { toast.err(t('service_required')); return; }
         const btn = $('manager-entry-submit'); setBusy(btn, true);
         const url = index === '' ? '/tunnel-manager/entries' : `/tunnel-manager/entries/${index}`;
@@ -654,6 +657,7 @@
     ns.fetchTunnelManagerSettings = fetchTunnelManagerSettings;
     ns.maybeLoadTunnelManagerZones = maybeLoadTunnelManagerZones;
     ns.loadTunnelManagerConfig = loadTunnelManagerConfig;
+    ns.openTunnelEntryDialog = openTunnelEntryDialog;
     ns.canLoadTunnelManagerZones = canLoadTunnelManagerZones;
     ns.fetchMCPStatus = fetchMCPStatus;
     ns.refreshDDNS = refreshDDNS;

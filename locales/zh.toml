@@ -1074,6 +1074,9 @@ other = "单独端口运行中"
 [s3_dedicated_starting]
 other = "单独端口待启动"
 
+[s3_dedicated_stopped]
+other = "单独端口已停止"
+
 [s3_dedicated_waiting_feature]
 other = "先启用 S3 WebDAV"
 
@@ -1088,6 +1091,96 @@ other = "独立 WebDAV 端口必须在 1 到 65535 之间。"
 
 [s3_dedicated_auth_warning]
 other = "如果关闭 WebDAV 登录，任何能访问这个端口的人都能访问已启用的挂载。"
+
+[s3_dedicated_auto_start]
+other = "启动时自动运行"
+
+[s3_dedicated_start]
+other = "启动端口"
+
+[s3_dedicated_stop]
+other = "停止端口"
+
+[s3_dedicated_started]
+other = "独立 WebDAV 端口已启动"
+
+[s3_dedicated_stopped_done]
+other = "独立 WebDAV 端口已停止"
+
+[s3_dedicated_start_failed]
+other = "启动独立 WebDAV 端口失败"
+
+[s3_dedicated_stop_failed]
+other = "停止独立 WebDAV 端口失败"
+
+[s3_public_endpoint_mode]
+other = "公开访问地址"
+
+[s3_public_endpoint_help]
+other = "决定挂载卡片里给 WebDAV 客户端复制的地址。"
+
+[s3_domain_mode_none]
+other = "直连端口"
+
+[s3_domain_mode_custom]
+other = "自定义 URL"
+
+[s3_domain_mode_tunnel]
+other = "Cloudflare Tunnel"
+
+[s3_custom_base_url]
+other = "基础 URL"
+
+[s3_open_tunnel_rule]
+other = "去远程隧道配置"
+
+[s3_tunnel_domains_unloaded]
+other = "先加载域名"
+
+[select_domain]
+other = "选择域名"
+
+[s3_tunnel_synced]
+other = "Tunnel 已同步"
+
+[s3_tunnel_missing]
+other = "Tunnel 绑定缺失"
+
+[s3_tunnel_unavailable]
+other = "远程隧道不可用"
+
+[s3_tunnel_error]
+other = "Tunnel 检查失败"
+
+[s3_tunnel_not_configured]
+other = "未设置域名"
+
+[s3_tunnel_feature_required]
+other = "请先在功能开关启用远程隧道管理。"
+
+[s3_tunnel_manager_required]
+other = "请先完成远程隧道管理的账户、隧道和 API 凭证配置。"
+
+[s3_tunnel_permission_required]
+other = "当前 Cloudflare API 凭证权限不足，请先在远程隧道管理里检查权限。"
+
+[s3_tunnel_domain_required]
+other = "没有可选域名，请先在远程隧道管理里加载域名。"
+
+[s3_tunnel_hostname_required]
+other = "请输入子域名并选择域名。"
+
+[s3_tunnel_overwrite_title]
+other = "覆盖现有 Tunnel 规则？"
+
+[s3_tunnel_overwrite_message]
+other = "{hostname} 已有公开主机名规则，将打开编辑窗口覆盖为当前 WebDAV 独立端口。"
+
+[s3_tunnel_rule_prefilled]
+other = "已打开远程隧道规则，请确认后保存。"
+
+[s3_tunnel_open_failed]
+other = "打开远程隧道规则失败"
 
 [s3_new_mount]
 other = "新建挂载"

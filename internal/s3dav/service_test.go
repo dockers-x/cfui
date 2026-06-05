@@ -146,6 +146,32 @@ func TestSaveMountPreservesPathStyleFalse(t *testing.T) {
 	}
 }
 
+func TestSaveSettingsPreservesDedicatedAutoStart(t *testing.T) {
+	svc := newTestService(t, fakeCloudflareClient{}, afero.NewMemMapFs())
+	autoStart := true
+	port := 15432
+	customDomain := "https://dav.example.com/base/"
+	tunnelHostname := "https://dav.example.com/webdav/"
+
+	resp, err := svc.SaveSettings(context.Background(), SettingsRequest{
+		WebDAVAccessMode:        "dedicated",
+		DedicatedPort:           &port,
+		DedicatedAutoStart:      &autoStart,
+		DedicatedDomainMode:     "tunnel",
+		DedicatedCustomDomain:   &customDomain,
+		DedicatedTunnelHostname: &tunnelHostname,
+	})
+	if err != nil {
+		t.Fatalf("SaveSettings: %v", err)
+	}
+	if resp.WebDAVAccessMode != "dedicated" || !resp.DedicatedAutoStart || resp.DedicatedDomainMode != "tunnel" || resp.DedicatedCustomDomain != "https://dav.example.com/base" || resp.DedicatedTunnelHostname != "dav.example.com" {
+		t.Fatalf("expected dedicated settings to be saved, got %#v", resp)
+	}
+	if got := svc.cfgMgr.Get().S3WebDAV; got.WebDAVAccessMode != "dedicated" || !got.DedicatedAutoStart || got.DedicatedDomainMode != "tunnel" || got.DedicatedCustomDomain != "https://dav.example.com/base" || got.DedicatedTunnelHostname != "dav.example.com" {
+		t.Fatalf("expected stored dedicated settings, got %#v", got)
+	}
+}
+
 func TestCreateMountRejectsDuplicateMountPath(t *testing.T) {
 	svc := newTestService(t, fakeCloudflareClient{}, afero.NewMemMapFs())
 	req := validMountRequest()

@@ -13,6 +13,7 @@ import (
 	"cfui/internal/config"
 	"cfui/internal/logger"
 	"cfui/internal/s3dav"
+	"cfui/internal/tunnelmgr"
 )
 
 type s3DedicatedServer struct {
@@ -31,7 +32,7 @@ func (s *Server) StartS3WebDAV() {
 	if s.s3WebDAV == nil {
 		s.s3WebDAV = newS3DedicatedServer()
 	}
-	s.restartS3WebDAVDedicated(context.Background())
+	s.reconcileS3WebDAVDedicated(context.Background(), false)
 }
 
 func (s *Server) StopS3WebDAV(ctx context.Context) error {
@@ -39,6 +40,10 @@ func (s *Server) StopS3WebDAV(ctx context.Context) error {
 		return nil
 	}
 	return s.s3WebDAV.stop(ctx, "")
+}
+
+func (s *Server) StartS3WebDAVNow(ctx context.Context) error {
+	return s.startS3WebDAVDedicated(ctx)
 }
 
 func (s *Server) mainWebDAVHandler() http.Handler {
@@ -64,6 +69,10 @@ func (s *Server) dedicatedWebDAVHandler() http.Handler {
 }
 
 func (s *Server) restartS3WebDAVDedicated(ctx context.Context) {
+	s.reconcileS3WebDAVDedicated(ctx, true)
+}
+
+func (s *Server) reconcileS3WebDAVDedicated(ctx context.Context, keepRunning bool) {
 	if s.s3WebDAV == nil {
 		s.s3WebDAV = newS3DedicatedServer()
 	}
@@ -74,14 +83,36 @@ func (s *Server) restartS3WebDAVDedicated(ctx context.Context) {
 		}
 		return
 	}
+	shouldStart := (!keepRunning && cfg.DedicatedAutoStart) || (keepRunning && s.s3WebDAV.isRunning())
+	if !shouldStart {
+		if err := s.s3WebDAV.stop(ctx, ""); err != nil && logger.Sugar != nil {
+			logger.Sugar.Warnf("Failed to stop dedicated S3 WebDAV server: %v", err)
+		}
+		return
+	}
+	if err := s.startS3WebDAVDedicated(ctx); err != nil && logger.Sugar != nil {
+		addr, _ := s3DedicatedAddr(cfg)
+		logger.Sugar.Warnf("Failed to start dedicated S3 WebDAV server on %s: %v", addr, err)
+	}
+}
+
+func (s *Server) startS3WebDAVDedicated(ctx context.Context) error {
+	if s.s3WebDAV == nil {
+		s.s3WebDAV = newS3DedicatedServer()
+	}
+	cfg := s.cfgMgr.Get().S3WebDAV
+	if !cfg.Enabled {
+		return errors.New("S3 WebDAV is disabled")
+	}
+	if normalizeS3WebDAVAccessMode(cfg.WebDAVAccessMode) != config.S3WebDAVAccessModeDedicated {
+		return errors.New("dedicated WebDAV access mode is not enabled")
+	}
 	addr, err := s3DedicatedAddr(cfg)
 	if err != nil {
 		s.s3WebDAV.setError(err)
-		return
+		return err
 	}
-	if err := s.s3WebDAV.ensure(ctx, addr, s.dedicatedWebDAVHandler()); err != nil && logger.Sugar != nil {
-		logger.Sugar.Warnf("Failed to start dedicated S3 WebDAV server on %s: %v", addr, err)
-	}
+	return s.s3WebDAV.ensure(ctx, addr, s.dedicatedWebDAVHandler())
 }
 
 func (s *Server) decorateS3SettingsResponse(resp s3dav.SettingsResponse) s3dav.SettingsResponse {
@@ -92,6 +123,27 @@ func (s *Server) decorateS3SettingsResponse(resp s3dav.SettingsResponse) s3dav.S
 	resp.DedicatedRunning = running
 	resp.DedicatedAddress = addr
 	resp.DedicatedError = errMsg
+	resp = s.decorateS3TunnelStatus(resp)
+	return resp
+}
+
+func (s *Server) decorateS3TunnelStatus(resp s3dav.SettingsResponse) s3dav.SettingsResponse {
+	if resp.DedicatedDomainMode != config.S3WebDAVDomainModeTunnel {
+		return resp
+	}
+	if strings.TrimSpace(resp.DedicatedTunnelHostname) == "" {
+		resp.DedicatedTunnelStatus = tunnelmgr.S3WebDAVTunnelStatusMissing
+		resp.DedicatedTunnelStatusMessage = "Tunnel hostname is not configured."
+		return resp
+	}
+	if s.tunnelMgr == nil {
+		resp.DedicatedTunnelStatus = tunnelmgr.S3WebDAVTunnelStatusUnavailable
+		resp.DedicatedTunnelStatusMessage = "Tunnel Manager is unavailable."
+		return resp
+	}
+	status := s.tunnelMgr.CheckS3WebDAVHostname(context.Background(), resp.DedicatedTunnelHostname, s3DedicatedTunnelService(resp.DedicatedPort))
+	resp.DedicatedTunnelStatus = status.Status
+	resp.DedicatedTunnelStatusMessage = status.Message
 	return resp
 }
 
@@ -185,6 +237,12 @@ func (s *s3DedicatedServer) snapshot() (bool, string, string) {
 	return s.running, s.addr, s.errMsg
 }
 
+func (s *s3DedicatedServer) isRunning() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.running
+}
+
 func s3DedicatedAddr(cfg config.S3WebDAVConfig) (string, error) {
 	port := cfg.DedicatedPort
 	if port <= 0 {
@@ -198,6 +256,13 @@ func s3DedicatedAddr(cfg config.S3WebDAVConfig) (string, error) {
 		host = "0.0.0.0"
 	}
 	return net.JoinHostPort(host, strconv.Itoa(port)), nil
+}
+
+func s3DedicatedTunnelService(port int) string {
+	if port <= 0 {
+		port = 14334
+	}
+	return "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 }
 
 func normalizeS3WebDAVAccessMode(mode string) string {

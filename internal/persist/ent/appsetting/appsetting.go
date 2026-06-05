@@ -63,6 +63,14 @@ const (
 	FieldS3WebdavDedicatedBindHost = "s3_webdav_dedicated_bind_host"
 	// FieldS3WebdavDedicatedPort holds the string denoting the s3_webdav_dedicated_port field in the database.
 	FieldS3WebdavDedicatedPort = "s3_webdav_dedicated_port"
+	// FieldS3WebdavDedicatedAutoStart holds the string denoting the s3_webdav_dedicated_auto_start field in the database.
+	FieldS3WebdavDedicatedAutoStart = "s3_webdav_dedicated_auto_start"
+	// FieldS3WebdavDedicatedDomainMode holds the string denoting the s3_webdav_dedicated_domain_mode field in the database.
+	FieldS3WebdavDedicatedDomainMode = "s3_webdav_dedicated_domain_mode"
+	// FieldS3WebdavDedicatedCustomDomain holds the string denoting the s3_webdav_dedicated_custom_domain field in the database.
+	FieldS3WebdavDedicatedCustomDomain = "s3_webdav_dedicated_custom_domain"
+	// FieldS3WebdavDedicatedTunnelHostname holds the string denoting the s3_webdav_dedicated_tunnel_hostname field in the database.
+	FieldS3WebdavDedicatedTunnelHostname = "s3_webdav_dedicated_tunnel_hostname"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -99,6 +107,10 @@ var Columns = []string{
 	FieldS3WebdavAccessMode,
 	FieldS3WebdavDedicatedBindHost,
 	FieldS3WebdavDedicatedPort,
+	FieldS3WebdavDedicatedAutoStart,
+	FieldS3WebdavDedicatedDomainMode,
+	FieldS3WebdavDedicatedCustomDomain,
+	FieldS3WebdavDedicatedTunnelHostname,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -164,6 +176,14 @@ var (
 	DefaultS3WebdavDedicatedBindHost string
 	// DefaultS3WebdavDedicatedPort holds the default value on creation for the "s3_webdav_dedicated_port" field.
 	DefaultS3WebdavDedicatedPort int
+	// DefaultS3WebdavDedicatedAutoStart holds the default value on creation for the "s3_webdav_dedicated_auto_start" field.
+	DefaultS3WebdavDedicatedAutoStart bool
+	// DefaultS3WebdavDedicatedDomainMode holds the default value on creation for the "s3_webdav_dedicated_domain_mode" field.
+	DefaultS3WebdavDedicatedDomainMode string
+	// DefaultS3WebdavDedicatedCustomDomain holds the default value on creation for the "s3_webdav_dedicated_custom_domain" field.
+	DefaultS3WebdavDedicatedCustomDomain string
+	// DefaultS3WebdavDedicatedTunnelHostname holds the default value on creation for the "s3_webdav_dedicated_tunnel_hostname" field.
+	DefaultS3WebdavDedicatedTunnelHostname string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -303,6 +323,26 @@ func ByS3WebdavDedicatedBindHost(opts ...sql.OrderTermOption) OrderOption {
 // ByS3WebdavDedicatedPort orders the results by the s3_webdav_dedicated_port field.
 func ByS3WebdavDedicatedPort(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldS3WebdavDedicatedPort, opts...).ToFunc()
+}
+
+// ByS3WebdavDedicatedAutoStart orders the results by the s3_webdav_dedicated_auto_start field.
+func ByS3WebdavDedicatedAutoStart(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldS3WebdavDedicatedAutoStart, opts...).ToFunc()
+}
+
+// ByS3WebdavDedicatedDomainMode orders the results by the s3_webdav_dedicated_domain_mode field.
+func ByS3WebdavDedicatedDomainMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldS3WebdavDedicatedDomainMode, opts...).ToFunc()
+}
+
+// ByS3WebdavDedicatedCustomDomain orders the results by the s3_webdav_dedicated_custom_domain field.
+func ByS3WebdavDedicatedCustomDomain(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldS3WebdavDedicatedCustomDomain, opts...).ToFunc()
+}
+
+// ByS3WebdavDedicatedTunnelHostname orders the results by the s3_webdav_dedicated_tunnel_hostname field.
+func ByS3WebdavDedicatedTunnelHostname(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldS3WebdavDedicatedTunnelHostname, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

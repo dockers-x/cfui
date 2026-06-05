@@ -399,6 +399,62 @@ func (_u *AppSettingUpdate) AddS3WebdavDedicatedPort(v int) *AppSettingUpdate {
 	return _u
 }
 
+// SetS3WebdavDedicatedAutoStart sets the "s3_webdav_dedicated_auto_start" field.
+func (_u *AppSettingUpdate) SetS3WebdavDedicatedAutoStart(v bool) *AppSettingUpdate {
+	_u.mutation.SetS3WebdavDedicatedAutoStart(v)
+	return _u
+}
+
+// SetNillableS3WebdavDedicatedAutoStart sets the "s3_webdav_dedicated_auto_start" field if the given value is not nil.
+func (_u *AppSettingUpdate) SetNillableS3WebdavDedicatedAutoStart(v *bool) *AppSettingUpdate {
+	if v != nil {
+		_u.SetS3WebdavDedicatedAutoStart(*v)
+	}
+	return _u
+}
+
+// SetS3WebdavDedicatedDomainMode sets the "s3_webdav_dedicated_domain_mode" field.
+func (_u *AppSettingUpdate) SetS3WebdavDedicatedDomainMode(v string) *AppSettingUpdate {
+	_u.mutation.SetS3WebdavDedicatedDomainMode(v)
+	return _u
+}
+
+// SetNillableS3WebdavDedicatedDomainMode sets the "s3_webdav_dedicated_domain_mode" field if the given value is not nil.
+func (_u *AppSettingUpdate) SetNillableS3WebdavDedicatedDomainMode(v *string) *AppSettingUpdate {
+	if v != nil {
+		_u.SetS3WebdavDedicatedDomainMode(*v)
+	}
+	return _u
+}
+
+// SetS3WebdavDedicatedCustomDomain sets the "s3_webdav_dedicated_custom_domain" field.
+func (_u *AppSettingUpdate) SetS3WebdavDedicatedCustomDomain(v string) *AppSettingUpdate {
+	_u.mutation.SetS3WebdavDedicatedCustomDomain(v)
+	return _u
+}
+
+// SetNillableS3WebdavDedicatedCustomDomain sets the "s3_webdav_dedicated_custom_domain" field if the given value is not nil.
+func (_u *AppSettingUpdate) SetNillableS3WebdavDedicatedCustomDomain(v *string) *AppSettingUpdate {
+	if v != nil {
+		_u.SetS3WebdavDedicatedCustomDomain(*v)
+	}
+	return _u
+}
+
+// SetS3WebdavDedicatedTunnelHostname sets the "s3_webdav_dedicated_tunnel_hostname" field.
+func (_u *AppSettingUpdate) SetS3WebdavDedicatedTunnelHostname(v string) *AppSettingUpdate {
+	_u.mutation.SetS3WebdavDedicatedTunnelHostname(v)
+	return _u
+}
+
+// SetNillableS3WebdavDedicatedTunnelHostname sets the "s3_webdav_dedicated_tunnel_hostname" field if the given value is not nil.
+func (_u *AppSettingUpdate) SetNillableS3WebdavDedicatedTunnelHostname(v *string) *AppSettingUpdate {
+	if v != nil {
+		_u.SetS3WebdavDedicatedTunnelHostname(*v)
+	}
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *AppSettingUpdate) SetUpdatedAt(v time.Time) *AppSettingUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -551,6 +607,18 @@ func (_u *AppSettingUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.AddedS3WebdavDedicatedPort(); ok {
 		_spec.AddField(appsetting.FieldS3WebdavDedicatedPort, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.S3WebdavDedicatedAutoStart(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedAutoStart, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.S3WebdavDedicatedDomainMode(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedDomainMode, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.S3WebdavDedicatedCustomDomain(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedCustomDomain, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.S3WebdavDedicatedTunnelHostname(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedTunnelHostname, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(appsetting.FieldUpdatedAt, field.TypeTime, value)
@@ -946,6 +1014,62 @@ func (_u *AppSettingUpdateOne) AddS3WebdavDedicatedPort(v int) *AppSettingUpdate
 	return _u
 }
 
+// SetS3WebdavDedicatedAutoStart sets the "s3_webdav_dedicated_auto_start" field.
+func (_u *AppSettingUpdateOne) SetS3WebdavDedicatedAutoStart(v bool) *AppSettingUpdateOne {
+	_u.mutation.SetS3WebdavDedicatedAutoStart(v)
+	return _u
+}
+
+// SetNillableS3WebdavDedicatedAutoStart sets the "s3_webdav_dedicated_auto_start" field if the given value is not nil.
+func (_u *AppSettingUpdateOne) SetNillableS3WebdavDedicatedAutoStart(v *bool) *AppSettingUpdateOne {
+	if v != nil {
+		_u.SetS3WebdavDedicatedAutoStart(*v)
+	}
+	return _u
+}
+
+// SetS3WebdavDedicatedDomainMode sets the "s3_webdav_dedicated_domain_mode" field.
+func (_u *AppSettingUpdateOne) SetS3WebdavDedicatedDomainMode(v string) *AppSettingUpdateOne {
+	_u.mutation.SetS3WebdavDedicatedDomainMode(v)
+	return _u
+}
+
+// SetNillableS3WebdavDedicatedDomainMode sets the "s3_webdav_dedicated_domain_mode" field if the given value is not nil.
+func (_u *AppSettingUpdateOne) SetNillableS3WebdavDedicatedDomainMode(v *string) *AppSettingUpdateOne {
+	if v != nil {
+		_u.SetS3WebdavDedicatedDomainMode(*v)
+	}
+	return _u
+}
+
+// SetS3WebdavDedicatedCustomDomain sets the "s3_webdav_dedicated_custom_domain" field.
+func (_u *AppSettingUpdateOne) SetS3WebdavDedicatedCustomDomain(v string) *AppSettingUpdateOne {
+	_u.mutation.SetS3WebdavDedicatedCustomDomain(v)
+	return _u
+}
+
+// SetNillableS3WebdavDedicatedCustomDomain sets the "s3_webdav_dedicated_custom_domain" field if the given value is not nil.
+func (_u *AppSettingUpdateOne) SetNillableS3WebdavDedicatedCustomDomain(v *string) *AppSettingUpdateOne {
+	if v != nil {
+		_u.SetS3WebdavDedicatedCustomDomain(*v)
+	}
+	return _u
+}
+
+// SetS3WebdavDedicatedTunnelHostname sets the "s3_webdav_dedicated_tunnel_hostname" field.
+func (_u *AppSettingUpdateOne) SetS3WebdavDedicatedTunnelHostname(v string) *AppSettingUpdateOne {
+	_u.mutation.SetS3WebdavDedicatedTunnelHostname(v)
+	return _u
+}
+
+// SetNillableS3WebdavDedicatedTunnelHostname sets the "s3_webdav_dedicated_tunnel_hostname" field if the given value is not nil.
+func (_u *AppSettingUpdateOne) SetNillableS3WebdavDedicatedTunnelHostname(v *string) *AppSettingUpdateOne {
+	if v != nil {
+		_u.SetS3WebdavDedicatedTunnelHostname(*v)
+	}
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *AppSettingUpdateOne) SetUpdatedAt(v time.Time) *AppSettingUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -1128,6 +1252,18 @@ func (_u *AppSettingUpdateOne) sqlSave(ctx context.Context) (_node *AppSetting, 
 	}
 	if value, ok := _u.mutation.AddedS3WebdavDedicatedPort(); ok {
 		_spec.AddField(appsetting.FieldS3WebdavDedicatedPort, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.S3WebdavDedicatedAutoStart(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedAutoStart, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.S3WebdavDedicatedDomainMode(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedDomainMode, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.S3WebdavDedicatedCustomDomain(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedCustomDomain, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.S3WebdavDedicatedTunnelHostname(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedTunnelHostname, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(appsetting.FieldUpdatedAt, field.TypeTime, value)

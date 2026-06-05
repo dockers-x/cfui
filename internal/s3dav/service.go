@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -73,6 +74,27 @@ func (s *Service) SaveSettings(ctx context.Context, req SettingsRequest) (Settin
 			return SettingsResponse{}, fmt.Errorf("dedicated WebDAV port must be between 1 and 65535")
 		}
 		cfg.DedicatedPort = *req.DedicatedPort
+	}
+	if req.DedicatedAutoStart != nil {
+		cfg.DedicatedAutoStart = *req.DedicatedAutoStart
+	}
+	if strings.TrimSpace(req.DedicatedDomainMode) != "" {
+		switch strings.TrimSpace(req.DedicatedDomainMode) {
+		case config.S3WebDAVDomainModeNone, config.S3WebDAVDomainModeCustom, config.S3WebDAVDomainModeTunnel:
+			cfg.DedicatedDomainMode = strings.TrimSpace(req.DedicatedDomainMode)
+		default:
+			return SettingsResponse{}, fmt.Errorf("dedicated WebDAV domain mode must be %q, %q, or %q", config.S3WebDAVDomainModeNone, config.S3WebDAVDomainModeCustom, config.S3WebDAVDomainModeTunnel)
+		}
+	}
+	if req.DedicatedCustomDomain != nil {
+		customDomain, err := normalizePublicBaseURL(*req.DedicatedCustomDomain)
+		if err != nil {
+			return SettingsResponse{}, err
+		}
+		cfg.DedicatedCustomDomain = customDomain
+	}
+	if req.DedicatedTunnelHostname != nil {
+		cfg.DedicatedTunnelHostname = normalizeHostname(*req.DedicatedTunnelHostname)
 	}
 	appCfg.S3WebDAV = cfg
 	if err := s.cfgMgr.Save(appCfg); err != nil {
@@ -564,6 +586,13 @@ func (s *Service) normalizeConfig(cfg config.S3WebDAVConfig) config.S3WebDAVConf
 	if cfg.DedicatedPort <= 0 {
 		cfg.DedicatedPort = 14334
 	}
+	cfg.DedicatedDomainMode = normalizeDomainMode(cfg.DedicatedDomainMode)
+	if customDomain, err := normalizePublicBaseURL(cfg.DedicatedCustomDomain); err == nil {
+		cfg.DedicatedCustomDomain = customDomain
+	} else {
+		cfg.DedicatedCustomDomain = strings.TrimSpace(cfg.DedicatedCustomDomain)
+	}
+	cfg.DedicatedTunnelHostname = normalizeHostname(cfg.DedicatedTunnelHostname)
 	if len(cfg.Mounts) == 0 {
 		cfg.Mounts = []config.S3WebDAVMountConfig{config.DefaultS3WebDAVMountConfig()}
 	}
@@ -586,6 +615,50 @@ func normalizeAccessMode(mode string) string {
 	default:
 		return config.S3WebDAVAccessModeMain
 	}
+}
+
+func normalizeDomainMode(mode string) string {
+	switch strings.TrimSpace(mode) {
+	case config.S3WebDAVDomainModeCustom:
+		return config.S3WebDAVDomainModeCustom
+	case config.S3WebDAVDomainModeTunnel:
+		return config.S3WebDAVDomainModeTunnel
+	default:
+		return config.S3WebDAVDomainModeNone
+	}
+}
+
+func normalizePublicBaseURL(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", nil
+	}
+	u, err := url.Parse(value)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return "", fmt.Errorf("dedicated WebDAV custom domain must be a full http:// or https:// URL")
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", fmt.Errorf("dedicated WebDAV custom domain must use http:// or https://")
+	}
+	u.Path = strings.TrimRight(u.EscapedPath(), "/")
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String(), nil
+}
+
+func normalizeHostname(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if u, err := url.Parse(value); err == nil && u.Host != "" {
+		value = u.Host
+	}
+	value = strings.Trim(value, "/")
+	if host, _, err := strings.Cut(value, ":"); err {
+		value = host
+	}
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 func (s *Service) normalizeMount(mount config.S3WebDAVMountConfig) config.S3WebDAVMountConfig {
@@ -640,13 +713,17 @@ func (s *Service) settingsResponse(ctx context.Context, cfg config.S3WebDAVConfi
 		mounts = append(mounts, s.mountResponse(ctx, mount))
 	}
 	return SettingsResponse{
-		Enabled:           cfg.Enabled,
-		ActiveKey:         cfg.ActiveKey,
-		WebDAVAccessMode:  cfg.WebDAVAccessMode,
-		DedicatedBindHost: cfg.DedicatedBindHost,
-		DedicatedPort:     cfg.DedicatedPort,
-		Mounts:            mounts,
-		Availability:      Availability{CanEnable: true, Status: StatusReady, Message: "S3 WebDAV can be enabled."},
+		Enabled:                 cfg.Enabled,
+		ActiveKey:               cfg.ActiveKey,
+		WebDAVAccessMode:        cfg.WebDAVAccessMode,
+		DedicatedBindHost:       cfg.DedicatedBindHost,
+		DedicatedPort:           cfg.DedicatedPort,
+		DedicatedAutoStart:      cfg.DedicatedAutoStart,
+		DedicatedDomainMode:     cfg.DedicatedDomainMode,
+		DedicatedCustomDomain:   cfg.DedicatedCustomDomain,
+		DedicatedTunnelHostname: cfg.DedicatedTunnelHostname,
+		Mounts:                  mounts,
+		Availability:            Availability{CanEnable: true, Status: StatusReady, Message: "S3 WebDAV can be enabled."},
 	}
 }
 

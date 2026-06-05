@@ -30,24 +30,34 @@ type Availability struct {
 }
 
 type SettingsRequest struct {
-	Enabled           *bool   `json:"enabled,omitempty"`
-	ActiveKey         string  `json:"active_key"`
-	WebDAVAccessMode  string  `json:"webdav_access_mode"`
-	DedicatedBindHost *string `json:"dedicated_bind_host,omitempty"`
-	DedicatedPort     *int    `json:"dedicated_port,omitempty"`
+	Enabled                 *bool   `json:"enabled,omitempty"`
+	ActiveKey               string  `json:"active_key"`
+	WebDAVAccessMode        string  `json:"webdav_access_mode"`
+	DedicatedBindHost       *string `json:"dedicated_bind_host,omitempty"`
+	DedicatedPort           *int    `json:"dedicated_port,omitempty"`
+	DedicatedAutoStart      *bool   `json:"dedicated_auto_start,omitempty"`
+	DedicatedDomainMode     string  `json:"dedicated_domain_mode"`
+	DedicatedCustomDomain   *string `json:"dedicated_custom_domain,omitempty"`
+	DedicatedTunnelHostname *string `json:"dedicated_tunnel_hostname,omitempty"`
 }
 
 type SettingsResponse struct {
-	Enabled           bool            `json:"enabled"`
-	ActiveKey         string          `json:"active_key"`
-	WebDAVAccessMode  string          `json:"webdav_access_mode"`
-	DedicatedBindHost string          `json:"dedicated_bind_host"`
-	DedicatedPort     int             `json:"dedicated_port"`
-	DedicatedRunning  bool            `json:"dedicated_running"`
-	DedicatedAddress  string          `json:"dedicated_address"`
-	DedicatedError    string          `json:"dedicated_error,omitempty"`
-	Mounts            []MountResponse `json:"mounts"`
-	Availability      Availability    `json:"availability"`
+	Enabled                      bool            `json:"enabled"`
+	ActiveKey                    string          `json:"active_key"`
+	WebDAVAccessMode             string          `json:"webdav_access_mode"`
+	DedicatedBindHost            string          `json:"dedicated_bind_host"`
+	DedicatedPort                int             `json:"dedicated_port"`
+	DedicatedAutoStart           bool            `json:"dedicated_auto_start"`
+	DedicatedDomainMode          string          `json:"dedicated_domain_mode"`
+	DedicatedCustomDomain        string          `json:"dedicated_custom_domain"`
+	DedicatedTunnelHostname      string          `json:"dedicated_tunnel_hostname"`
+	DedicatedTunnelStatus        string          `json:"dedicated_tunnel_status"`
+	DedicatedTunnelStatusMessage string          `json:"dedicated_tunnel_status_message,omitempty"`
+	DedicatedRunning             bool            `json:"dedicated_running"`
+	DedicatedAddress             string          `json:"dedicated_address"`
+	DedicatedError               string          `json:"dedicated_error,omitempty"`
+	Mounts                       []MountResponse `json:"mounts"`
+	Availability                 Availability    `json:"availability"`
 }
 
 type MountRequest struct {

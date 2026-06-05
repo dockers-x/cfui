@@ -67,6 +67,14 @@ type AppSetting struct {
 	S3WebdavDedicatedBindHost string `json:"s3_webdav_dedicated_bind_host,omitempty"`
 	// S3WebdavDedicatedPort holds the value of the "s3_webdav_dedicated_port" field.
 	S3WebdavDedicatedPort int `json:"s3_webdav_dedicated_port,omitempty"`
+	// S3WebdavDedicatedAutoStart holds the value of the "s3_webdav_dedicated_auto_start" field.
+	S3WebdavDedicatedAutoStart bool `json:"s3_webdav_dedicated_auto_start,omitempty"`
+	// S3WebdavDedicatedDomainMode holds the value of the "s3_webdav_dedicated_domain_mode" field.
+	S3WebdavDedicatedDomainMode string `json:"s3_webdav_dedicated_domain_mode,omitempty"`
+	// S3WebdavDedicatedCustomDomain holds the value of the "s3_webdav_dedicated_custom_domain" field.
+	S3WebdavDedicatedCustomDomain string `json:"s3_webdav_dedicated_custom_domain,omitempty"`
+	// S3WebdavDedicatedTunnelHostname holds the value of the "s3_webdav_dedicated_tunnel_hostname" field.
+	S3WebdavDedicatedTunnelHostname string `json:"s3_webdav_dedicated_tunnel_hostname,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -79,11 +87,11 @@ func (*AppSetting) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case appsetting.FieldAutoStart, appsetting.FieldAutoRestart, appsetting.FieldMetricsEnable, appsetting.FieldLogJSON, appsetting.FieldPostQuantum, appsetting.FieldNoTLSVerify, appsetting.FieldMcpEnabled, appsetting.FieldS3WebdavEnabled:
+		case appsetting.FieldAutoStart, appsetting.FieldAutoRestart, appsetting.FieldMetricsEnable, appsetting.FieldLogJSON, appsetting.FieldPostQuantum, appsetting.FieldNoTLSVerify, appsetting.FieldMcpEnabled, appsetting.FieldS3WebdavEnabled, appsetting.FieldS3WebdavDedicatedAutoStart:
 			values[i] = new(sql.NullBool)
 		case appsetting.FieldID, appsetting.FieldRetries, appsetting.FieldMetricsPort, appsetting.FieldS3WebdavDedicatedPort:
 			values[i] = new(sql.NullInt64)
-		case appsetting.FieldKey, appsetting.FieldCustomTag, appsetting.FieldSoftwareName, appsetting.FieldProtocol, appsetting.FieldGracePeriod, appsetting.FieldRegion, appsetting.FieldLogLevel, appsetting.FieldLogFile, appsetting.FieldEdgeIPVersion, appsetting.FieldEdgeBindAddress, appsetting.FieldExtraArgs, appsetting.FieldS3WebdavActiveKey, appsetting.FieldS3WebdavAccessMode, appsetting.FieldS3WebdavDedicatedBindHost:
+		case appsetting.FieldKey, appsetting.FieldCustomTag, appsetting.FieldSoftwareName, appsetting.FieldProtocol, appsetting.FieldGracePeriod, appsetting.FieldRegion, appsetting.FieldLogLevel, appsetting.FieldLogFile, appsetting.FieldEdgeIPVersion, appsetting.FieldEdgeBindAddress, appsetting.FieldExtraArgs, appsetting.FieldS3WebdavActiveKey, appsetting.FieldS3WebdavAccessMode, appsetting.FieldS3WebdavDedicatedBindHost, appsetting.FieldS3WebdavDedicatedDomainMode, appsetting.FieldS3WebdavDedicatedCustomDomain, appsetting.FieldS3WebdavDedicatedTunnelHostname:
 			values[i] = new(sql.NullString)
 		case appsetting.FieldCreatedAt, appsetting.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -258,6 +266,30 @@ func (_m *AppSetting) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.S3WebdavDedicatedPort = int(value.Int64)
 			}
+		case appsetting.FieldS3WebdavDedicatedAutoStart:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field s3_webdav_dedicated_auto_start", values[i])
+			} else if value.Valid {
+				_m.S3WebdavDedicatedAutoStart = value.Bool
+			}
+		case appsetting.FieldS3WebdavDedicatedDomainMode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field s3_webdav_dedicated_domain_mode", values[i])
+			} else if value.Valid {
+				_m.S3WebdavDedicatedDomainMode = value.String
+			}
+		case appsetting.FieldS3WebdavDedicatedCustomDomain:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field s3_webdav_dedicated_custom_domain", values[i])
+			} else if value.Valid {
+				_m.S3WebdavDedicatedCustomDomain = value.String
+			}
+		case appsetting.FieldS3WebdavDedicatedTunnelHostname:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field s3_webdav_dedicated_tunnel_hostname", values[i])
+			} else if value.Valid {
+				_m.S3WebdavDedicatedTunnelHostname = value.String
+			}
 		case appsetting.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -380,6 +412,18 @@ func (_m *AppSetting) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("s3_webdav_dedicated_port=")
 	builder.WriteString(fmt.Sprintf("%v", _m.S3WebdavDedicatedPort))
+	builder.WriteString(", ")
+	builder.WriteString("s3_webdav_dedicated_auto_start=")
+	builder.WriteString(fmt.Sprintf("%v", _m.S3WebdavDedicatedAutoStart))
+	builder.WriteString(", ")
+	builder.WriteString("s3_webdav_dedicated_domain_mode=")
+	builder.WriteString(_m.S3WebdavDedicatedDomainMode)
+	builder.WriteString(", ")
+	builder.WriteString("s3_webdav_dedicated_custom_domain=")
+	builder.WriteString(_m.S3WebdavDedicatedCustomDomain)
+	builder.WriteString(", ")
+	builder.WriteString("s3_webdav_dedicated_tunnel_hostname=")
+	builder.WriteString(_m.S3WebdavDedicatedTunnelHostname)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

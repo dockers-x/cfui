@@ -678,15 +678,76 @@
                                     </label>
                                 </div>
                                 <div id="s3-dedicated-settings" class="s3-dedicated-settings" hidden>
-                                    <div class="form-field">
-                                        <label for="s3-dedicated-host" data-i18n="s3_dedicated_host">Bind host</label>
-                                        <input type="text" id="s3-dedicated-host" class="input" placeholder="0.0.0.0" spellcheck="false" autocomplete="off">
+                                    <div class="s3-dedicated-fields">
+                                        <div class="form-field">
+                                            <label for="s3-dedicated-host" data-i18n="s3_dedicated_host">Bind host</label>
+                                            <input type="text" id="s3-dedicated-host" class="input" placeholder="0.0.0.0" spellcheck="false" autocomplete="off">
+                                        </div>
+                                        <div class="form-field">
+                                            <label for="s3-dedicated-port" data-i18n="s3_dedicated_port">Port</label>
+                                            <input type="number" id="s3-dedicated-port" class="input" min="1" max="65535" value="14334" inputmode="numeric">
+                                        </div>
+                                        <button id="s3-dedicated-apply" type="button" class="btn btn--sm" data-i18n="apply">Apply</button>
                                     </div>
-                                    <div class="form-field">
-                                        <label for="s3-dedicated-port" data-i18n="s3_dedicated_port">Port</label>
-                                        <input type="number" id="s3-dedicated-port" class="input" min="1" max="65535" value="14334" inputmode="numeric">
+                                    <div class="s3-dedicated-controls">
+                                        <label class="toggle">
+                                            <input type="checkbox" id="s3-dedicated-autostart">
+                                            <span class="track"></span>
+                                            <span class="label" data-i18n="s3_dedicated_auto_start">Auto-start on launch</span>
+                                        </label>
+                                        <span class="s3-dedicated-controls__spacer"></span>
+                                        <button id="s3-dedicated-action" type="button" class="btn btn--primary btn--sm" data-action="start">
+                                            <span class="spinner" aria-hidden="true"></span>
+                                            <span class="text" data-i18n="s3_dedicated_start">Start port</span>
+                                        </button>
                                     </div>
-                                    <button id="s3-dedicated-apply" type="button" class="btn btn--sm" data-i18n="apply">Apply</button>
+                                    <div class="s3-domain-settings">
+                                        <div class="s3-domain-head">
+                                            <div>
+                                                <div class="s3-mount-label" data-i18n="s3_public_endpoint_mode">Public endpoint</div>
+                                                <div class="section-subtitle" data-i18n="s3_public_endpoint_help">Choose what endpoint is shown for WebDAV clients.</div>
+                                            </div>
+                                            <span id="s3-dedicated-tunnel-state" class="pill" data-state="neutral" hidden>
+                                                <span class="dot" aria-hidden="true"></span>
+                                                <span class="text"></span>
+                                            </span>
+                                        </div>
+                                        <div class="s3-domain-modes" role="radiogroup" aria-label="Public endpoint" data-i18n-attr="aria-label|s3_public_endpoint_mode">
+                                            <label class="s3-domain-choice">
+                                                <input type="radio" name="s3-dedicated-domain-mode" id="s3-domain-none" value="none" checked>
+                                                <span data-i18n="s3_domain_mode_none">Direct port</span>
+                                            </label>
+                                            <label class="s3-domain-choice">
+                                                <input type="radio" name="s3-dedicated-domain-mode" id="s3-domain-custom" value="custom">
+                                                <span data-i18n="s3_domain_mode_custom">Custom URL</span>
+                                            </label>
+                                            <label class="s3-domain-choice">
+                                                <input type="radio" name="s3-dedicated-domain-mode" id="s3-domain-tunnel" value="tunnel">
+                                                <span data-i18n="s3_domain_mode_tunnel">Cloudflare Tunnel</span>
+                                            </label>
+                                        </div>
+                                        <div id="s3-domain-custom-panel" class="s3-domain-panel" hidden>
+                                            <div class="form-field">
+                                                <label for="s3-dedicated-custom-domain" data-i18n="s3_custom_base_url">Base URL</label>
+                                                <input type="url" id="s3-dedicated-custom-domain" class="input" placeholder="https://dav.example.com" spellcheck="false" autocomplete="off">
+                                            </div>
+                                            <button id="s3-domain-apply" type="button" class="btn btn--sm" data-i18n="apply">Apply</button>
+                                        </div>
+                                        <div id="s3-domain-tunnel-panel" class="s3-domain-panel" hidden>
+                                            <div class="form-field">
+                                                <label for="s3-dedicated-tunnel-subdomain" data-i18n="subdomain">Subdomain</label>
+                                                <input type="text" id="s3-dedicated-tunnel-subdomain" class="input" placeholder="webdav" spellcheck="false" autocomplete="off">
+                                            </div>
+                                            <div class="form-field">
+                                                <label for="s3-dedicated-tunnel-domain" data-i18n="domain">Domain</label>
+                                                <select id="s3-dedicated-tunnel-domain" class="form-select"></select>
+                                            </div>
+                                            <button id="s3-dedicated-tunnel-open" type="button" class="btn btn--sm">
+                                                <span class="spinner" aria-hidden="true"></span>
+                                                <span class="text" data-i18n="s3_open_tunnel_rule">Open Tunnel rule</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div id="s3-dedicated-warning" class="notice" data-state="warn" hidden data-i18n="s3_dedicated_auth_warning">If WebDAV login is disabled, anyone who can reach this port can access enabled mounts.</div>
                             </div>
@@ -1008,6 +1069,7 @@
             </div>
             <form id="manager-entry-form" class="modal-body" novalidate>
                 <input type="hidden" id="manager-entry-index">
+                <input type="hidden" id="manager-entry-comment">
                 <div class="section">
                     <div class="section-title" style="margin-bottom: 12px;" data-i18n="public_hostname_section">Public hostname</div>
                     <div class="form-row">

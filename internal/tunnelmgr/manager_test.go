@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/base64"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -70,13 +71,27 @@ func (f *fakeCFClient) ListDNSRecords(ctx context.Context, rc *cloudflare.Resour
 }
 
 func (f *fakeCFClient) CreateDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.CreateDNSRecordParams) (cloudflare.DNSRecord, error) {
-	record := cloudflare.DNSRecord{ID: "dns-1", Type: params.Type, Name: params.Name, Content: params.Content}
+	record := cloudflare.DNSRecord{ID: "dns-1", Type: params.Type, Name: params.Name, Content: params.Content, Comment: params.Comment, Proxied: params.Proxied, TTL: params.TTL}
 	f.dnsRecords = append(f.dnsRecords, record)
 	return record, nil
 }
 
 func (f *fakeCFClient) UpdateDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.UpdateDNSRecordParams) (cloudflare.DNSRecord, error) {
-	return cloudflare.DNSRecord{ID: params.ID, Type: params.Type, Name: params.Name, Content: params.Content}, nil
+	record := cloudflare.DNSRecord{ID: params.ID, Type: params.Type, Name: params.Name, Content: params.Content, Proxied: params.Proxied, TTL: params.TTL}
+	if params.Comment != nil {
+		record.Comment = *params.Comment
+	}
+	for i := range f.dnsRecords {
+		if f.dnsRecords[i].ID == params.ID {
+			if record.Comment == "" {
+				record.Comment = f.dnsRecords[i].Comment
+			}
+			f.dnsRecords[i] = record
+			return record, nil
+		}
+	}
+	f.dnsRecords = append(f.dnsRecords, record)
+	return record, nil
 }
 
 func (f *fakeCFClient) DeleteDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, recordID string) error {
@@ -262,6 +277,70 @@ func TestAddEntryInsertsBeforeCatchAll(t *testing.T) {
 	}
 	if len(client.updates) != 1 {
 		t.Fatalf("expected one SDK update, got %d", len(client.updates))
+	}
+}
+
+func TestAddEntryWithS3WebDAVCommentMarksDNSRecord(t *testing.T) {
+	client := &fakeCFClient{config: cloudflare.TunnelConfigurationResult{
+		TunnelID: "tunnel-1",
+		Config: cloudflare.TunnelConfiguration{Ingress: []cloudflare.UnvalidatedIngressRule{
+			{Service: "http_status:404"},
+		}},
+	}}
+	mgr := newTestManager(t, client)
+	hostname := "dav.example.com"
+	service := "http://127.0.0.1:14334"
+
+	if _, err := mgr.AddEntry(context.Background(), IngressRule{
+		Hostname: hostname,
+		Service:  service,
+		Comment:  S3WebDAVTunnelComment(hostname, service),
+	}); err != nil {
+		t.Fatalf("AddEntry: %v", err)
+	}
+	if len(client.dnsRecords) != 1 {
+		t.Fatalf("expected one DNS record, got %#v", client.dnsRecords)
+	}
+	if !strings.Contains(client.dnsRecords[0].Comment, S3WebDAVTunnelCommentMarker) {
+		t.Fatalf("expected S3 WebDAV DNS comment marker, got %#v", client.dnsRecords[0])
+	}
+}
+
+func TestCheckS3WebDAVHostnameRequiresTunnelRuleAndDNSComment(t *testing.T) {
+	hostname := "dav.example.com"
+	service := "http://127.0.0.1:14334"
+	client := &fakeCFClient{
+		config: cloudflare.TunnelConfigurationResult{
+			TunnelID: "tunnel-1",
+			Config: cloudflare.TunnelConfiguration{Ingress: []cloudflare.UnvalidatedIngressRule{
+				{Hostname: hostname, Service: service},
+				{Service: "http_status:404"},
+			}},
+		},
+		dnsRecords: []cloudflare.DNSRecord{{
+			ID:      "dns-1",
+			Type:    "CNAME",
+			Name:    hostname,
+			Content: "tunnel-1.cfargotunnel.com",
+		}},
+	}
+	mgr := newTestManager(t, client)
+
+	status := mgr.CheckS3WebDAVHostname(context.Background(), hostname, service)
+	if status.Status != S3WebDAVTunnelStatusMissing || !strings.Contains(status.Message, "DNS marker") {
+		t.Fatalf("expected missing DNS marker status, got %#v", status)
+	}
+
+	client.dnsRecords[0].Comment = S3WebDAVTunnelComment(hostname, service)
+	status = mgr.CheckS3WebDAVHostname(context.Background(), hostname, service)
+	if status.Status != S3WebDAVTunnelStatusSynced || !status.Synced {
+		t.Fatalf("expected synced status, got %#v", status)
+	}
+
+	client.dnsRecords[0].Content = "other-tunnel.cfargotunnel.com"
+	status = mgr.CheckS3WebDAVHostname(context.Background(), hostname, service)
+	if status.Status != S3WebDAVTunnelStatusMissing || !strings.Contains(status.Message, "DNS marker") {
+		t.Fatalf("expected wrong CNAME target to be treated as missing DNS marker, got %#v", status)
 	}
 }
 

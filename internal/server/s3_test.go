@@ -285,11 +285,12 @@ func TestDedicatedWebDAVServerStartsOnConfiguredPort(t *testing.T) {
 	port := freeLocalPort(t)
 	cfg := s.cfgMgr.Get()
 	cfg.S3WebDAV = config.S3WebDAVConfig{
-		Enabled:           true,
-		ActiveKey:         "datasync",
-		WebDAVAccessMode:  config.S3WebDAVAccessModeDedicated,
-		DedicatedBindHost: "127.0.0.1",
-		DedicatedPort:     port,
+		Enabled:            true,
+		ActiveKey:          "datasync",
+		WebDAVAccessMode:   config.S3WebDAVAccessModeDedicated,
+		DedicatedBindHost:  "127.0.0.1",
+		DedicatedPort:      port,
+		DedicatedAutoStart: true,
 		Mounts: []config.S3WebDAVMountConfig{{
 			Key:               "datasync",
 			Name:              "Data Sync",
@@ -354,11 +355,12 @@ func TestSwitchingWebDAVAccessModeStopsDedicatedServerAndRestoresMainRoute(t *te
 	port := freeLocalPort(t)
 	cfg := s.cfgMgr.Get()
 	cfg.S3WebDAV = config.S3WebDAVConfig{
-		Enabled:           true,
-		ActiveKey:         "datasync",
-		WebDAVAccessMode:  config.S3WebDAVAccessModeDedicated,
-		DedicatedBindHost: "127.0.0.1",
-		DedicatedPort:     port,
+		Enabled:            true,
+		ActiveKey:          "datasync",
+		WebDAVAccessMode:   config.S3WebDAVAccessModeDedicated,
+		DedicatedBindHost:  "127.0.0.1",
+		DedicatedPort:      port,
+		DedicatedAutoStart: true,
 		Mounts: []config.S3WebDAVMountConfig{{
 			Key:               "datasync",
 			Name:              "Data Sync",
@@ -435,6 +437,177 @@ func TestSwitchingWebDAVAccessModeStopsDedicatedServerAndRestoresMainRoute(t *te
 	}
 	if string(got) != "main" {
 		t.Fatalf("unexpected main uploaded content %q", string(got))
+	}
+}
+
+func TestDedicatedWebDAVServerSkipsStartupWhenAutoStartDisabled(t *testing.T) {
+	s := newServerTestServer(t)
+	port := freeLocalPort(t)
+	cfg := s.cfgMgr.Get()
+	cfg.S3WebDAV = config.S3WebDAVConfig{
+		Enabled:            true,
+		ActiveKey:          "datasync",
+		WebDAVAccessMode:   config.S3WebDAVAccessModeDedicated,
+		DedicatedBindHost:  "127.0.0.1",
+		DedicatedPort:      port,
+		DedicatedAutoStart: false,
+		Mounts: []config.S3WebDAVMountConfig{{
+			Key:               "datasync",
+			Name:              "Data Sync",
+			Enabled:           true,
+			WebDAVEnabled:     true,
+			WebDAVAuthEnabled: false,
+			Provider:          s3dav.ProviderGenericS3,
+			EndpointURL:       "https://s3.example.com",
+			Region:            "us-east-1",
+			PathStyle:         true,
+			BucketName:        "bucket",
+			MountPath:         "/webdav/datasync/",
+			AccessKeyID:       "ak",
+			SecretAccessKey:   "sk",
+		}},
+	}
+	if err := s.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	s.StartS3WebDAV()
+	defer s.StopS3WebDAV(context.Background())
+	if running, _, errMsg := s.s3WebDAV.snapshot(); running || errMsg != "" {
+		t.Fatalf("expected dedicated WebDAV to stay stopped, running=%v err=%q", running, errMsg)
+	}
+	settings := s.decorateS3SettingsResponse(s.s3Svc.Settings(context.Background()))
+	if settings.DedicatedRunning || settings.DedicatedAutoStart {
+		t.Fatalf("unexpected dedicated WebDAV settings: %#v", settings)
+	}
+}
+
+func TestDedicatedWebDAVAutoStartDoesNotOverrideMainMode(t *testing.T) {
+	s := newServerTestServer(t)
+	port := freeLocalPort(t)
+	cfg := s.cfgMgr.Get()
+	cfg.S3WebDAV = config.S3WebDAVConfig{
+		Enabled:            true,
+		ActiveKey:          "datasync",
+		WebDAVAccessMode:   config.S3WebDAVAccessModeMain,
+		DedicatedBindHost:  "127.0.0.1",
+		DedicatedPort:      port,
+		DedicatedAutoStart: true,
+		Mounts: []config.S3WebDAVMountConfig{{
+			Key:               "datasync",
+			Name:              "Data Sync",
+			Enabled:           true,
+			WebDAVEnabled:     true,
+			WebDAVAuthEnabled: false,
+			Provider:          s3dav.ProviderGenericS3,
+			EndpointURL:       "https://s3.example.com",
+			Region:            "us-east-1",
+			PathStyle:         true,
+			BucketName:        "bucket",
+			MountPath:         "/webdav/datasync/",
+			AccessKeyID:       "ak",
+			SecretAccessKey:   "sk",
+		}},
+	}
+	if err := s.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	s.StartS3WebDAV()
+	defer s.StopS3WebDAV(context.Background())
+	if running, _, errMsg := s.s3WebDAV.snapshot(); running || errMsg != "" {
+		t.Fatalf("expected main mode to keep dedicated WebDAV stopped, running=%v err=%q", running, errMsg)
+	}
+	settings := s.decorateS3SettingsResponse(s.s3Svc.Settings(context.Background()))
+	if settings.WebDAVAccessMode != config.S3WebDAVAccessModeMain || !settings.DedicatedAutoStart || settings.DedicatedRunning {
+		t.Fatalf("expected main mode to win over dedicated auto-start, got %#v", settings)
+	}
+}
+
+func TestDedicatedWebDAVControlStartsAndStopsServer(t *testing.T) {
+	s := newServerTestServer(t)
+	port := freeLocalPort(t)
+	cfg := s.cfgMgr.Get()
+	cfg.S3WebDAV = config.S3WebDAVConfig{
+		Enabled:            true,
+		ActiveKey:          "datasync",
+		WebDAVAccessMode:   config.S3WebDAVAccessModeDedicated,
+		DedicatedBindHost:  "127.0.0.1",
+		DedicatedPort:      port,
+		DedicatedAutoStart: false,
+		Mounts: []config.S3WebDAVMountConfig{{
+			Key:               "datasync",
+			Name:              "Data Sync",
+			Enabled:           true,
+			WebDAVEnabled:     true,
+			WebDAVAuthEnabled: false,
+			Provider:          s3dav.ProviderGenericS3,
+			EndpointURL:       "https://s3.example.com",
+			Region:            "us-east-1",
+			PathStyle:         true,
+			BucketName:        "bucket",
+			MountPath:         "/webdav/datasync/",
+			AccessKeyID:       "ak",
+			SecretAccessKey:   "sk",
+		}},
+	}
+	if err := s.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+	memFS := afero.NewMemMapFs()
+	s.s3Svc = s3dav.NewServiceForTest(
+		s.cfgMgr,
+		func(string) (s3dav.CloudflareClient, error) {
+			return serverFakeR2Client{}, nil
+		},
+		func(context.Context, s3dav.FSConfig, s3dav.Credentials) (afero.Fs, error) {
+			return memFS, nil
+		},
+	)
+	defer s.StopS3WebDAV(context.Background())
+
+	startReq := httptest.NewRequest(http.MethodPost, "/api/s3/webdav-control", strings.NewReader(`{"action":"start"}`))
+	startReq.Header.Set("Content-Type", "application/json")
+	startRec := httptest.NewRecorder()
+	s.handleS3WebDAVControl(startRec, startReq)
+	if startRec.Code != http.StatusOK {
+		t.Fatalf("start status %d: %s", startRec.Code, startRec.Body.String())
+	}
+	var started s3dav.SettingsResponse
+	if err := json.NewDecoder(startRec.Body).Decode(&started); err != nil {
+		t.Fatalf("decode started settings: %v", err)
+	}
+	if !started.DedicatedRunning || started.DedicatedAutoStart {
+		t.Fatalf("expected manual start without auto-start, got %#v", started)
+	}
+
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("http://127.0.0.1:%d/webdav/datasync/live.txt", port), bytes.NewBufferString("live"))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("dedicated WebDAV PUT: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("dedicated WebDAV PUT status %d", resp.StatusCode)
+	}
+
+	stopReq := httptest.NewRequest(http.MethodPost, "/api/s3/webdav-control", strings.NewReader(`{"action":"stop"}`))
+	stopReq.Header.Set("Content-Type", "application/json")
+	stopRec := httptest.NewRecorder()
+	s.handleS3WebDAVControl(stopRec, stopReq)
+	if stopRec.Code != http.StatusOK {
+		t.Fatalf("stop status %d: %s", stopRec.Code, stopRec.Body.String())
+	}
+	var stopped s3dav.SettingsResponse
+	if err := json.NewDecoder(stopRec.Body).Decode(&stopped); err != nil {
+		t.Fatalf("decode stopped settings: %v", err)
+	}
+	if stopped.DedicatedRunning || stopped.DedicatedAutoStart {
+		t.Fatalf("expected manual stop without changing auto-start, got %#v", stopped)
 	}
 }
 

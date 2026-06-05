@@ -362,6 +362,62 @@ func (_c *AppSettingCreate) SetNillableS3WebdavDedicatedPort(v *int) *AppSetting
 	return _c
 }
 
+// SetS3WebdavDedicatedAutoStart sets the "s3_webdav_dedicated_auto_start" field.
+func (_c *AppSettingCreate) SetS3WebdavDedicatedAutoStart(v bool) *AppSettingCreate {
+	_c.mutation.SetS3WebdavDedicatedAutoStart(v)
+	return _c
+}
+
+// SetNillableS3WebdavDedicatedAutoStart sets the "s3_webdav_dedicated_auto_start" field if the given value is not nil.
+func (_c *AppSettingCreate) SetNillableS3WebdavDedicatedAutoStart(v *bool) *AppSettingCreate {
+	if v != nil {
+		_c.SetS3WebdavDedicatedAutoStart(*v)
+	}
+	return _c
+}
+
+// SetS3WebdavDedicatedDomainMode sets the "s3_webdav_dedicated_domain_mode" field.
+func (_c *AppSettingCreate) SetS3WebdavDedicatedDomainMode(v string) *AppSettingCreate {
+	_c.mutation.SetS3WebdavDedicatedDomainMode(v)
+	return _c
+}
+
+// SetNillableS3WebdavDedicatedDomainMode sets the "s3_webdav_dedicated_domain_mode" field if the given value is not nil.
+func (_c *AppSettingCreate) SetNillableS3WebdavDedicatedDomainMode(v *string) *AppSettingCreate {
+	if v != nil {
+		_c.SetS3WebdavDedicatedDomainMode(*v)
+	}
+	return _c
+}
+
+// SetS3WebdavDedicatedCustomDomain sets the "s3_webdav_dedicated_custom_domain" field.
+func (_c *AppSettingCreate) SetS3WebdavDedicatedCustomDomain(v string) *AppSettingCreate {
+	_c.mutation.SetS3WebdavDedicatedCustomDomain(v)
+	return _c
+}
+
+// SetNillableS3WebdavDedicatedCustomDomain sets the "s3_webdav_dedicated_custom_domain" field if the given value is not nil.
+func (_c *AppSettingCreate) SetNillableS3WebdavDedicatedCustomDomain(v *string) *AppSettingCreate {
+	if v != nil {
+		_c.SetS3WebdavDedicatedCustomDomain(*v)
+	}
+	return _c
+}
+
+// SetS3WebdavDedicatedTunnelHostname sets the "s3_webdav_dedicated_tunnel_hostname" field.
+func (_c *AppSettingCreate) SetS3WebdavDedicatedTunnelHostname(v string) *AppSettingCreate {
+	_c.mutation.SetS3WebdavDedicatedTunnelHostname(v)
+	return _c
+}
+
+// SetNillableS3WebdavDedicatedTunnelHostname sets the "s3_webdav_dedicated_tunnel_hostname" field if the given value is not nil.
+func (_c *AppSettingCreate) SetNillableS3WebdavDedicatedTunnelHostname(v *string) *AppSettingCreate {
+	if v != nil {
+		_c.SetS3WebdavDedicatedTunnelHostname(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *AppSettingCreate) SetCreatedAt(v time.Time) *AppSettingCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -521,6 +577,22 @@ func (_c *AppSettingCreate) defaults() {
 		v := appsetting.DefaultS3WebdavDedicatedPort
 		_c.mutation.SetS3WebdavDedicatedPort(v)
 	}
+	if _, ok := _c.mutation.S3WebdavDedicatedAutoStart(); !ok {
+		v := appsetting.DefaultS3WebdavDedicatedAutoStart
+		_c.mutation.SetS3WebdavDedicatedAutoStart(v)
+	}
+	if _, ok := _c.mutation.S3WebdavDedicatedDomainMode(); !ok {
+		v := appsetting.DefaultS3WebdavDedicatedDomainMode
+		_c.mutation.SetS3WebdavDedicatedDomainMode(v)
+	}
+	if _, ok := _c.mutation.S3WebdavDedicatedCustomDomain(); !ok {
+		v := appsetting.DefaultS3WebdavDedicatedCustomDomain
+		_c.mutation.SetS3WebdavDedicatedCustomDomain(v)
+	}
+	if _, ok := _c.mutation.S3WebdavDedicatedTunnelHostname(); !ok {
+		v := appsetting.DefaultS3WebdavDedicatedTunnelHostname
+		_c.mutation.SetS3WebdavDedicatedTunnelHostname(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := appsetting.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -612,6 +684,18 @@ func (_c *AppSettingCreate) check() error {
 	}
 	if _, ok := _c.mutation.S3WebdavDedicatedPort(); !ok {
 		return &ValidationError{Name: "s3_webdav_dedicated_port", err: errors.New(`ent: missing required field "AppSetting.s3_webdav_dedicated_port"`)}
+	}
+	if _, ok := _c.mutation.S3WebdavDedicatedAutoStart(); !ok {
+		return &ValidationError{Name: "s3_webdav_dedicated_auto_start", err: errors.New(`ent: missing required field "AppSetting.s3_webdav_dedicated_auto_start"`)}
+	}
+	if _, ok := _c.mutation.S3WebdavDedicatedDomainMode(); !ok {
+		return &ValidationError{Name: "s3_webdav_dedicated_domain_mode", err: errors.New(`ent: missing required field "AppSetting.s3_webdav_dedicated_domain_mode"`)}
+	}
+	if _, ok := _c.mutation.S3WebdavDedicatedCustomDomain(); !ok {
+		return &ValidationError{Name: "s3_webdav_dedicated_custom_domain", err: errors.New(`ent: missing required field "AppSetting.s3_webdav_dedicated_custom_domain"`)}
+	}
+	if _, ok := _c.mutation.S3WebdavDedicatedTunnelHostname(); !ok {
+		return &ValidationError{Name: "s3_webdav_dedicated_tunnel_hostname", err: errors.New(`ent: missing required field "AppSetting.s3_webdav_dedicated_tunnel_hostname"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "AppSetting.created_at"`)}
@@ -744,6 +828,22 @@ func (_c *AppSettingCreate) createSpec() (*AppSetting, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.S3WebdavDedicatedPort(); ok {
 		_spec.SetField(appsetting.FieldS3WebdavDedicatedPort, field.TypeInt, value)
 		_node.S3WebdavDedicatedPort = value
+	}
+	if value, ok := _c.mutation.S3WebdavDedicatedAutoStart(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedAutoStart, field.TypeBool, value)
+		_node.S3WebdavDedicatedAutoStart = value
+	}
+	if value, ok := _c.mutation.S3WebdavDedicatedDomainMode(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedDomainMode, field.TypeString, value)
+		_node.S3WebdavDedicatedDomainMode = value
+	}
+	if value, ok := _c.mutation.S3WebdavDedicatedCustomDomain(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedCustomDomain, field.TypeString, value)
+		_node.S3WebdavDedicatedCustomDomain = value
+	}
+	if value, ok := _c.mutation.S3WebdavDedicatedTunnelHostname(); ok {
+		_spec.SetField(appsetting.FieldS3WebdavDedicatedTunnelHostname, field.TypeString, value)
+		_node.S3WebdavDedicatedTunnelHostname = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(appsetting.FieldCreatedAt, field.TypeTime, value)

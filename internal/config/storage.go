@@ -134,6 +134,10 @@ func (m *Manager) loadStructuredConfig(ctx context.Context) (Config, bool, error
 	cfg.S3WebDAV.WebDAVAccessMode = normalizeS3WebDAVAccessMode(settingsRow.S3WebdavAccessMode)
 	cfg.S3WebDAV.DedicatedBindHost = strings.TrimSpace(settingsRow.S3WebdavDedicatedBindHost)
 	cfg.S3WebDAV.DedicatedPort = normalizeS3WebDAVDedicatedPort(settingsRow.S3WebdavDedicatedPort)
+	cfg.S3WebDAV.DedicatedAutoStart = settingsRow.S3WebdavDedicatedAutoStart
+	cfg.S3WebDAV.DedicatedDomainMode = normalizeS3WebDAVDomainMode(settingsRow.S3WebdavDedicatedDomainMode)
+	cfg.S3WebDAV.DedicatedCustomDomain = strings.TrimSpace(settingsRow.S3WebdavDedicatedCustomDomain)
+	cfg.S3WebDAV.DedicatedTunnelHostname = normalizeS3WebDAVTunnelHostname(settingsRow.S3WebdavDedicatedTunnelHostname)
 
 	if tokenRow, err := m.client.TunnelToken.Query().Where(tunneltoken.Key(defaultConfigKey)).Only(ctx); err == nil {
 		cfg.Token = tokenRow.Token
@@ -261,6 +265,10 @@ func saveAppSetting(ctx context.Context, tx *ent.Tx, cfg Config) error {
 			SetS3WebdavAccessMode(s3Cfg.WebDAVAccessMode).
 			SetS3WebdavDedicatedBindHost(s3Cfg.DedicatedBindHost).
 			SetS3WebdavDedicatedPort(s3Cfg.DedicatedPort).
+			SetS3WebdavDedicatedAutoStart(s3Cfg.DedicatedAutoStart).
+			SetS3WebdavDedicatedDomainMode(s3Cfg.DedicatedDomainMode).
+			SetS3WebdavDedicatedCustomDomain(s3Cfg.DedicatedCustomDomain).
+			SetS3WebdavDedicatedTunnelHostname(s3Cfg.DedicatedTunnelHostname).
 			Save(ctx)
 		return err
 	}
@@ -293,6 +301,10 @@ func saveAppSetting(ctx context.Context, tx *ent.Tx, cfg Config) error {
 		SetS3WebdavAccessMode(s3Cfg.WebDAVAccessMode).
 		SetS3WebdavDedicatedBindHost(s3Cfg.DedicatedBindHost).
 		SetS3WebdavDedicatedPort(s3Cfg.DedicatedPort).
+		SetS3WebdavDedicatedAutoStart(s3Cfg.DedicatedAutoStart).
+		SetS3WebdavDedicatedDomainMode(s3Cfg.DedicatedDomainMode).
+		SetS3WebdavDedicatedCustomDomain(s3Cfg.DedicatedCustomDomain).
+		SetS3WebdavDedicatedTunnelHostname(s3Cfg.DedicatedTunnelHostname).
 		Save(ctx)
 	return err
 }
@@ -408,6 +420,9 @@ func normalizeS3WebDAVConfig(cfg S3WebDAVConfig) S3WebDAVConfig {
 	cfg.WebDAVAccessMode = normalizeS3WebDAVAccessMode(cfg.WebDAVAccessMode)
 	cfg.DedicatedBindHost = strings.TrimSpace(cfg.DedicatedBindHost)
 	cfg.DedicatedPort = normalizeS3WebDAVDedicatedPort(cfg.DedicatedPort)
+	cfg.DedicatedDomainMode = normalizeS3WebDAVDomainMode(cfg.DedicatedDomainMode)
+	cfg.DedicatedCustomDomain = strings.TrimSpace(cfg.DedicatedCustomDomain)
+	cfg.DedicatedTunnelHostname = normalizeS3WebDAVTunnelHostname(cfg.DedicatedTunnelHostname)
 	if len(cfg.Mounts) == 0 {
 		cfg.Mounts = []S3WebDAVMountConfig{DefaultS3WebDAVMountConfig()}
 	}
@@ -443,11 +458,29 @@ func normalizeS3WebDAVAccessMode(v string) string {
 	}
 }
 
+func normalizeS3WebDAVDomainMode(v string) string {
+	switch strings.TrimSpace(v) {
+	case S3WebDAVDomainModeCustom:
+		return S3WebDAVDomainModeCustom
+	case S3WebDAVDomainModeTunnel:
+		return S3WebDAVDomainModeTunnel
+	default:
+		return S3WebDAVDomainModeNone
+	}
+}
+
 func normalizeS3WebDAVDedicatedPort(port int) int {
 	if port <= 0 {
 		return 14334
 	}
 	return port
+}
+
+func normalizeS3WebDAVTunnelHostname(v string) string {
+	v = strings.TrimSpace(v)
+	v = strings.TrimPrefix(strings.TrimPrefix(v, "https://"), "http://")
+	v = strings.Trim(v, "/")
+	return strings.ToLower(v)
 }
 
 func normalizeS3MountConfig(mount S3WebDAVMountConfig, index int) S3WebDAVMountConfig {

@@ -1074,6 +1074,9 @@ other = "Separate port running"
 [s3_dedicated_starting]
 other = "Separate port pending"
 
+[s3_dedicated_stopped]
+other = "Separate port stopped"
+
 [s3_dedicated_waiting_feature]
 other = "Enable S3 WebDAV first"
 
@@ -1088,6 +1091,96 @@ other = "Dedicated WebDAV port must be between 1 and 65535."
 
 [s3_dedicated_auth_warning]
 other = "If WebDAV login is disabled, anyone who can reach this port can access enabled mounts."
+
+[s3_dedicated_auto_start]
+other = "Auto-start on launch"
+
+[s3_dedicated_start]
+other = "Start port"
+
+[s3_dedicated_stop]
+other = "Stop port"
+
+[s3_dedicated_started]
+other = "Dedicated WebDAV port started"
+
+[s3_dedicated_stopped_done]
+other = "Dedicated WebDAV port stopped"
+
+[s3_dedicated_start_failed]
+other = "Failed to start dedicated WebDAV port"
+
+[s3_dedicated_stop_failed]
+other = "Failed to stop dedicated WebDAV port"
+
+[s3_public_endpoint_mode]
+other = "Public endpoint"
+
+[s3_public_endpoint_help]
+other = "Controls the address copied from mount cards for WebDAV clients."
+
+[s3_domain_mode_none]
+other = "Direct port"
+
+[s3_domain_mode_custom]
+other = "Custom URL"
+
+[s3_domain_mode_tunnel]
+other = "Cloudflare Tunnel"
+
+[s3_custom_base_url]
+other = "Base URL"
+
+[s3_open_tunnel_rule]
+other = "Open Tunnel rule"
+
+[s3_tunnel_domains_unloaded]
+other = "Load domains first"
+
+[select_domain]
+other = "Select domain"
+
+[s3_tunnel_synced]
+other = "Tunnel synced"
+
+[s3_tunnel_missing]
+other = "Tunnel binding missing"
+
+[s3_tunnel_unavailable]
+other = "Tunnel Manager unavailable"
+
+[s3_tunnel_error]
+other = "Tunnel check failed"
+
+[s3_tunnel_not_configured]
+other = "No hostname set"
+
+[s3_tunnel_feature_required]
+other = "Enable Remote Tunnel Manager in Features first."
+
+[s3_tunnel_manager_required]
+other = "Complete Remote Tunnel Manager account, tunnel, and API credential settings first."
+
+[s3_tunnel_permission_required]
+other = "The current Cloudflare API credentials do not have the required permissions. Check permissions in Remote Tunnel Manager first."
+
+[s3_tunnel_domain_required]
+other = "No domains are available. Load domains in Remote Tunnel Manager first."
+
+[s3_tunnel_hostname_required]
+other = "Enter a subdomain and select a domain."
+
+[s3_tunnel_overwrite_title]
+other = "Overwrite existing Tunnel rule?"
+
+[s3_tunnel_overwrite_message]
+other = "{hostname} already has a public hostname rule. The edit dialog will overwrite it with the current WebDAV dedicated port."
+
+[s3_tunnel_rule_prefilled]
+other = "Remote Tunnel rule opened. Review and save it."
+
+[s3_tunnel_open_failed]
+other = "Failed to open Remote Tunnel rule"
 
 [s3_new_mount]
 other = "New Mount"

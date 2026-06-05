@@ -37,6 +37,10 @@ var (
 		{Name: "s3_webdav_access_mode", Type: field.TypeString, Default: "main"},
 		{Name: "s3_webdav_dedicated_bind_host", Type: field.TypeString, Default: ""},
 		{Name: "s3_webdav_dedicated_port", Type: field.TypeInt, Default: 14334},
+		{Name: "s3_webdav_dedicated_auto_start", Type: field.TypeBool, Default: false},
+		{Name: "s3_webdav_dedicated_domain_mode", Type: field.TypeString, Default: "none"},
+		{Name: "s3_webdav_dedicated_custom_domain", Type: field.TypeString, Default: ""},
+		{Name: "s3_webdav_dedicated_tunnel_hostname", Type: field.TypeString, Default: ""},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}

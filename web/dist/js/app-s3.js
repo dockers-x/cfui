@@ -9,6 +9,10 @@
     const DEFAULT_MOUNT = '/webdav/s3/';
     const ACCESS_MAIN = 'main';
     const ACCESS_DEDICATED = 'dedicated';
+    const DOMAIN_NONE = 'none';
+    const DOMAIN_CUSTOM = 'custom';
+    const DOMAIN_TUNNEL = 'tunnel';
+    const TUNNEL_COMMENT_MARKER = 'cfui:s3-webdav';
 
     const availabilityKeys = {
         READY: 's3_ready',
@@ -219,7 +223,7 @@
         actions.append(edit, del);
         top.append(identity, actions);
 
-        const endpoint = copyField(t('s3_webdav_endpoint'), webDAVEndpointForMount(settings, mount), () => copyMountEndpoint(settings, mount));
+        const endpoint = copyField(t('s3_webdav_endpoint'), webDAVEndpointForMount(settings, mount), () => copyMountEndpoint(settings, mount), webDAVEndpointState(settings));
         const toggles = document.createElement('div');
         toggles.className = 's3-state-grid';
         toggles.append(
@@ -258,7 +262,10 @@
         const dedicatedSettings = $('s3-dedicated-settings');
         const host = $('s3-dedicated-host');
         const port = $('s3-dedicated-port');
+        const autoStart = $('s3-dedicated-autostart');
+        const action = $('s3-dedicated-action');
         const warning = $('s3-dedicated-warning');
+        const domainMode = dedicatedDomainMode(settings);
         if (main) main.checked = mode === ACCESS_MAIN;
         if (dedicated) dedicated.checked = mode === ACCESS_DEDICATED;
         if (host) {
@@ -269,7 +276,13 @@
             port.value = String(settings.dedicated_port || 14334);
             port.disabled = mode !== ACCESS_DEDICATED;
         }
+        if (autoStart) {
+            autoStart.checked = !!settings.dedicated_auto_start;
+            autoStart.disabled = mode !== ACCESS_DEDICATED;
+        }
+        renderS3DomainSettings(settings, mode, domainMode);
         $('s3-dedicated-apply')?.toggleAttribute('disabled', mode !== ACCESS_DEDICATED);
+        renderS3DedicatedAction(settings, action, mode);
         if (dedicatedSettings) {
             dedicatedSettings.hidden = mode !== ACCESS_DEDICATED;
             dedicatedSettings.dataset.enabled = String(mode === ACCESS_DEDICATED);
@@ -309,7 +322,116 @@
             return;
         }
         el.dataset.state = settings.dedicated_running ? 'ok' : 'warn';
-        if (text) text.textContent = settings.dedicated_running ? t('s3_dedicated_running') : t('s3_dedicated_starting');
+        if (text) text.textContent = settings.dedicated_running ? t('s3_dedicated_running') : t('s3_dedicated_stopped');
+    }
+
+    function renderS3DedicatedAction(settings, btn, mode = accessMode(settings)) {
+        if (!btn) return;
+        settings = settings || {};
+        const canControl = mode === ACCESS_DEDICATED && !!settings.enabled;
+        const running = !!settings.dedicated_running;
+        btn.disabled = !canControl;
+        btn.dataset.action = running ? 'stop' : 'start';
+        btn.classList.toggle('btn--primary', !running);
+        btn.classList.toggle('btn--danger', running);
+        const label = t(running ? 's3_dedicated_stop' : 's3_dedicated_start');
+        const text = btn.querySelector('.text');
+        if (text) text.textContent = label;
+        btn.setAttribute('aria-label', label);
+        btn.title = canControl ? label : t('s3_dedicated_waiting_feature');
+    }
+
+    function renderS3DomainSettings(settings, mode, domainMode = dedicatedDomainMode(settings)) {
+        const enabled = mode === ACCESS_DEDICATED;
+        const radios = {
+            [DOMAIN_NONE]: $('s3-domain-none'),
+            [DOMAIN_CUSTOM]: $('s3-domain-custom'),
+            [DOMAIN_TUNNEL]: $('s3-domain-tunnel'),
+        };
+        for (const [key, radio] of Object.entries(radios)) {
+            if (!radio) continue;
+            radio.checked = domainMode === key;
+            radio.disabled = !enabled;
+        }
+        const customPanel = $('s3-domain-custom-panel');
+        const tunnelPanel = $('s3-domain-tunnel-panel');
+        if (customPanel) customPanel.hidden = !enabled || domainMode !== DOMAIN_CUSTOM;
+        if (tunnelPanel) tunnelPanel.hidden = !enabled || domainMode !== DOMAIN_TUNNEL;
+        const customInput = $('s3-dedicated-custom-domain');
+        if (customInput) {
+            customInput.value = settings.dedicated_custom_domain || '';
+            customInput.disabled = !enabled || domainMode !== DOMAIN_CUSTOM;
+        }
+        $('s3-domain-apply')?.toggleAttribute('disabled', !enabled || domainMode !== DOMAIN_CUSTOM);
+        renderS3TunnelDomainInputs(settings, enabled && domainMode === DOMAIN_TUNNEL);
+        renderS3TunnelStatus(settings, enabled && domainMode === DOMAIN_TUNNEL);
+    }
+
+    function renderS3TunnelDomainInputs(settings, enabled) {
+        const host = normalizeHost(settings?.dedicated_tunnel_hostname || '');
+        const split = splitHostnameForZones(host);
+        const subdomain = $('s3-dedicated-tunnel-subdomain');
+        if (subdomain) {
+            subdomain.value = split.subdomain;
+            subdomain.disabled = !enabled;
+        }
+        renderS3TunnelDomainOptions(split.domain);
+        const domain = $('s3-dedicated-tunnel-domain');
+        if (domain) domain.disabled = !enabled;
+        $('s3-dedicated-tunnel-open')?.toggleAttribute('disabled', !enabled);
+    }
+
+    function renderS3TunnelDomainOptions(selected = '') {
+        const select = $('s3-dedicated-tunnel-domain');
+        if (!select) return;
+        const zones = state.tunnelManager?.zones || [];
+        const existing = selected || select.value;
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = zones.length ? t('select_domain') : t('s3_tunnel_domains_unloaded');
+        select.appendChild(placeholder);
+        for (const zone of zones) {
+            const opt = document.createElement('option');
+            opt.value = zone.name;
+            opt.textContent = zone.status ? `${zone.name} (${zone.status})` : zone.name;
+            select.appendChild(opt);
+        }
+        if (existing && !zones.some((zone) => zone.name === existing)) {
+            const opt = document.createElement('option');
+            opt.value = existing;
+            opt.textContent = existing;
+            select.appendChild(opt);
+        }
+        select.value = existing || '';
+    }
+
+    function renderS3TunnelStatus(settings, visible) {
+        const el = $('s3-dedicated-tunnel-state');
+        if (!el) return;
+        el.hidden = !visible;
+        if (!visible) return;
+        const status = settings?.dedicated_tunnel_status || (!settings?.dedicated_tunnel_hostname ? 'missing' : '');
+        const text = el.querySelector('.text');
+        const stateName = status === 'synced' ? 'ok' : status === 'unavailable' ? 'warn' : status ? 'error' : 'neutral';
+        el.dataset.state = stateName;
+        if (text) text.textContent = tunnelStatusText(settings);
+        el.title = settings?.dedicated_tunnel_status_message || '';
+    }
+
+    function tunnelStatusText(settings) {
+        switch (settings?.dedicated_tunnel_status) {
+        case 'synced':
+            return t('s3_tunnel_synced');
+        case 'unavailable':
+            return t('s3_tunnel_unavailable');
+        case 'error':
+            return t('s3_tunnel_error');
+        case 'missing':
+            return t('s3_tunnel_missing');
+        default:
+            return t('s3_tunnel_not_configured');
+        }
     }
 
     function fileBrowser(settings, mount) {
@@ -412,7 +534,7 @@
         return card;
     }
 
-    function copyField(label, value, onCopy) {
+    function copyField(label, value, onCopy, stateName = '') {
         const endpoint = document.createElement('div');
         endpoint.className = 's3-mount-endpoint';
         const endpointLabel = document.createElement('div');
@@ -420,6 +542,7 @@
         endpointLabel.textContent = label;
         const endpointBox = document.createElement('div');
         endpointBox.className = 's3-copy-line';
+        if (stateName) endpointBox.dataset.state = stateName;
         const endpointInput = document.createElement('input');
         endpointInput.type = 'text';
         endpointInput.className = 'input';
@@ -566,23 +689,43 @@
         return settings?.webdav_access_mode === ACCESS_DEDICATED ? ACCESS_DEDICATED : ACCESS_MAIN;
     }
 
+    function dedicatedDomainMode(settings) {
+        const mode = settings?.dedicated_domain_mode;
+        return mode === DOMAIN_CUSTOM || mode === DOMAIN_TUNNEL ? mode : DOMAIN_NONE;
+    }
+
     function activeWebDAVOrigin(settings) {
-        return accessMode(settings) === ACCESS_DEDICATED ? dedicatedOrigin(settings) : window.location.origin;
+        if (accessMode(settings) !== ACCESS_DEDICATED) return window.location.origin;
+        const domainMode = dedicatedDomainMode(settings);
+        if (domainMode === DOMAIN_CUSTOM && settings?.dedicated_custom_domain) {
+            return settings.dedicated_custom_domain;
+        }
+        if (domainMode === DOMAIN_TUNNEL && settings?.dedicated_tunnel_hostname) {
+            return `https://${normalizeHost(settings.dedicated_tunnel_hostname)}`;
+        }
+        return dedicatedOrigin(settings);
     }
 
     function dedicatedOrigin(settings) {
-        const protocol = window.location.protocol || 'http:';
         let host = (settings?.dedicated_bind_host || '').trim();
         if (!host || host === '0.0.0.0' || host === '::' || host === '[::]') host = window.location.hostname || 'localhost';
         if (host.includes(':') && !host.startsWith('[')) host = `[${host}]`;
         const port = Number(settings?.dedicated_port || 14334);
-        return `${protocol}//${host}:${port}`;
+        return `http://${host}:${port}`;
+    }
+
+    function dedicatedTunnelService(settings) {
+        return `http://127.0.0.1:${Number(settings?.dedicated_port || 14334)}`;
     }
 
     function webDAVEndpointFor(path, origin = activeWebDAVOrigin(state.s3.settings)) {
         const normalized = (path || DEFAULT_MOUNT).trim() || DEFAULT_MOUNT;
         try {
-            return new URL(normalized, origin).toString();
+            const base = new URL(origin);
+            base.pathname = joinURLPath(base.pathname, normalized);
+            base.search = '';
+            base.hash = '';
+            return base.toString();
         } catch {
             return normalized;
         }
@@ -590,6 +733,12 @@
 
     function webDAVEndpointForMount(settings, mount) {
         return webDAVEndpointFor(mount?.mount_path || DEFAULT_MOUNT, activeWebDAVOrigin(settings));
+    }
+
+    function webDAVEndpointState(settings) {
+        if (accessMode(settings) !== ACCESS_DEDICATED || dedicatedDomainMode(settings) !== DOMAIN_TUNNEL) return '';
+        const status = settings?.dedicated_tunnel_status;
+        return status && status !== 'synced' ? 'error' : '';
     }
 
     function copyMountEndpoint(settings, mount) {
@@ -603,6 +752,9 @@
         if (control) setBusy(control, true);
         const hostValue = $('s3-dedicated-host')?.value ?? settings.dedicated_bind_host ?? '';
         const portValue = Number($('s3-dedicated-port')?.value || settings.dedicated_port || 14334);
+        const domainModeValue = overrides.dedicated_domain_mode || dedicatedDomainMode(settings);
+        const customDomainValue = $('s3-dedicated-custom-domain')?.value.trim() ?? settings.dedicated_custom_domain ?? '';
+        const tunnelHostnameValue = tunnelHostnameForSave(settings, domainModeValue, overrides);
         if (!Number.isInteger(portValue) || portValue < 1 || portValue > 65535) {
             toast.err(t('s3_dedicated_port_invalid'));
             if (control) setBusy(control, false);
@@ -615,6 +767,10 @@
                 webdav_access_mode: overrides.webdav_access_mode || accessMode(settings),
                 dedicated_bind_host: overrides.dedicated_bind_host ?? hostValue,
                 dedicated_port: overrides.dedicated_port ?? portValue,
+                dedicated_auto_start: overrides.dedicated_auto_start ?? !!($('s3-dedicated-autostart')?.checked ?? settings.dedicated_auto_start),
+                dedicated_domain_mode: domainModeValue,
+                dedicated_custom_domain: overrides.dedicated_custom_domain ?? customDomainValue,
+                dedicated_tunnel_hostname: tunnelHostnameValue,
             });
             state.s3.settings = data;
             state.s3.activeKey = data.active_key || state.s3.activeKey;
@@ -628,6 +784,109 @@
         } finally {
             if (control) setBusy(control, false);
         }
+    }
+
+    async function controlS3Dedicated(action, control) {
+        if (!action || !['start', 'stop'].includes(action)) return;
+        if (control) setBusy(control, true, t(action === 'start' ? 's3_dedicated_start' : 's3_dedicated_stop'));
+        try {
+            const data = await apiSend('/s3/webdav-control', 'POST', { action });
+            state.s3.settings = data;
+            state.s3.activeKey = data.active_key || state.s3.activeKey;
+            renderS3Settings(data);
+            const mount = activeMount();
+            if (canBrowseFiles(data, mount)) await loadS3Files(state.s3.path || '/');
+            toast.ok(t(action === 'start' ? 's3_dedicated_started' : 's3_dedicated_stopped_done'));
+        } catch (err) {
+            toast.err(t(action === 'start' ? 's3_dedicated_start_failed' : 's3_dedicated_stop_failed') + ': ' + err.message);
+            await fetchS3Settings();
+        } finally {
+            if (control) {
+                setBusy(control, false);
+                renderS3DedicatedAction(state.s3.settings, control);
+            }
+        }
+    }
+
+    async function openDedicatedTunnelRule(control) {
+        const settings = state.s3.settings;
+        if (!settings) return;
+        if (control) setBusy(control, true, t('s3_open_tunnel_rule'));
+        try {
+            if (!(await ensureTunnelManagerReady())) return;
+            await window.cfui.maybeLoadTunnelManagerZones?.(true);
+            renderS3TunnelDomainOptions($('s3-dedicated-tunnel-domain')?.value || splitHostnameForZones(settings.dedicated_tunnel_hostname).domain);
+            const subdomain = $('s3-dedicated-tunnel-subdomain')?.value;
+            const domain = $('s3-dedicated-tunnel-domain')?.value;
+            const hostname = buildHostname(subdomain, domain);
+            if (!String(subdomain || '').trim() || !String(domain || '').trim() || !hostname || !hostname.includes('.')) {
+                toast.err(t('s3_tunnel_hostname_required'));
+                return;
+            }
+            const service = dedicatedTunnelService(settings);
+            const comment = `${TUNNEL_COMMENT_MARKER} hostname=${hostname} service=${service}`;
+            const cfg = await window.cfui.loadTunnelManagerConfig?.(true);
+            if (!cfg) throw new Error(t('manager_config_load_failed'));
+            const existing = (cfg?.entries || []).find((entry) => normalizeHost(entry.hostname) === hostname && !String(entry.path || '').trim());
+            if (existing) {
+                const ok = await window.cfui.confirm({
+                    title: t('s3_tunnel_overwrite_title'),
+                    message: t('s3_tunnel_overwrite_message', { hostname }),
+                    okText: t('continue'),
+                    okClass: 'btn--primary',
+                });
+                if (!ok) return;
+            }
+            await saveS3AccessSettings({
+                dedicated_domain_mode: DOMAIN_TUNNEL,
+                dedicated_tunnel_hostname: hostname,
+            });
+            window.cfui.activateTab?.('manager');
+            window.cfui.openTunnelEntryDialog?.({
+                index: existing?.index,
+                hostname,
+                path: '',
+                service,
+                comment,
+                no_tls_verify: false,
+                http_host_header: '',
+                origin_server_name: '',
+            });
+            toast.ok(t('s3_tunnel_rule_prefilled'));
+        } catch (err) {
+            toast.err(t('s3_tunnel_open_failed') + ': ' + err.message);
+        } finally {
+            if (control) setBusy(control, false);
+        }
+    }
+
+    async function ensureTunnelManagerReady() {
+        if (!state.features?.tunnel_manager) {
+            toast.err(t('s3_tunnel_feature_required'));
+            window.cfui.activateTab?.('features');
+            return false;
+        }
+        await window.cfui.fetchTunnelManagerSettings?.();
+        const settings = state.tunnelManager?.settings || {};
+        if (!settings.enabled || !settings.account_id || !settings.tunnel_id || !(settings.api_token_set || settings.api_key_set)) {
+            toast.err(t('s3_tunnel_manager_required'));
+            window.cfui.activateTab?.('manager');
+            return false;
+        }
+        const verify = await apiSend('/tunnel-manager/verify-token', 'POST', { auth_mode: settings.auth_mode || 'token' });
+        const missing = (verify.permissions || []).filter((perm) => perm.required && !perm.granted);
+        if (!verify.valid || missing.length) {
+            toast.err(t('s3_tunnel_permission_required'));
+            window.cfui.activateTab?.('manager');
+            return false;
+        }
+        await window.cfui.maybeLoadTunnelManagerZones?.(true);
+        if (!(state.tunnelManager?.zones || []).length) {
+            toast.err(t('s3_tunnel_domain_required'));
+            window.cfui.activateTab?.('manager');
+            return false;
+        }
+        return true;
     }
 
     async function loadS3Files(path = state.s3.path || '/') {
@@ -881,6 +1140,53 @@
         return parts.length ? '/' + parts.join('/') : '/';
     }
 
+    function normalizeHost(value) {
+        value = String(value || '').trim();
+        try {
+            const url = new URL(value.includes('://') ? value : `https://${value}`);
+            value = url.host;
+        } catch {
+            value = value.replace(/^https?:\/\//i, '');
+        }
+        return value.replace(/^\/+|\/+$/g, '').split('/')[0].split(':')[0].toLowerCase();
+    }
+
+    function splitHostnameForZones(hostname) {
+        hostname = normalizeHost(hostname);
+        if (!hostname) return { subdomain: '', domain: '' };
+        const zones = (state.tunnelManager?.zones || []).map((zone) => zone.name).sort((a, b) => b.length - a.length);
+        for (const zone of zones) {
+            const suffix = `.${zone}`;
+            if (hostname === zone) return { subdomain: '', domain: zone };
+            if (hostname.endsWith(suffix)) return { subdomain: hostname.slice(0, -suffix.length), domain: zone };
+        }
+        const parts = hostname.split('.');
+        if (parts.length <= 2) return { subdomain: parts.length === 2 ? parts[0] : '', domain: parts.length === 2 ? parts[1] : hostname };
+        return { subdomain: parts.slice(0, -2).join('.'), domain: parts.slice(-2).join('.') };
+    }
+
+    function buildHostname(subdomain, domain) {
+        subdomain = String(subdomain || '').trim().replace(/^\.+|\.+$/g, '');
+        domain = String(domain || '').trim().replace(/^\.+|\.+$/g, '');
+        return normalizeHost(subdomain ? `${subdomain}.${domain}` : domain);
+    }
+
+    function joinURLPath(basePath, mountPath) {
+        const base = String(basePath || '/').replace(/\/+$/g, '');
+        const mount = String(mountPath || '').replace(/^\/+/g, '');
+        const joined = [base === '' ? '' : base, mount].filter(Boolean).join('/');
+        return joined.startsWith('/') ? joined : `/${joined}`;
+    }
+
+    function tunnelHostnameForSave(settings, domainMode, overrides) {
+        if (Object.prototype.hasOwnProperty.call(overrides, 'dedicated_tunnel_hostname')) {
+            return normalizeHost(overrides.dedicated_tunnel_hostname || '');
+        }
+        if (domainMode !== DOMAIN_TUNNEL) return settings.dedicated_tunnel_hostname || '';
+        const next = buildHostname($('s3-dedicated-tunnel-subdomain')?.value, $('s3-dedicated-tunnel-domain')?.value);
+        return next || settings.dedicated_tunnel_hostname || '';
+    }
+
     async function responseError(res) {
         try { const data = await res.json(); return data.error || res.statusText; }
         catch { return res.statusText; }
@@ -983,7 +1289,20 @@
         $('s3-access-dedicated')?.addEventListener('change', (e) => {
             if (e.target.checked) saveS3AccessSettings({ webdav_access_mode: ACCESS_DEDICATED }, e.target);
         });
+        $('s3-dedicated-autostart')?.addEventListener('change', (e) => saveS3AccessSettings({ dedicated_auto_start: e.target.checked }, e.target));
         $('s3-dedicated-apply')?.addEventListener('click', (e) => saveS3AccessSettings({}, e.currentTarget));
+        $('s3-dedicated-action')?.addEventListener('click', (e) => controlS3Dedicated(e.currentTarget.dataset.action, e.currentTarget));
+        $('s3-domain-none')?.addEventListener('change', (e) => {
+            if (e.target.checked) saveS3AccessSettings({ dedicated_domain_mode: DOMAIN_NONE }, e.target);
+        });
+        $('s3-domain-custom')?.addEventListener('change', (e) => {
+            if (e.target.checked) saveS3AccessSettings({ dedicated_domain_mode: DOMAIN_CUSTOM }, e.target);
+        });
+        $('s3-domain-tunnel')?.addEventListener('change', (e) => {
+            if (e.target.checked) saveS3AccessSettings({ dedicated_domain_mode: DOMAIN_TUNNEL }, e.target);
+        });
+        $('s3-domain-apply')?.addEventListener('click', (e) => saveS3AccessSettings({ dedicated_domain_mode: DOMAIN_CUSTOM }, e.currentTarget));
+        $('s3-dedicated-tunnel-open')?.addEventListener('click', (e) => openDedicatedTunnelRule(e.currentTarget));
         $('s3-upload-input')?.addEventListener('change', (e) => {
             const file = e.target.files?.[0];
             e.target.value = '';

@@ -40,6 +40,10 @@ func (AppSetting) Fields() []ent.Field {
 		field.String("s3_webdav_access_mode").Default("main"),
 		field.String("s3_webdav_dedicated_bind_host").Default(""),
 		field.Int("s3_webdav_dedicated_port").Default(14334),
+		field.Bool("s3_webdav_dedicated_auto_start").Default(false),
+		field.String("s3_webdav_dedicated_domain_mode").Default("none"),
+		field.String("s3_webdav_dedicated_custom_domain").Default(""),
+		field.String("s3_webdav_dedicated_tunnel_hostname").Default(""),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}
