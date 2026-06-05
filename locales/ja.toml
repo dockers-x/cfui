@@ -1428,6 +1428,12 @@ other = "前半は現在のホスト、後半は WebDAV パスです。コピー
 [s3_test_connection]
 other = "接続をテスト"
 
+[s3_test_s3]
+other = "S3 をテスト"
+
+[s3_test_webdav]
+other = "WebDAV をテスト"
+
 [s3_save_settings]
 other = "設定を保存"
 
@@ -1574,6 +1580,12 @@ other = "S3 接続は利用できます。"
 
 [s3_test_failed]
 other = "S3 接続テストに失敗しました"
+
+[s3_webdav_test_success]
+other = "WebDAV endpoint は利用できます。"
+
+[s3_webdav_test_failed]
+other = "WebDAV endpoint テストに失敗しました"
 
 [testing]
 other = "テスト中..."

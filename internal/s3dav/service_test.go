@@ -344,6 +344,32 @@ func TestTestConnectionListsRoot(t *testing.T) {
 	}
 }
 
+func TestTestWebDAVConnectionChecksWebDAVReadiness(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	if err := afero.WriteFile(fs, "/readme.txt", []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	svc := newTestService(t, fakeCloudflareClient{}, fs)
+
+	resp, err := svc.TestWebDAVConnection(context.Background(), "default", validMountRequest())
+	if err != nil {
+		t.Fatalf("TestWebDAVConnection: %v", err)
+	}
+	if !resp.Success || resp.Availability.Status != StatusReady {
+		t.Fatalf("unexpected WebDAV test response: %#v", resp)
+	}
+
+	req := validMountRequest()
+	req.WebDAVPassword = ""
+	resp, err = svc.TestWebDAVConnection(context.Background(), "default", req)
+	if err != nil {
+		t.Fatalf("TestWebDAVConnection missing password: %v", err)
+	}
+	if resp.Success || resp.Availability.Status != StatusWebDAVCredentialsRequired {
+		t.Fatalf("expected missing WebDAV credentials, got %#v", resp)
+	}
+}
+
 func TestListFilesUsesSelectedAferoFilesystem(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	if err := fs.MkdirAll("/docs", 0755); err != nil {

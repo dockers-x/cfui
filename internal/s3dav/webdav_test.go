@@ -2,6 +2,7 @@ package s3dav
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -60,6 +61,64 @@ func TestWebDAVHandlerRequiresBasicAuth(t *testing.T) {
 	}
 	if okRec.Body.String() != "hello" {
 		t.Fatalf("unexpected body %q", okRec.Body.String())
+	}
+}
+
+func TestWebDAVHandlerUsesUpdatedPasswordWithoutRestart(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	if err := afero.WriteFile(fs, "/readme.txt", []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	svc := newTestService(t, fakeCloudflareClient{}, fs)
+	hash, err := HashPassword("old-secret")
+	if err != nil {
+		t.Fatalf("HashPassword: %v", err)
+	}
+	cfg := svc.cfgMgr.Get()
+	cfg.S3WebDAV.Enabled = true
+	cfg.S3WebDAV.Mounts[0].EndpointURL = "https://s3.example.com"
+	cfg.S3WebDAV.Mounts[0].BucketName = "bucket"
+	cfg.S3WebDAV.Mounts[0].MountPath = "/webdav/private/"
+	cfg.S3WebDAV.Mounts[0].AccessKeyID = "ak"
+	cfg.S3WebDAV.Mounts[0].SecretAccessKey = "sk"
+	cfg.S3WebDAV.Mounts[0].WebDAVUsername = "dav"
+	cfg.S3WebDAV.Mounts[0].WebDAVPasswordHash = hash
+	if err := svc.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+	handler := svc.Handler()
+
+	oldReq := httptest.NewRequest(http.MethodGet, "/webdav/private/readme.txt", nil)
+	oldReq.SetBasicAuth("dav", "old-secret")
+	oldRec := httptest.NewRecorder()
+	handler.ServeHTTP(oldRec, oldReq)
+	if oldRec.Code != http.StatusOK {
+		t.Fatalf("expected old password to work before update, got %d: %s", oldRec.Code, oldRec.Body.String())
+	}
+
+	req := validMountRequest()
+	req.MountPath = "/webdav/private/"
+	req.RootPrefix = ""
+	req.WebDAVUsername = "dav"
+	req.WebDAVPassword = "new-secret"
+	if _, err := svc.SaveMount(context.Background(), "default", req); err != nil {
+		t.Fatalf("SaveMount new password: %v", err)
+	}
+
+	staleReq := httptest.NewRequest(http.MethodGet, "/webdav/private/readme.txt", nil)
+	staleReq.SetBasicAuth("dav", "old-secret")
+	staleRec := httptest.NewRecorder()
+	handler.ServeHTTP(staleRec, staleReq)
+	if staleRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected old password to fail after update, got %d: %s", staleRec.Code, staleRec.Body.String())
+	}
+
+	newReq := httptest.NewRequest(http.MethodGet, "/webdav/private/readme.txt", nil)
+	newReq.SetBasicAuth("dav", "new-secret")
+	newRec := httptest.NewRecorder()
+	handler.ServeHTTP(newRec, newReq)
+	if newRec.Code != http.StatusOK {
+		t.Fatalf("expected new password to work without handler restart, got %d: %s", newRec.Code, newRec.Body.String())
 	}
 }
 

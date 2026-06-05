@@ -80,6 +80,50 @@ func TestS3SettingsDoesNotLeakSecrets(t *testing.T) {
 	}
 }
 
+func TestS3WebDAVTestEndpointChecksWebDAVConfig(t *testing.T) {
+	s := newServerTestServer(t)
+	memFS := afero.NewMemMapFs()
+	if err := afero.WriteFile(memFS, "/readme.txt", []byte("hello"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	s.s3Svc = s3dav.NewServiceForTest(
+		s.cfgMgr,
+		func(string) (s3dav.CloudflareClient, error) {
+			return serverFakeR2Client{}, nil
+		},
+		func(context.Context, s3dav.FSConfig, s3dav.Credentials) (afero.Fs, error) {
+			return memFS, nil
+		},
+	)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/s3/webdav-test?mount_key=default", strings.NewReader(`{
+		"enabled": true,
+		"name": "My S3",
+		"provider": "generic_s3",
+		"endpoint_url": "https://s3.example.com",
+		"region": "us-east-1",
+		"path_style": true,
+		"bucket_name": "bucket",
+		"mount_path": "/webdav/my_s3/",
+		"access_key_id": "access-key",
+		"secret_access_key": "secret-access-key",
+		"webdav_enabled": true,
+		"webdav_auth_enabled": true,
+		"webdav_username": "dav",
+		"webdav_password": "secret"
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	s.handleS3WebDAVTest(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("webdav test status %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"success":true`) {
+		t.Fatalf("expected successful WebDAV test response: %s", rec.Body.String())
+	}
+}
+
 func TestS3BucketsCanUseTemporaryR2AccountID(t *testing.T) {
 	s := newServerTestServer(t)
 	cfg := s.cfgMgr.Get()

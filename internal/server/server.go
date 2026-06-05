@@ -165,6 +165,7 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/s3/mounts/", s.handleS3Mount)
 	mux.HandleFunc("/api/s3/mounts", s.handleS3Mounts)
 	mux.HandleFunc("/api/s3/test", s.handleS3Test)
+	mux.HandleFunc("/api/s3/webdav-test", s.handleS3WebDAVTest)
 	mux.HandleFunc("/api/s3/buckets", s.handleS3Buckets)
 	mux.HandleFunc("/api/s3/files/download", s.handleS3Download)
 	mux.HandleFunc("/api/s3/files/mkdir", s.handleS3Mkdir)
@@ -395,6 +396,24 @@ func (s *Server) handleS3Test(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp, err := s.s3Svc.TestConnection(r.Context(), r.URL.Query().Get("mount_key"), req)
+	if err != nil {
+		writeS3Error(w, err)
+		return
+	}
+	writeJSON(w, resp)
+}
+
+func (s *Server) handleS3WebDAVTest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req s3dav.MountRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	resp, err := s.s3Svc.TestWebDAVConnection(r.Context(), r.URL.Query().Get("mount_key"), req)
 	if err != nil {
 		writeS3Error(w, err)
 		return

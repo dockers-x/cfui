@@ -1428,6 +1428,12 @@ other = "前面是当前访问域名，后面是 WebDAV 路径。复制按钮会
 [s3_test_connection]
 other = "测试连接"
 
+[s3_test_s3]
+other = "测试 S3"
+
+[s3_test_webdav]
+other = "测试 WebDAV"
+
 [s3_save_settings]
 other = "保存设置"
 
@@ -1574,6 +1580,12 @@ other = "S3 连接可用。"
 
 [s3_test_failed]
 other = "S3 连接测试失败"
+
+[s3_webdav_test_success]
+other = "WebDAV endpoint 可用。"
+
+[s3_webdav_test_failed]
+other = "WebDAV endpoint 测试失败"
 
 [testing]
 other = "测试中..."

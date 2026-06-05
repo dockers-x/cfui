@@ -228,6 +228,58 @@ func (s *Service) TestConnection(ctx context.Context, key string, req MountReque
 	}, nil
 }
 
+func (s *Service) TestWebDAVConnection(ctx context.Context, key string, req MountRequest) (TestConnectionResponse, error) {
+	cfg := s.effectiveConfig()
+	current, ok := s.mountForKey(cfg, key)
+	if !ok {
+		current = config.DefaultS3WebDAVMountConfig()
+	}
+	mount, err := s.requestMount(req, current, key == "")
+	if err != nil {
+		return TestConnectionResponse{}, err
+	}
+	availability := s.WebDAVAvailability(ctx, mount)
+	if !availability.CanEnable {
+		return TestConnectionResponse{
+			Success:      false,
+			Message:      availability.Message,
+			Availability: availability,
+		}, nil
+	}
+	fs, err := s.filesystemForMount(ctx, mount, false)
+	if err != nil {
+		return TestConnectionResponse{
+			Success: false,
+			Message: "WebDAV filesystem failed: " + err.Error(),
+			Availability: Availability{
+				CanEnable: false,
+				Status:    StatusS3FilesystemUnavailable,
+				Message:   "WebDAV filesystem failed.",
+			},
+		}, nil
+	}
+	if _, err := listFiles(fs, "/"); err != nil {
+		return TestConnectionResponse{
+			Success: false,
+			Message: "WebDAV list failed: " + err.Error(),
+			Availability: Availability{
+				CanEnable: false,
+				Status:    StatusS3FilesystemUnavailable,
+				Message:   "WebDAV list failed.",
+			},
+		}, nil
+	}
+	return TestConnectionResponse{
+		Success: true,
+		Message: "WebDAV endpoint works.",
+		Availability: Availability{
+			CanEnable: true,
+			Status:    StatusReady,
+			Message:   "S3 WebDAV is ready.",
+		},
+	}, nil
+}
+
 func (s *Service) FeatureAvailability(_ context.Context, _ config.S3WebDAVConfig) Availability {
 	return Availability{CanEnable: true, Status: StatusReady, Message: "S3 WebDAV can be enabled."}
 }

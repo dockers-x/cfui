@@ -1428,6 +1428,12 @@ other = "The first field is the current host, and the second is the WebDAV path.
 [s3_test_connection]
 other = "Test connection"
 
+[s3_test_s3]
+other = "Test S3"
+
+[s3_test_webdav]
+other = "Test WebDAV"
+
 [s3_save_settings]
 other = "Save settings"
 
@@ -1574,6 +1580,12 @@ other = "S3 connection works."
 
 [s3_test_failed]
 other = "S3 connection test failed"
+
+[s3_webdav_test_success]
+other = "WebDAV endpoint works."
+
+[s3_webdav_test_failed]
+other = "WebDAV endpoint test failed"
 
 [testing]
 other = "Testing..."

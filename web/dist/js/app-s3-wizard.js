@@ -85,6 +85,7 @@
         $('s3-wizard-next').hidden = wizard.step === steps.length - 1;
         $('s3-wizard-save').hidden = wizard.step !== steps.length - 1;
         $('s3-wizard-test').hidden = wizard.step < 2;
+        renderTestButton();
         if (wizard.step === steps.length - 1) renderReview();
         applyProviderDefaults();
         applyWebDAVControls();
@@ -169,17 +170,23 @@
 
     async function testConnection() {
         const btn = $('s3-wizard-test');
+        const webDAVTest = wizard.step >= 3;
+        const successKey = webDAVTest ? 's3_webdav_test_success' : 's3_test_success';
+        const failedKey = webDAVTest ? 's3_webdav_test_failed' : 's3_test_failed';
+        const path = webDAVTest ? '/s3/webdav-test' : '/s3/test';
         setBusy(btn, true, t('testing'));
         try {
             const key = wizard.mode === 'edit' && wizard.mount?.key ? '?mount_key=' + encodeURIComponent(wizard.mount.key) : '';
-            const data = await apiSend('/s3/test' + key, 'POST', payload());
-            showAlert(data.message || (data.success ? t('s3_test_success') : t('s3_test_failed')), data.success ? 'ok' : 'error');
-            toast[data.success ? 'ok' : 'err'](data.message || (data.success ? t('s3_test_success') : t('s3_test_failed')));
+            const data = await apiSend(path + key, 'POST', payload());
+            const message = data.success ? t(successKey) : (data.message || t(failedKey));
+            showAlert(message, data.success ? 'ok' : 'error');
+            toast[data.success ? 'ok' : 'err'](message);
         } catch (err) {
             showAlert(err.message, 'error');
-            toast.err(t('s3_test_failed') + ': ' + err.message);
+            toast.err(t(failedKey) + ': ' + err.message);
         } finally {
             setBusy(btn, false);
+            renderTestButton();
         }
     }
 
@@ -342,6 +349,15 @@
             reviewRow(t('s3_webdav_endpoint'), window.cfui.s3WebDAVEndpointFor?.(body.mount_path) || body.mount_path),
             reviewRow(t('s3_webdav_username'), body.webdav_auth_enabled ? (body.webdav_username || t('s3_webdav_credentials_required')) : t('s3_webdav_auth_disabled'))
         );
+    }
+
+    function renderTestButton() {
+        const btn = $('s3-wizard-test');
+        if (!btn) return;
+        const label = t(wizard.step >= 3 ? 's3_test_webdav' : 's3_test_s3');
+        const text = btn.querySelector('.text');
+        if (text) text.textContent = label;
+        btn.setAttribute('aria-label', label);
     }
 
     function reviewRow(label, valueText) {
