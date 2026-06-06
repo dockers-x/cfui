@@ -1811,6 +1811,21 @@ details.disclosure > .body {
     overflow: auto;
 }
 
+.modal.modal--sync-create {
+    max-height: min(92dvh, 760px);
+    overflow: hidden;
+}
+
+.modal--sync-create .modal-body.s3-sync {
+    flex: 1 1 auto;
+    grid-template-rows: auto minmax(180px, 1fr) auto auto;
+    gap: var(--gap-3);
+    min-height: 0;
+    overflow: hidden;
+    padding-top: var(--gap-4);
+    padding-bottom: var(--gap-4);
+}
+
 .s3-wizard {
     display: grid;
     gap: var(--gap-4);
@@ -1966,7 +1981,7 @@ details.disclosure > .body {
 
 .s3-file-toolbar {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--gap-3);
 }
@@ -1977,13 +1992,40 @@ details.disclosure > .body {
 
 .s3-file-toolbar .btn-row {
     align-items: center;
+    align-self: flex-start;
+    min-height: 36px;
 }
 
+.s3-file-toolbar label.btn {
+    margin: 0;
+}
+
+.s3-file-toolbar .btn,
 .s3-file-toolbar .icon-btn {
     width: 36px;
     min-width: 36px;
     height: 36px;
     min-height: 36px;
+    box-sizing: border-box;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.s3-file-toolbar .btn {
+    width: auto;
+    padding-left: 12px;
+    padding-right: 12px;
+    line-height: 1;
+}
+
+.s3-file-toolbar .btn span {
+    line-height: 1;
+}
+
+.s3-file-toolbar .btn svg,
+.s3-file-toolbar .icon-btn svg {
+    display: block;
+    flex: 0 0 auto;
 }
 
 .s3-sync-task-slot {
@@ -2268,6 +2310,12 @@ details.disclosure > .body {
     gap: var(--gap-3);
 }
 
+.modal--sync-create .s3-sync-grid {
+    height: auto;
+    min-height: 0;
+    max-height: 360px;
+}
+
 .s3-sync-pane {
     display: grid;
     grid-template-rows: auto minmax(260px, 44dvh);
@@ -2276,6 +2324,12 @@ details.disclosure > .body {
     border-radius: var(--r-control);
     background: var(--surface);
     overflow: hidden;
+}
+
+.modal--sync-create .s3-sync-pane {
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
+    min-height: 0;
 }
 
 .s3-sync-pane__head {
@@ -2301,6 +2355,7 @@ details.disclosure > .body {
 }
 
 .s3-sync-tree {
+    min-height: 0;
     overflow: auto;
     padding: 8px;
 }
@@ -2785,6 +2840,17 @@ details.disclosure > .body {
 
     .s3-sync-pane {
         grid-template-rows: auto minmax(220px, 34dvh);
+    }
+
+    .modal--sync-create .s3-sync-grid {
+        height: auto;
+        max-height: min(52dvh, 420px);
+        overflow: auto;
+    }
+
+    .modal--sync-create .s3-sync-pane {
+        height: min(240px, 34dvh);
+        min-height: 220px;
     }
 
     .s3-sync-pane__head {
