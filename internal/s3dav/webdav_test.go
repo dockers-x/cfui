@@ -232,7 +232,7 @@ func TestWebDAVPutUsesSlashlessS3ObjectKey(t *testing.T) {
 
 func TestWebDAVOpenFileWriteOnlyCreateCreatesParentPrefixes(t *testing.T) {
 	source := s3StyleWriteOnlyFS{Fs: afero.NewMemMapFs()}
-	fs := aferoWebDAVFS{fs: source}
+	fs := newWebDAVFileSystem(source)
 
 	file, err := fs.OpenFile(context.Background(), "/cc-switch-sync/v2/db.sql", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -265,7 +265,7 @@ func TestWebDAVOpenFileReadWriteWithoutCreateFallsBackToReadOnly(t *testing.T) {
 	if err := afero.WriteFile(source.Fs, "/props.txt", []byte("hello"), 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	fs := aferoWebDAVFS{fs: source}
+	fs := newWebDAVFileSystem(source)
 
 	file, err := fs.OpenFile(context.Background(), "/props.txt", os.O_RDWR, 0)
 	if err != nil {
@@ -283,18 +283,19 @@ func TestWebDAVOpenFileReadWriteWithoutCreateFallsBackToReadOnly(t *testing.T) {
 
 func TestWebDAVWriteFileStatAfterCloseFallsBackToSyntheticInfo(t *testing.T) {
 	source := afero.NewMemMapFs()
-	file, err := source.OpenFile("/db.sql", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	fs := newWebDAVFileSystem(statNeverOpenFileFS{Fs: source})
+
+	file, err := fs.OpenFile(context.Background(), "/db.sql", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		t.Fatalf("OpenFile: %v", err)
 	}
-	wrapped := &webDAVWriteFile{File: statNeverFile{File: file}, name: "/db.sql"}
-	if _, err := wrapped.Write([]byte("hello")); err != nil {
+	if _, err := file.Write([]byte("hello")); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
-	if err := wrapped.Close(); err != nil {
+	if err := file.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
 	}
-	info, err := wrapped.Stat()
+	info, err := file.Stat()
 	if err != nil {
 		t.Fatalf("Stat after close: %v", err)
 	}
@@ -594,6 +595,18 @@ type statNeverFile struct {
 
 func (f statNeverFile) Stat() (os.FileInfo, error) {
 	return nil, &os.PathError{Op: "stat", Path: f.Name(), Err: os.ErrNotExist}
+}
+
+type statNeverOpenFileFS struct {
+	afero.Fs
+}
+
+func (fs statNeverOpenFileFS) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
+	file, err := fs.Fs.OpenFile(name, flag, perm)
+	if err != nil {
+		return nil, err
+	}
+	return statNeverFile{File: file}, nil
 }
 
 type rootStatNotFoundFS struct {

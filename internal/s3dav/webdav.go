@@ -2,7 +2,6 @@ package s3dav
 
 import (
 	"bytes"
-	"context"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -12,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lib-x/aferodav"
 	"github.com/spf13/afero"
 	"golang.org/x/net/webdav"
 )
@@ -43,7 +43,7 @@ func (s *Service) Handler() http.Handler {
 		}
 		handler := &webdav.Handler{
 			Prefix:     mountPath,
-			FileSystem: aferoWebDAVFS{fs: fs},
+			FileSystem: newWebDAVFileSystem(fs),
 			LockSystem: s.webDAVLockSystem(mount.Key),
 		}
 		handler.ServeHTTP(w, r)
@@ -65,6 +65,42 @@ func (s *Service) webDAVLockSystem(key string) webdav.LockSystem {
 	return ls
 }
 
+func newWebDAVFileSystem(fs afero.Fs) webdav.FileSystem {
+	return aferodav.NewFS(fs,
+		aferodav.WithPathCleaner(cleanWebDAVPath),
+		aferodav.WithAutoMkdirParents(),
+		aferodav.WithRecursiveMkdir(),
+		aferodav.WithObjectStoreWriteMode(),
+		aferodav.WithSyntheticWriteStat(),
+		aferodav.WithImplicitDirectoryStat(implicitWebDAVDirectoryStat(fs)),
+	)
+}
+
+func cleanWebDAVPath(op aferodav.PathOp, name string) (string, error) {
+	requireObject := false
+	switch op {
+	case aferodav.PathOpMkdir,
+		aferodav.PathOpRemoveAll,
+		aferodav.PathOpRenameSource,
+		aferodav.PathOpRenameDestination:
+		requireObject = true
+	}
+	return CleanPath(name, requireObject)
+}
+
+func implicitWebDAVDirectoryStat(fs afero.Fs) aferodav.ImplicitDirectoryStat {
+	return func(name string) (os.FileInfo, bool, error) {
+		if name == "/" {
+			return s3ListFileInfo{name: "/", dir: true, modTime: time.Unix(0, 0)}, true, nil
+		}
+		entries, err := listFiles(fs, name)
+		if err != nil || len(entries.Entries) == 0 {
+			return nil, false, nil
+		}
+		return s3ListFileInfo{name: path.Base(name), dir: true, modTime: time.Unix(0, 0)}, true, nil
+	}
+}
+
 func serveBrowserReadOnly(w http.ResponseWriter, r *http.Request, mountPath string, fs afero.Fs) bool {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		return false
@@ -75,7 +111,7 @@ func serveBrowserReadOnly(w http.ResponseWriter, r *http.Request, mountPath stri
 		http.NotFound(w, r)
 		return true
 	}
-	webFS := aferoWebDAVFS{fs: fs}
+	webFS := newWebDAVFileSystem(fs)
 	info, err := webFS.Stat(r.Context(), cleaned)
 	if err != nil {
 		http.NotFound(w, r)
@@ -434,123 +470,3 @@ tbody tr:hover { background: color-mix(in srgb, var(--accent-soft) 45%, transpar
 </body>
 </html>
 `))
-
-type aferoWebDAVFS struct {
-	fs afero.Fs
-}
-
-func (a aferoWebDAVFS) Mkdir(_ context.Context, name string, perm os.FileMode) error {
-	cleaned, err := CleanPath(name, true)
-	if err != nil {
-		return err
-	}
-	return a.fs.MkdirAll(cleaned, perm)
-}
-
-func (a aferoWebDAVFS) OpenFile(_ context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
-	cleaned, err := CleanPath(name, false)
-	if err != nil {
-		return nil, err
-	}
-	wholeObjectWrite := webDAVWholeObjectWrite(flag)
-	if wholeObjectWrite {
-		parent := ParentPath(cleaned)
-		if parent != "" && parent != "/" {
-			if err := a.fs.MkdirAll(parent, 0755); err != nil {
-				return nil, err
-			}
-		}
-		flag = (flag &^ os.O_RDWR) | os.O_WRONLY
-	} else if flag&os.O_RDWR != 0 {
-		flag &^= os.O_RDWR
-	}
-	file, err := a.fs.OpenFile(cleaned, flag, perm)
-	if err != nil {
-		return nil, err
-	}
-	if wholeObjectWrite {
-		return &webDAVWriteFile{File: file, name: cleaned, modTime: time.Now()}, nil
-	}
-	return file, nil
-}
-
-func webDAVWholeObjectWrite(flag int) bool {
-	return flag&(os.O_CREATE|os.O_TRUNC|os.O_WRONLY) != 0
-}
-
-func (a aferoWebDAVFS) RemoveAll(_ context.Context, name string) error {
-	cleaned, err := CleanPath(name, true)
-	if err != nil {
-		return err
-	}
-	return a.fs.RemoveAll(cleaned)
-}
-
-func (a aferoWebDAVFS) Rename(_ context.Context, oldName, newName string) error {
-	return renamePath(a.fs, oldName, newName)
-}
-
-func (a aferoWebDAVFS) Stat(_ context.Context, name string) (os.FileInfo, error) {
-	cleaned, err := CleanPath(name, false)
-	if err != nil {
-		return nil, err
-	}
-	if cleaned == "/" {
-		return s3ListFileInfo{name: "/", dir: true, modTime: time.Unix(0, 0)}, nil
-	}
-	info, err := a.fs.Stat(cleaned)
-	if err == nil {
-		return info, nil
-	}
-	if os.IsNotExist(err) {
-		entries, listErr := listFiles(a.fs, cleaned)
-		if listErr == nil && len(entries.Entries) > 0 {
-			return s3ListFileInfo{name: path.Base(cleaned), dir: true, modTime: time.Unix(0, 0)}, nil
-		}
-	}
-	return nil, err
-}
-
-type webDAVWriteFile struct {
-	afero.File
-	name    string
-	size    int64
-	modTime time.Time
-	closed  bool
-}
-
-func (f *webDAVWriteFile) Write(p []byte) (int, error) {
-	n, err := f.File.Write(p)
-	f.size += int64(n)
-	f.modTime = time.Now()
-	return n, err
-}
-
-func (f *webDAVWriteFile) Close() error {
-	f.closed = true
-	return f.File.Close()
-}
-
-func (f *webDAVWriteFile) Stat() (os.FileInfo, error) {
-	info, err := f.File.Stat()
-	if err == nil {
-		return info, nil
-	}
-	if f.modTime.IsZero() {
-		f.modTime = time.Now()
-	}
-	return webDAVFileInfo{name: path.Base(f.name), size: f.size, modTime: f.modTime}, nil
-}
-
-type webDAVFileInfo struct {
-	name    string
-	size    int64
-	modTime time.Time
-}
-
-func (i webDAVFileInfo) Name() string       { return i.name }
-func (i webDAVFileInfo) Size() int64        { return i.size }
-func (i webDAVFileInfo) Mode() os.FileMode  { return 0644 }
-func (i webDAVFileInfo) ModTime() time.Time { return i.modTime }
-func (i webDAVFileInfo) IsDir() bool        { return false }
-func (i webDAVFileInfo) Sys() any           { return nil }
