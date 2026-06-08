@@ -6,6 +6,10 @@ cfui is a web control panel for Cloudflare Tunnel (`cloudflared`). It runs the l
 
 The web UI is built into the binary. Configuration is stored in a local SQLite database under the data directory.
 
+## Acknowledgements
+
+- [LinuxDo Community](https://linux.do)
+
 ## Features
 
 - **Local Cloudflare Tunnel runner**

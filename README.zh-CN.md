@@ -6,6 +6,10 @@ cfui 是一个用于管理 Cloudflare Tunnel（`cloudflared`）的 Web 控制台
 
 Web UI 已内置在二进制文件中。配置保存在数据目录下的本地 SQLite 数据库里。
 
+## 致谢
+
+- [LinuxDo 社区](https://linux.do)
+
 ## 功能
 
 - **本地 Cloudflare Tunnel 运行管理**
