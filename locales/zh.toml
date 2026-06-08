@@ -25,6 +25,15 @@ other = "管理您的 Cloudflare Tunnel 连接"
 [tunnel_profile_editing]
 other = "正在编辑的隧道"
 
+[tunnel_profiles_label]
+other = "隧道配置"
+
+[tunnel_profiles_help]
+other = "选择要编辑的隧道；通过行内按钮切换本地运行器。"
+
+[editing_tunnel_profile]
+other = "正在编辑"
+
 [active_local_tunnel]
 other = "本地运行器"
 

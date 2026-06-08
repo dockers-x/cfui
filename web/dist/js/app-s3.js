@@ -308,7 +308,7 @@
         const text = el.querySelector('.text');
         const mode = accessMode(settings);
         if (mode === ACCESS_MAIN) {
-            el.dataset.state = 'neutral';
+            el.dataset.state = 'ok';
             if (text) text.textContent = t('s3_access_mode_main');
             return;
         }

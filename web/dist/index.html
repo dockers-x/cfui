@@ -123,25 +123,19 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="tunnel-profile-bar" role="group" aria-label="Tunnel profiles">
-                            <div class="form-field">
-                                <label for="tunnel-profile-select" data-i18n="tunnel_profile_editing">Editing tunnel</label>
-                                <select id="tunnel-profile-select" class="form-select"></select>
+                        <div class="tunnel-profile-bar" role="group" aria-labelledby="tunnel-profile-heading">
+                            <div class="tunnel-profile-head">
+                                <div class="tunnel-profile-title">
+                                    <div id="tunnel-profile-heading" class="tunnel-profile-label" data-i18n="tunnel_profiles_label">Tunnel profiles</div>
+                                    <p class="help-text" data-i18n="tunnel_profiles_help">Select a tunnel to edit. Use the row action to choose the local runner.</p>
+                                </div>
+                                <div class="btn-row">
+                                    <button id="add-tunnel-profile" type="button" class="btn btn--sm" data-i18n="add_tunnel_profile">Add tunnel</button>
+                                    <button id="delete-tunnel-profile" type="button" class="btn btn--sm btn--ghost" data-i18n="delete_tunnel_profile">Delete</button>
+                                </div>
                             </div>
-                            <div class="tunnel-profile-meta">
-                                <span class="pill" id="active-tunnel-pill" data-state="neutral">
-                                    <span class="dot"></span>
-                                    <span class="text" data-i18n="active_local_tunnel">Local runner</span>
-                                </span>
-                                <button id="activate-tunnel-profile" type="button" class="btn btn--sm">
-                                    <span class="spinner" aria-hidden="true"></span>
-                                    <span class="text" data-i18n="use_for_local_runner">Use for local runner</span>
-                                </button>
-                            </div>
-                            <div class="btn-row">
-                                <button id="add-tunnel-profile" type="button" class="btn btn--sm" data-i18n="add_tunnel_profile">Add tunnel</button>
-                                <button id="delete-tunnel-profile" type="button" class="btn btn--sm btn--ghost" data-i18n="delete_tunnel_profile">Delete</button>
-                            </div>
+                            <select id="tunnel-profile-select" class="tunnel-profile-select-native" aria-hidden="true" tabindex="-1"></select>
+                            <div id="tunnel-profile-list" class="tunnel-profile-list" role="list" aria-label="Tunnel profiles" data-i18n-attr="aria-label|tunnel_profiles_label"></div>
                         </div>
                         <form id="config-form" novalidate>
                             <div class="form-field">

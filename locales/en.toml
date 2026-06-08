@@ -25,6 +25,15 @@ other = "Manage your Cloudflare Tunnel connection"
 [tunnel_profile_editing]
 other = "Editing tunnel"
 
+[tunnel_profiles_label]
+other = "Tunnel profiles"
+
+[tunnel_profiles_help]
+other = "Select a tunnel to edit. Use the row action to choose the local runner."
+
+[editing_tunnel_profile]
+other = "Editing"
+
 [active_local_tunnel]
 other = "Local runner"
 
