@@ -24,6 +24,9 @@
         await fetchVersion();
         await fetchConfig();
         await fetchFeatures();
+        await fetchStatus();
+        setInterval(fetchStatus, 2000);
+
         restoreLastTab();
 
         if (state.features.tunnel_manager) {
@@ -34,9 +37,6 @@
         if (state.features.mcp) await fetchMCPStatus();
         if (state.features.ddns) await refreshDDNS();
         if (state.features.s3_webdav) await fetchS3Settings();
-        await fetchStatus();
-
-        setInterval(fetchStatus, 2000);
         setInterval(() => { if (!$('panel-ddns').hidden) fetchDDNSStatus(); }, 10000);
     }
 
