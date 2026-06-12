@@ -431,50 +431,15 @@
         const name = document.createElement('span');
         name.className = 'tunnel-profile-item__name';
         name.textContent = tunnelDisplayName(profile);
-        const meta = document.createElement('span');
-        meta.className = 'tunnel-profile-item__meta';
-        meta.textContent = profile.key || '';
-        copy.append(name, meta);
+        copy.append(name);
 
-        const badges = document.createElement('span');
-        badges.className = 'tunnel-profile-badges';
-        badges.append(
-            tunnelProfileBadge('status', t('status_stopped')),
-            tunnelProfileBadge('editing', t('editing_tunnel_profile'))
-        );
-        summary.append(copy, badges);
+        const protocol = document.createElement('span');
+        protocol.className = 'tunnel-profile-item__protocol';
+        protocol.hidden = true;
+        summary.append(copy, protocol);
 
-        const actions = document.createElement('div');
-        actions.className = 'tunnel-profile-item__actions';
-
-        const power = document.createElement('button');
-        power.type = 'button';
-        power.className = 'btn btn--sm tunnel-profile-power-btn';
-        power.dataset.action = 'start';
-        const powerSpinner = document.createElement('span');
-        powerSpinner.className = 'spinner';
-        powerSpinner.setAttribute('aria-hidden', 'true');
-        const powerText = document.createElement('span');
-        powerText.className = 'text';
-        powerText.textContent = t('start_this_tunnel');
-        power.append(powerSpinner, powerText);
-        power.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const btn = e.currentTarget;
-            controlTunnel(btn, profile.key, btn.dataset.action);
-        });
-        actions.appendChild(power);
-
-        item.append(summary, actions);
+        item.append(summary);
         return item;
-    }
-
-    function tunnelProfileBadge(role, text) {
-        const badge = document.createElement('span');
-        badge.className = 'tunnel-profile-badge';
-        badge.dataset.role = role;
-        badge.textContent = text;
-        return badge;
     }
 
     function updateTunnelProfileUI() {
@@ -486,6 +451,7 @@
             del.title = onlyOne ? t('cannot_delete_only_tunnel') : '';
         }
         syncTunnelProfileListState(selected);
+        updateSelectedTunnelAction(selected);
     }
 
     function syncTunnelProfileListState(selected = selectedTunnelProfile()) {
@@ -498,40 +464,50 @@
 
             const summary = item.querySelector('.tunnel-profile-item__summary');
             if (summary) summary.setAttribute('aria-pressed', String(isSelected));
+            let stateName = 'neutral';
+            let statusText = t('status_stopped');
+            if (st.running) {
+                stateName = 'ok';
+                statusText = t('status_running');
+            } else if (st.status === 'error') {
+                stateName = 'error';
+                statusText = t('status_error');
+            }
+            item.dataset.state = stateName;
 
-            const statusBadge = item.querySelector('.tunnel-profile-badge[data-role="status"]');
-            if (statusBadge) {
-                if (st.running) {
-                    const proto = st.protocol && st.protocol !== 'auto' ? ` · ${st.protocol.toUpperCase()}` : '';
-                    statusBadge.textContent = t('status_running') + proto;
-                    statusBadge.dataset.state = 'ok';
-                    statusBadge.title = '';
-                } else if (st.status === 'error') {
-                    statusBadge.textContent = t('status_error');
-                    statusBadge.dataset.state = 'error';
-                    statusBadge.title = st.error || '';
-                } else {
-                    statusBadge.textContent = t('status_stopped');
-                    statusBadge.dataset.state = 'neutral';
-                    statusBadge.title = '';
-                }
+            const protoText = st.running && st.protocol && st.protocol !== 'auto'
+                ? st.protocol.toUpperCase()
+                : '';
+            const protocol = item.querySelector('.tunnel-profile-item__protocol');
+            if (protocol) {
+                protocol.textContent = protoText;
+                protocol.hidden = !protoText;
             }
 
-            const editing = item.querySelector('.tunnel-profile-badge[data-role="editing"]');
-            if (editing) {
-                editing.hidden = !isSelected;
-                editing.dataset.state = 'neutral';
+            if (summary) {
+                const name = item.querySelector('.tunnel-profile-item__name')?.textContent || '';
+                const fullStatus = protoText ? `${statusText} · ${protoText}` : statusText;
+                const titleParts = [name, fullStatus];
+                if (st.status === 'error' && st.error) titleParts.push(st.error);
+                summary.title = titleParts.filter(Boolean).join(' · ');
+                summary.setAttribute('aria-label', summary.title);
             }
 
-            const power = item.querySelector('.tunnel-profile-power-btn');
-            if (power && power.getAttribute('aria-busy') !== 'true') {
-                const action = st.running ? 'stop' : 'start';
-                power.dataset.action = action;
-                power.classList.toggle('btn--danger', st.running);
-                const powerText = power.querySelector('.text');
-                if (powerText) powerText.textContent = t(st.running ? 'stop_this_tunnel' : 'start_this_tunnel');
-            }
         });
+    }
+
+    function updateSelectedTunnelAction(selected = selectedTunnelProfile()) {
+        const actionBtn = $('selected-tunnel-action');
+        if (!actionBtn || actionBtn.getAttribute('aria-busy') === 'true') return;
+        const key = selected?.key || selectedTunnelKey();
+        const st = (state.tunnelStatuses || {})[key] || {};
+        const action = st.running ? 'stop' : 'start';
+        actionBtn.dataset.action = action;
+        actionBtn.dataset.key = key;
+        actionBtn.classList.toggle('btn--primary', !st.running);
+        actionBtn.classList.toggle('btn--danger', st.running);
+        const text = actionBtn.querySelector('.text');
+        if (text) text.textContent = t(st.running ? 'stop_this_tunnel' : 'start_this_tunnel');
     }
 
     async function onTunnelProfileChange(keyOverride) {
@@ -676,6 +652,10 @@
         $('tunnel-profile-select')?.addEventListener('change', onTunnelProfileChange);
         $('add-tunnel-profile')?.addEventListener('click', addTunnelProfile);
         $('delete-tunnel-profile')?.addEventListener('click', deleteSelectedTunnel);
+        $('selected-tunnel-action')?.addEventListener('click', (e) => {
+            const btn = e.currentTarget;
+            controlTunnel(btn, selectedTunnelKey(), btn.dataset.action || 'start');
+        });
         $('toggle-token')?.addEventListener('mousedown', (e) => e.preventDefault());
         $('toggle-token')?.addEventListener('click', toggleTokenVisibility);
         $('tunnel-alert-logs')?.addEventListener('click', () => {

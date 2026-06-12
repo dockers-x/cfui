@@ -22,17 +22,11 @@ other = "トンネル設定"
 [tunnel_config_subtitle]
 other = "Cloudflare Tunnel 接続を管理します"
 
-[tunnel_profile_editing]
-other = "編集中のトンネル"
-
 [tunnel_profiles_label]
 other = "トンネル設定"
 
 [tunnel_profiles_help]
 other = "編集するトンネルを選択します。各トンネルは個別に起動・停止でき、同時に実行できます。"
-
-[editing_tunnel_profile]
-other = "編集中"
 
 [active_local_tunnel]
 other = "デフォルトトンネル"

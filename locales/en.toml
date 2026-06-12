@@ -22,17 +22,11 @@ other = "Tunnel Configuration"
 [tunnel_config_subtitle]
 other = "Manage your Cloudflare Tunnel connection"
 
-[tunnel_profile_editing]
-other = "Editing tunnel"
-
 [tunnel_profiles_label]
 other = "Tunnel profiles"
 
 [tunnel_profiles_help]
 other = "Select a tunnel to edit. Each tunnel can be started and stopped independently and may run at the same time."
-
-[editing_tunnel_profile]
-other = "Editing"
 
 [active_local_tunnel]
 other = "Default tunnel"

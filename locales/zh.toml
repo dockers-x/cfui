@@ -22,17 +22,11 @@ other = "隧道配置"
 [tunnel_config_subtitle]
 other = "管理您的 Cloudflare Tunnel 连接"
 
-[tunnel_profile_editing]
-other = "正在编辑的隧道"
-
 [tunnel_profiles_label]
 other = "隧道配置"
 
 [tunnel_profiles_help]
 other = "选择要编辑的隧道。每条隧道都可以独立启动和停止，可同时运行多条隧道。"
-
-[editing_tunnel_profile]
-other = "正在编辑"
 
 [active_local_tunnel]
 other = "默认隧道"
