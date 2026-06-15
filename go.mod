@@ -13,7 +13,7 @@ require (
 	github.com/cloudflare/cloudflared v0.0.0-20260508111348-ae3799a09858
 	github.com/fclairamb/afero-s3 v0.4.0
 	github.com/lib-x/aferodav v0.2.0
-	github.com/lib-x/entsqlite v0.2.2
+	github.com/lib-x/entsqlite v0.2.3
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/afero v1.15.0
@@ -134,7 +134,7 @@ require (
 	modernc.org/libc v1.72.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.50.1 // indirect
+	modernc.org/sqlite v1.52.0 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 	zombiezen.com/go/capnproto2 v2.18.0+incompatible // indirect
 )
