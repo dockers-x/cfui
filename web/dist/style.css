@@ -507,7 +507,13 @@ input, select, textarea {
 }
 
 @keyframes blink {
-    50% { opacity: 0.35; }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
 }
 
 @keyframes ping {
@@ -765,10 +771,13 @@ input, select, textarea {
     height: 8px;
     border-radius: 50%;
     background: var(--tunnel-led-stopped);
+    transform-origin: center;
+    animation: none;
 }
 
 .tunnel-profile-item[data-state="running"] .tunnel-profile-item__led {
     background: var(--tunnel-led-running);
+    animation: pulse 2s infinite;
 }
 
 .tunnel-profile-item[data-state="stopped"] .tunnel-profile-item__led {
@@ -777,6 +786,7 @@ input, select, textarea {
 
 .tunnel-profile-item[data-state="error"] .tunnel-profile-item__led {
     background: var(--tunnel-led-error);
+    animation: blink 0.8s infinite;
 }
 
 .tunnel-profile-item__summary:hover {
