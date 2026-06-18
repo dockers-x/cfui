@@ -532,6 +532,39 @@ func (m *Manager) DeleteEntryFor(ctx context.Context, tunnelKey string, index in
 	})
 }
 
+func (m *Manager) ReorderEntries(ctx context.Context, order []int) (ConfigurationResponse, error) {
+	return m.ReorderEntriesFor(ctx, "", order)
+}
+
+func (m *Manager) ReorderEntriesFor(ctx context.Context, tunnelKey string, order []int) (ConfigurationResponse, error) {
+	return m.mutateFor(ctx, tunnelKey, func(cfg *cloudflare.TunnelConfiguration) error {
+		if len(order) != len(cfg.Ingress) {
+			return fmt.Errorf("entry order length %d does not match current rule count %d", len(order), len(cfg.Ingress))
+		}
+		if len(order) == 0 {
+			return nil
+		}
+		if hasCatchAll(cfg.Ingress) && order[len(order)-1] != len(cfg.Ingress)-1 {
+			return fmt.Errorf("catch-all rule must remain last")
+		}
+		next := make([]cloudflare.UnvalidatedIngressRule, 0, len(cfg.Ingress))
+		seen := make([]bool, len(cfg.Ingress))
+		for _, index := range order {
+			if index < 0 || index >= len(cfg.Ingress) {
+				return fmt.Errorf("entry index %d is out of range", index)
+			}
+			if seen[index] {
+				return fmt.Errorf("entry index %d appears more than once", index)
+			}
+			seen[index] = true
+			next = append(next, cfg.Ingress[index])
+		}
+		cfg.Ingress = next
+		ensureCatchAll(cfg)
+		return nil
+	})
+}
+
 func (m *Manager) CheckS3WebDAVHostname(ctx context.Context, hostname, service string) S3WebDAVTunnelStatus {
 	return m.CheckS3WebDAVHostnameFor(ctx, "", hostname, service)
 }

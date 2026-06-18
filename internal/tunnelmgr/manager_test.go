@@ -690,3 +690,57 @@ func TestUpdateAndDeleteEntry(t *testing.T) {
 		t.Fatalf("expected only catch-all after delete, got %#v", resp.Entries)
 	}
 }
+
+func TestReorderEntriesPreservesRequestedOrderAndCatchAll(t *testing.T) {
+	client := &fakeCFClient{config: cloudflare.TunnelConfigurationResult{
+		TunnelID: "tunnel-1",
+		Version:  1,
+		Config: cloudflare.TunnelConfiguration{Ingress: []cloudflare.UnvalidatedIngressRule{
+			{Hostname: "root.example.com", Path: "/", Service: "http://localhost:8080"},
+			{Hostname: "root.example.com", Path: "/aaaa", Service: "http://localhost:8081"},
+			{Hostname: "api.example.com", Path: "/", Service: "http://localhost:9090"},
+			{Service: "http_status:404"},
+		}},
+	}}
+	mgr := newTestManager(t, client)
+
+	resp, err := mgr.ReorderEntries(context.Background(), []int{1, 0, 2, 3})
+	if err != nil {
+		t.Fatalf("ReorderEntries: %v", err)
+	}
+	if len(resp.Entries) != 4 {
+		t.Fatalf("expected 4 entries, got %#v", resp.Entries)
+	}
+	if resp.Entries[0].Path != "/aaaa" || resp.Entries[1].Path != "/" || resp.Entries[3].Service != "http_status:404" {
+		t.Fatalf("unexpected reordered entries: %#v", resp.Entries)
+	}
+	if len(client.updates) != 1 {
+		t.Fatalf("expected one SDK update, got %d", len(client.updates))
+	}
+	updated := client.updates[0].Ingress
+	if updated[0].Path != "/aaaa" || updated[1].Path != "/" || updated[3].Service != "http_status:404" {
+		t.Fatalf("unexpected SDK update order: %#v", updated)
+	}
+}
+
+func TestReorderEntriesRejectsMovingCatchAll(t *testing.T) {
+	client := &fakeCFClient{config: cloudflare.TunnelConfigurationResult{
+		TunnelID: "tunnel-1",
+		Config: cloudflare.TunnelConfiguration{Ingress: []cloudflare.UnvalidatedIngressRule{
+			{Hostname: "app.example.com", Service: "http://localhost:8080"},
+			{Service: "http_status:404"},
+		}},
+	}}
+	mgr := newTestManager(t, client)
+
+	_, err := mgr.ReorderEntries(context.Background(), []int{1, 0})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "catch-all") {
+		t.Fatalf("expected catch-all error, got %v", err)
+	}
+	if len(client.updates) != 0 {
+		t.Fatalf("unexpected SDK update after invalid reorder: %#v", client.updates)
+	}
+}

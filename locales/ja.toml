@@ -400,6 +400,21 @@ other = "トンネルルールを更新しました"
 [tunnel_rule_deleted]
 other = "トンネルルールを削除しました"
 
+[tunnel_rule_reorder_handle]
+other = "ingress ルールをドラッグして並べ替え"
+
+[tunnel_rule_move_up]
+other = "ルールを上へ移動"
+
+[tunnel_rule_move_down]
+other = "ルールを下へ移動"
+
+[tunnel_rule_reordered]
+other = "トンネルルールの順序を更新しました"
+
+[tunnel_rule_reorder_failed]
+other = "トンネルルールの並べ替えに失敗しました"
+
 [activate_tunnel_first]
 other = "開始または停止する前に、この設定を選択してください。"
 

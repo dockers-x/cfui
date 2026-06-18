@@ -400,6 +400,21 @@ other = "隧道规则已更新"
 [tunnel_rule_deleted]
 other = "隧道规则已删除"
 
+[tunnel_rule_reorder_handle]
+other = "拖拽调整 ingress 规则顺序"
+
+[tunnel_rule_move_up]
+other = "上移规则"
+
+[tunnel_rule_move_down]
+other = "下移规则"
+
+[tunnel_rule_reordered]
+other = "隧道规则顺序已更新"
+
+[tunnel_rule_reorder_failed]
+other = "调整隧道规则顺序失败"
+
 [activate_tunnel_first]
 other = "请先选择此配置，再启动或停止隧道。"
 

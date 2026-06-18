@@ -192,6 +192,7 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/tunnel-manager/tunnel", s.handleTunnelManagerTunnel)
 	mux.HandleFunc("/api/tunnel-manager/config", s.handleTunnelManagerConfig)
 	mux.HandleFunc("/api/tunnel-manager/zones", s.handleTunnelManagerZones)
+	mux.HandleFunc("/api/tunnel-manager/entries/reorder", s.handleTunnelManagerEntriesReorder)
 	mux.HandleFunc("/api/tunnel-manager/entries", s.handleTunnelManagerEntries)
 	mux.HandleFunc("/api/tunnel-manager/entries/", s.handleTunnelManagerEntry)
 	mux.HandleFunc("/api/tunnel-manager/verify-token", s.handleTunnelManagerVerifyToken)
@@ -934,6 +935,26 @@ func (s *Server) handleTunnelManagerEntries(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	cfg, err := s.tunnelMgr.AddEntryFor(r.Context(), r.URL.Query().Get("tunnel_key"), entry)
+	if err != nil {
+		writeTunnelManagerError(w, err)
+		return
+	}
+	writeJSON(w, cfg)
+}
+
+func (s *Server) handleTunnelManagerEntriesReorder(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Order []int `json:"order"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	cfg, err := s.tunnelMgr.ReorderEntriesFor(r.Context(), r.URL.Query().Get("tunnel_key"), req.Order)
 	if err != nil {
 		writeTunnelManagerError(w, err)
 		return

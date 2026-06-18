@@ -351,9 +351,22 @@
         parts.forEach((p, i) => { if (i > 0) { const sep = document.createElement('span'); sep.className = 'sep'; meta.appendChild(sep); } const span = document.createElement('span'); span.textContent = p; meta.appendChild(span); });
         const list = $('manager-rules-list');
         list.innerHTML = '';
+        list.ondragstart = null;
+        list.ondragover = null;
+        list.ondrop = null;
+        list.ondragend = null;
         if (!cfg.entries?.length) { const empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = t('no_ingress_rules'); list.appendChild(empty); return; }
+        const entries = cfg.entries || [];
         for (const entry of cfg.entries) {
-            const row = document.createElement('div'); row.className = 'rule';
+            const catchAll = isCatchAllTunnelRule(entry, entries);
+            const row = document.createElement('div'); row.className = catchAll ? 'rule rule--fixed' : 'rule rule--draggable';
+            row.dataset.ruleIndex = String(entry.index);
+            if (catchAll) row.dataset.catchAll = 'true';
+            else {
+                row.dataset.draggable = 'true';
+                row.draggable = true;
+                row.title = t('tunnel_rule_reorder_handle');
+            }
             const body = document.createElement('div'); body.className = 'body';
             const title = document.createElement('div'); title.className = 'title'; title.textContent = entry.hostname || t('catch_all_rule');
             const detail = document.createElement('div'); detail.className = 'detail';
@@ -361,13 +374,83 @@
             detail.textContent = `${entry.path || '/'} → ${entry.service}${noTls}`;
             body.append(title, detail);
             const actions = document.createElement('div'); actions.className = 'actions';
+            if (!catchAll) {
+                const up = tunnelRuleMoveButton(t('tunnel_rule_move_up'), '↑', () => moveTunnelManagerEntry(entry.index, -1));
+                const down = tunnelRuleMoveButton(t('tunnel_rule_move_down'), '↓', () => moveTunnelManagerEntry(entry.index, 1));
+                actions.append(up, down);
+            }
             const edit = document.createElement('button'); edit.className = 'btn btn--sm'; edit.type = 'button'; edit.textContent = t('edit'); edit.addEventListener('click', () => openTunnelEntryDialog(entry));
             const del = document.createElement('button'); del.className = 'btn btn--sm btn--ghost'; del.type = 'button'; del.textContent = t('delete'); del.addEventListener('click', () => confirmDeleteEntry(entry));
             actions.append(edit, del); row.append(body, actions); list.appendChild(row);
         }
+        bindTunnelRuleDragSort(list);
     }
 
     async function confirmDeleteEntry(entry) { const { confirm } = window.cfui; const ok = await confirm({ title: t('delete_rule_title'), message: t('delete_rule_message', { hostname: entry.hostname || t('catch_all_rule'), path: entry.path || '/' }), okText: t('delete') }); if (ok) await deleteTunnelManagerEntry(entry.index); }
+
+    function isCatchAllTunnelRule(entry, entries = []) {
+        const last = entries[entries.length - 1];
+        return !!last && entry.index === last.index && !String(entry.hostname || '').trim() && !String(entry.path || '').trim() && !!String(entry.service || '').trim();
+    }
+
+    function tunnelRuleMoveButton(label, text, onClick) {
+        const button = document.createElement('button');
+        button.className = 'btn btn--sm btn--ghost btn--square';
+        button.type = 'button';
+        button.textContent = text;
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        button.addEventListener('click', onClick);
+        return button;
+    }
+
+    function bindTunnelRuleDragSort(list) {
+        list.ondragstart = (event) => {
+            if (event.target.closest('button')) {
+                event.preventDefault();
+                return;
+            }
+            const row = event.target.closest('.rule[data-draggable="true"]');
+            if (!row) return;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', row.dataset.ruleIndex || '');
+            row.classList.add('rule--dragging');
+        };
+        list.ondragover = (event) => {
+            const dragging = list.querySelector('.rule--dragging');
+            if (!dragging) return;
+            event.preventDefault();
+            const before = tunnelRuleDragTarget(list, event.clientY);
+            if (before) list.insertBefore(dragging, before);
+            else list.insertBefore(dragging, list.querySelector('.rule[data-catch-all="true"]'));
+        };
+        list.ondrop = async (event) => {
+            const dragging = list.querySelector('.rule--dragging');
+            if (!dragging) return;
+            event.preventDefault();
+            dragging.classList.remove('rule--dragging');
+            await reorderTunnelManagerEntries(tunnelRuleOrderFromDOM(list));
+        };
+        list.ondragend = () => {
+            list.querySelector('.rule--dragging')?.classList.remove('rule--dragging');
+        };
+    }
+
+    function tunnelRuleDragTarget(list, y) {
+        const rows = [...list.querySelectorAll('.rule[data-draggable="true"]:not(.rule--dragging)')];
+        return rows.reduce((closest, row) => {
+            const box = row.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) return { offset, row };
+            return closest;
+        }, { offset: Number.NEGATIVE_INFINITY, row: null }).row;
+    }
+
+    function tunnelRuleOrderFromDOM(list) {
+        return [...list.querySelectorAll('.rule[data-rule-index]')]
+            .map((row) => Number(row.dataset.ruleIndex))
+            .filter((index) => Number.isInteger(index));
+    }
 
     function openTunnelEntryDialog(entry = null) {
         const dialog = $('manager-entry-dialog'); if (!dialog) return;
@@ -428,6 +511,35 @@
     async function deleteTunnelManagerEntry(index) {
         try { const data = await apiSend(`/tunnel-manager/entries/${index}` + tunnelManagerQuery(), 'DELETE'); state.tunnelManager.config = data; renderTunnelManagerConfig(data); toast.ok(t('tunnel_rule_deleted')); }
         catch (err) { toast.err(t('tunnel_rule_delete_failed') + ': ' + err.message); }
+    }
+
+    async function moveTunnelManagerEntry(index, delta) {
+        const entries = state.tunnelManager.config?.entries || [];
+        const movable = entries.filter((entry) => !isCatchAllTunnelRule(entry, entries));
+        const from = movable.findIndex((entry) => entry.index === index);
+        if (from < 0) return;
+        const to = from + delta;
+        if (to < 0 || to >= movable.length) return;
+        const next = movable.slice();
+        const [entry] = next.splice(from, 1);
+        next.splice(to, 0, entry);
+        const catchAll = entries.find((entry) => isCatchAllTunnelRule(entry, entries));
+        const order = next.map((entry) => entry.index);
+        if (catchAll) order.push(catchAll.index);
+        await reorderTunnelManagerEntries(order);
+    }
+
+    async function reorderTunnelManagerEntries(order) {
+        if (!Array.isArray(order) || !order.length) return;
+        try {
+            const data = await apiSend('/tunnel-manager/entries/reorder' + tunnelManagerQuery(), 'POST', { order });
+            state.tunnelManager.config = data;
+            renderTunnelManagerConfig(data);
+            toast.ok(t('tunnel_rule_reordered'));
+        } catch (err) {
+            toast.err(t('tunnel_rule_reorder_failed') + ': ' + err.message);
+            if (state.tunnelManager.config) renderTunnelManagerConfig(state.tunnelManager.config);
+        }
     }
 
     async function verifyTokenPermissions() {

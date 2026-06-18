@@ -1742,6 +1742,23 @@ details.disclosure > .body {
     border-radius: var(--r-control);
 }
 
+.rule--draggable {
+    cursor: grab;
+}
+
+.rule--draggable:active {
+    cursor: grabbing;
+}
+
+.rule--dragging {
+    opacity: 0.55;
+    border-style: dashed;
+}
+
+.rule--fixed {
+    background: var(--surface);
+}
+
 .rule .body {
     flex: 1 1 auto;
     min-width: 0;
@@ -3288,6 +3305,13 @@ details.disclosure > .body {
     flex-shrink: 0;
     gap: 6px;
     flex-wrap: wrap;
+}
+
+.btn--square {
+    width: 32px;
+    min-width: 32px;
+    padding-left: 0;
+    padding-right: 0;
 }
 
 @media (max-width: 540px) {

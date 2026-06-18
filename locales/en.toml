@@ -400,6 +400,21 @@ other = "Tunnel rule updated"
 [tunnel_rule_deleted]
 other = "Tunnel rule deleted"
 
+[tunnel_rule_reorder_handle]
+other = "Drag to reorder ingress rules"
+
+[tunnel_rule_move_up]
+other = "Move rule up"
+
+[tunnel_rule_move_down]
+other = "Move rule down"
+
+[tunnel_rule_reordered]
+other = "Tunnel rules reordered"
+
+[tunnel_rule_reorder_failed]
+other = "Failed to reorder tunnel rules"
+
 [activate_tunnel_first]
 other = "Select this profile before starting or stopping it."
 
