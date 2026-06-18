@@ -124,8 +124,8 @@
             id: 'tunnels',
             title: () => t('oauth_tunnels'),
             description: () => t('oauth_permission_tunnels_desc'),
-            readScopes: ['argotunnel.read'],
-            writeScopes: [],
+            readScopes: ['cloudflare-tunnel.read'],
+            writeScopes: ['cloudflare-tunnel.write'],
         },
         {
             id: 'waf',
@@ -148,6 +148,38 @@
             readScopes: ['account-analytics.read', 'analytics.read'],
             writeScopes: [],
         },
+    ];
+    const oauthMinimumSetupScopes = [
+        'account-settings.read',
+        'zone.read',
+        'dns.read',
+        'dns.write',
+        'cloudflare-tunnel.read',
+    ];
+    const oauthFullConsoleSetupScopes = [
+        'account-settings.read',
+        'zone.read',
+        'dns.read',
+        'dns.write',
+        'cloudflare-tunnel.read',
+        'cloudflare-tunnel.write',
+        'workers-scripts.read',
+        'workers-tail.read',
+        'workers-r2.read',
+        'workers-r2.write',
+        'd1.read',
+        'd1.write',
+        'workers-kv-storage.read',
+        'workers-kv-storage.write',
+        'snippets.read',
+        'snippets.write',
+        'zone-waf.read',
+        'zone-waf.write',
+        'zone-settings.read',
+        'zone-settings.write',
+        'cache.purge',
+        'analytics.read',
+        'account-analytics.read',
     ];
     const securityLevels = [
         ['essentially_off', 'oauth_security_essentially_off'],
@@ -469,6 +501,28 @@
             state.oauth.tunnels = Array.isArray(resp.data) ? resp.data : [];
         } catch (err) {
             renderOAuthError(err.message);
+        }
+    }
+
+    async function createOAuthTunnel(payload, button) {
+        if (!state.oauth.selectedAccountId) return;
+        try {
+            setBusy(button, true);
+            const resp = await apiSend('/cf/tunnels?account_id=' + encodeURIComponent(state.oauth.selectedAccountId), 'POST', payload);
+            state.oauth.tunnelCreateOpen = false;
+            await loadOAuthTunnels();
+            renderOAuthResource();
+            const profile = resp.local_profile;
+            if (profile?.key) {
+                const activeText = profile.active ? t('oauth_tunnel_local_profile_activated') : t('oauth_tunnel_local_profile_saved');
+                toast.ok(t('oauth_tunnel_create_success_with_profile', { name: resp.tunnel?.name || payload.name, profile: profile.name || profile.key, state: activeText }));
+            } else {
+                toast.ok(t('oauth_tunnel_create_success', { name: resp.tunnel?.name || payload.name }));
+            }
+        } catch (err) {
+            toast.err(err.message);
+        } finally {
+            setBusy(button, false);
         }
     }
 
@@ -1718,6 +1772,7 @@
         draft[id].enabled = !!enabled;
         if (!draft[id].enabled) draft[id].write = false;
         renderOAuthScopePanel(state.oauth.status);
+        renderOAuthScopeDialog(state.oauth.status);
     }
 
     function setPermissionWriteEnabled(id, enabled) {
@@ -1729,6 +1784,7 @@
         draft[id].enabled = true;
         draft[id].write = !!enabled;
         renderOAuthScopePanel(state.oauth.status);
+        renderOAuthScopeDialog(state.oauth.status);
     }
 
     function renderOAuthStatus(status) {
@@ -1786,9 +1842,13 @@
         const callbackPath = status?.config?.local_callback_path || '/oauth/callback';
         const relayURL = status?.config?.relay_callback_url || '';
         const localCallbackURL = window.location.origin + callbackPath;
+        const workerScriptURL = window.location.origin + '/cloudflare-oauth-worker.js';
+        const relayURLWithCallback = buildRelayURLWithCallback(relayURL, localCallbackURL);
+        const minimumScopeList = oauthMinimumSetupScopes.join(' ');
+        const fullConsoleScopeList = oauthFullConsoleSetupScopes.join(' ');
         const envSnippet = [
-            'CFUI_OAUTH_CLIENT_ID=<your Cloudflare OAuth client id>',
-            `CFUI_OAUTH_RELAY_URL=${relayURL || '<your Worker relay callback URL>'}`,
+            `CFUI_OAUTH_CLIENT_ID=${t('oauth_setup_client_id_placeholder')}`,
+            `CFUI_OAUTH_RELAY_URL=${relayURL || t('oauth_setup_relay_url_placeholder')}`,
             'CFUI_RUN_MODE=oauth',
         ].join('\n');
 
@@ -1807,26 +1867,62 @@
                 '1',
                 t('oauth_setup_oauth_app_title'),
                 t('oauth_setup_oauth_app_desc'),
-                [setupGuideCodeRow(t('oauth_setup_redirect_uri'), relayURL)]
+                [
+                    setupGuideCodeRow(t('oauth_setup_cloudflare_path'), t('oauth_setup_cloudflare_path_value'), { copy: false }),
+                    setupGuideCodeRow(t('oauth_setup_client_name'), 'cfui'),
+                    setupGuideCodeRow(t('oauth_setup_response_type'), t('oauth_setup_response_type_value'), { copy: false }),
+                    setupGuideCodeRow(t('oauth_setup_grant_type'), t('oauth_setup_grant_type_value'), { copy: false }),
+                    setupGuideCodeRow(t('oauth_setup_token_auth_method'), t('oauth_setup_token_auth_method_value'), { copy: false }),
+                    setupGuideCodeRow(t('oauth_setup_redirect_uri'), relayURL),
+                    setupGuideNote(t('oauth_setup_redirect_uri_note')),
+                    setupGuideCodeRow(t('oauth_setup_client_url'), t('oauth_setup_client_url_value'), { copy: false }),
+                ]
             ),
             setupGuideStep(
                 '2',
-                t('oauth_setup_worker_title'),
-                t('oauth_setup_worker_desc'),
+                t('oauth_setup_permissions_title'),
+                t('oauth_setup_permissions_desc'),
                 [
-                    setupGuideCodeRow(t('oauth_setup_worker_script'), 'docs/cloudflare-oauth-worker.js'),
-                    setupGuideCodeRow(t('oauth_setup_worker_callback_var'), `CFUI_CALLBACK_URL=${localCallbackURL}`),
-                    setupGuideRelayCheckNode(),
+                    setupGuideCodeRow(t('oauth_setup_permissions_minimum'), minimumScopeList),
+                    setupGuideCodeRow(t('oauth_setup_permissions_full'), fullConsoleScopeList),
+                    setupGuideNote(t('oauth_setup_permissions_categories')),
+                    setupGuideNote(t('oauth_setup_permissions_write_note')),
                 ]
             ),
             setupGuideStep(
                 '3',
+                t('oauth_setup_worker_title'),
+                t('oauth_setup_worker_desc'),
+                [
+                    setupGuideCodeRow(t('oauth_setup_worker_script'), workerScriptURL),
+                    setupGuideCodeRow(t('oauth_setup_worker_deploy_path'), t('oauth_setup_worker_deploy_path_value'), { copy: false }),
+                    setupGuideCodeRow(t('oauth_setup_worker_callback_var'), `CFUI_CALLBACK_URL=${localCallbackURL}`),
+                    setupGuideCodeRow(t('oauth_setup_worker_callback_param'), `CFUI_OAUTH_RELAY_URL=${relayURLWithCallback || t('oauth_setup_relay_url_placeholder')}`),
+                    setupGuideCodeRow(t('oauth_setup_worker_allowlist_var'), `CFUI_ALLOWED_CALLBACK_ORIGINS=${window.location.origin}`),
+                    setupGuideNote(t('oauth_setup_internal_dns_note')),
+                    setupGuideNote(t('oauth_setup_dynamic_callback_note')),
+                    setupGuideRelayCheckNode(),
+                ]
+            ),
+            setupGuideStep(
+                '4',
                 t('oauth_setup_env_title'),
                 t('oauth_setup_env_desc'),
                 [setupGuideCodeRow(t('oauth_setup_env_vars'), envSnippet)]
             ),
         );
         guide.appendChild(steps);
+    }
+
+    function buildRelayURLWithCallback(relayURL, localCallbackURL) {
+        if (!relayURL || !localCallbackURL) return '';
+        try {
+            const url = new URL(relayURL);
+            url.searchParams.set('cfui_callback_url', localCallbackURL);
+            return url.toString();
+        } catch {
+            return '';
+        }
     }
 
     function setupGuideStep(index, titleText, descText, rows = []) {
@@ -1848,7 +1944,7 @@
         return step;
     }
 
-    function setupGuideCodeRow(labelText, value) {
+    function setupGuideCodeRow(labelText, value, options = {}) {
         const row = document.createElement('div');
         row.className = 'oauth-setup-code-row';
         const label = document.createElement('div');
@@ -1857,9 +1953,19 @@
         const code = document.createElement('pre');
         code.className = 'oauth-setup-code mono';
         code.textContent = value || '';
-        const copy = smallButton(t('copy'), 'btn btn--sm btn--ghost', () => copyOAuthText(value || ''));
-        row.append(label, code, copy);
+        row.append(label, code);
+        if (options.copy !== false) {
+            const copy = smallButton(t('copy'), 'btn btn--sm btn--ghost', () => copyOAuthText(value || ''));
+            row.appendChild(copy);
+        }
         return row;
+    }
+
+    function setupGuideNote(text) {
+        const note = document.createElement('div');
+        note.className = 'oauth-setup-note';
+        note.textContent = text;
+        return note;
     }
 
     function setupGuideRelayCheckNode() {
@@ -1913,10 +2019,54 @@
         if (!list) return;
         list.innerHTML = '';
         if (!status?.config?.configured) return;
-        if (status?.logged_in) {
-            list.appendChild(scopePillSection(t('oauth_current_scopes'), status.current?.scopes || []));
+        list.appendChild(scopeSummaryNode(status));
+        renderOAuthScopeDialog(status);
+    }
+
+    function scopeSummaryNode(status) {
+        const summary = document.createElement('div');
+        summary.className = 'oauth-scope-summary';
+
+        const copy = document.createElement('div');
+        copy.className = 'oauth-scope-summary-copy';
+        const title = document.createElement('div');
+        title.className = 'oauth-scope-panel-title';
+        title.textContent = t('oauth_authorization_scopes');
+        const meta = document.createElement('div');
+        meta.className = 'oauth-scope-summary-text mono';
+        const scopeText = selectedOAuthScopeString();
+        meta.textContent = scopeText || t('oauth_scope_summary_empty');
+        meta.title = scopeText;
+        copy.append(title, meta);
+
+        const actions = document.createElement('div');
+        actions.className = 'oauth-scope-summary-actions';
+        const count = document.createElement('span');
+        count.className = 'oauth-badge';
+        count.textContent = t('oauth_scope_count', { n: selectedOAuthScopes().length });
+        const edit = iconButton(t('oauth_scope_edit'), iconEditSVG(), () => openOAuthScopeDialog(status));
+        actions.append(count, edit);
+        summary.append(copy, actions);
+        return summary;
+    }
+
+    function openOAuthScopeDialog(status = state.oauth.status) {
+        renderOAuthScopeDialog(status);
+        window.cfui.openDialog?.($('oauth-scope-dialog'));
+    }
+
+    function renderOAuthScopeDialog(status = state.oauth.status) {
+        const body = $('oauth-scope-dialog-body');
+        if (!body) return;
+        body.innerHTML = '';
+        if (!status?.config?.configured) {
+            body.appendChild(empty(t('oauth_not_configured')));
+            return;
         }
-        list.appendChild(permissionSelectorNode(status));
+        if (status?.logged_in) {
+            body.appendChild(scopePillSection(t('oauth_current_scopes'), status.current?.scopes || []));
+        }
+        body.appendChild(permissionSelectorNode(status));
     }
 
     function scopePillSection(titleText, scopes) {
@@ -2028,7 +2178,14 @@
         if (!list) return;
         list.innerHTML = '';
         const sessions = Array.isArray(status?.sessions) ? status.sessions : [];
-        if (!status?.config?.configured) return;
+        const divider = document.querySelector('.oauth-sidebar-divider');
+        if (!status?.config?.configured) {
+            list.hidden = true;
+            if (divider) divider.hidden = true;
+            return;
+        }
+        list.hidden = false;
+        if (divider) divider.hidden = false;
 
         const title = document.createElement('div');
         title.className = 'oauth-identity-title';
@@ -2044,7 +2201,12 @@
             item.className = 'oauth-identity-item';
             item.setAttribute('data-current', String(!!session.current));
 
-            const copy = document.createElement('div');
+            const main = document.createElement('button');
+            main.type = 'button';
+            main.className = 'oauth-identity-main';
+            main.disabled = !!session.current;
+            main.setAttribute('aria-pressed', String(!!session.current));
+            main.setAttribute('aria-label', session.current ? t('oauth_current_identity') : t('oauth_identity_switch_to', { label: session.label || t('oauth_account') }));
             const name = document.createElement('div');
             name.className = 'oauth-list-title';
             name.textContent = session.label || t('oauth_account');
@@ -2052,22 +2214,16 @@
             meta.className = 'oauth-list-meta';
             const scopeCount = Array.isArray(session.scopes) ? session.scopes.length : 0;
             meta.textContent = [session.current ? t('oauth_identity_current') : '', t('oauth_scope_count', { n: scopeCount }), formatDate(session.expires_at)].filter(Boolean).join(' · ');
-            copy.append(name, meta);
+            main.append(name, meta);
+            if (!session.current) main.addEventListener('click', (event) => switchOAuthSession(session.id, event.currentTarget));
 
             const actions = document.createElement('div');
-            actions.className = 'oauth-row-actions';
-            const switchButton = smallButton(
-                session.current ? t('oauth_identity_current') : t('oauth_identity_switch'),
-                session.current ? 'btn btn--sm' : 'btn btn--sm btn--ghost',
-                (event) => switchOAuthSession(session.id, event.currentTarget),
-            );
-            switchButton.disabled = !!session.current;
-            switchButton.setAttribute('aria-pressed', String(!!session.current));
-            const renameButton = smallButton(t('oauth_identity_rename'), 'btn btn--sm btn--ghost', () => renameOAuthSession(session.id, session.label));
-            const removeButton = smallButton(t('oauth_identity_remove'), 'btn btn--sm btn--ghost', () => removeOAuthSession(session.id, session.label));
-            actions.append(switchButton, renameButton, removeButton);
+            actions.className = 'oauth-identity-actions';
+            const renameButton = iconButton(t('oauth_identity_rename'), iconEditSVG(), () => renameOAuthSession(session.id, session.label));
+            const removeButton = iconButton(t('oauth_identity_remove'), iconTrashSVG(), () => removeOAuthSession(session.id, session.label), 'oauth-icon-danger');
+            actions.append(renameButton, removeButton);
 
-            item.append(copy, actions);
+            item.append(main, actions);
             list.appendChild(item);
         }
     }
@@ -2375,6 +2531,21 @@
             body.appendChild(empty(t('oauth_select_account')));
             return;
         }
+        const canCreate = canWrite('tunnels');
+        body.appendChild(resourceActionBar(t('oauth_tunnels'), canCreate ? {
+            text: state.oauth.tunnelCreateOpen ? t('cancel') : t('oauth_tunnel_create'),
+            className: state.oauth.tunnelCreateOpen ? 'btn btn--sm btn--ghost' : 'btn btn--sm btn--primary',
+            onClick: () => {
+                state.oauth.tunnelCreateOpen = !state.oauth.tunnelCreateOpen;
+                renderOAuthResource();
+            },
+        } : null));
+        if (!canCreate) {
+            body.appendChild(empty(t('oauth_tunnels_readonly')));
+        }
+        if (canCreate && state.oauth.tunnelCreateOpen) {
+            body.appendChild(tunnelCreateFormNode());
+        }
         if (!state.oauth.tunnels.length) {
             body.appendChild(empty(t('oauth_no_tunnels')));
             return;
@@ -2392,6 +2563,63 @@
             if (detail) row.appendChild(detail);
             body.appendChild(row);
         }
+    }
+
+    function tunnelCreateFormNode() {
+        const form = document.createElement('form');
+        form.className = 'oauth-form';
+        const title = document.createElement('h4');
+        title.className = 'oauth-section-title';
+        title.textContent = t('oauth_tunnel_create');
+        form.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'oauth-form-grid oauth-form-grid--tunnel';
+        const nameInput = textInput('', 'text');
+        nameInput.required = true;
+        nameInput.maxLength = 128;
+        nameInput.placeholder = t('oauth_tunnel_name_placeholder');
+        grid.appendChild(formField(t('oauth_tunnel_name'), nameInput));
+        form.appendChild(grid);
+
+        const options = document.createElement('div');
+        options.className = 'oauth-form-options oauth-form-options--stacked';
+        const saveOption = toggleOption(t('oauth_tunnel_save_local_profile'), true);
+        const activateOption = toggleOption(t('oauth_tunnel_activate_local_profile'), false);
+        const syncActivation = () => {
+            activateOption.input.disabled = !saveOption.input.checked;
+            if (!saveOption.input.checked) activateOption.input.checked = false;
+        };
+        saveOption.input.addEventListener('change', syncActivation);
+        syncActivation();
+        options.append(saveOption.node, activateOption.node);
+        form.appendChild(options);
+
+        const hint = document.createElement('div');
+        hint.className = 'oauth-row-meta';
+        hint.textContent = t('oauth_tunnel_create_hint');
+        form.appendChild(hint);
+
+        const actions = document.createElement('div');
+        actions.className = 'oauth-form-actions';
+        const cancelBtn = smallButton(t('cancel'), 'btn btn--sm btn--ghost', () => {
+            state.oauth.tunnelCreateOpen = false;
+            renderOAuthResource();
+        });
+        const submitBtn = smallButton(t('oauth_tunnel_create'), 'btn btn--sm btn--primary');
+        submitBtn.type = 'submit';
+        actions.append(cancelBtn, submitBtn);
+        form.appendChild(actions);
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            createOAuthTunnel({
+                name: nameInput.value.trim(),
+                save_local_profile: saveOption.input.checked,
+                activate_local: saveOption.input.checked && activateOption.input.checked,
+            }, submitBtn);
+        });
+        return form;
     }
 
     function tunnelConnectionCount(tunnel) {
@@ -5674,6 +5902,21 @@
         return label;
     }
 
+    function toggleOption(labelText, checked = false) {
+        const node = document.createElement('label');
+        node.className = 'toggle';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = !!checked;
+        const track = document.createElement('span');
+        track.className = 'track';
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = labelText;
+        node.append(input, track, label);
+        return { node, input };
+    }
+
     function textInput(value, type) {
         const input = document.createElement('input');
         input.type = type || 'text';
@@ -5898,6 +6141,7 @@
         resetOverview();
         state.oauth.dnsRecords = [];
         state.oauth.tunnels = [];
+        state.oauth.tunnelCreateOpen = false;
         state.oauth.workers = [];
         state.oauth.r2Buckets = [];
         state.oauth.r2Metrics = null;
@@ -6287,6 +6531,30 @@
         return button;
     }
 
+    function iconButton(label, svg, onClick, extraClass = '') {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `icon-btn icon-btn--sm oauth-icon-action ${extraClass}`.trim();
+        button.setAttribute('aria-label', label);
+        button.title = label;
+        button.innerHTML = svg;
+        if (onClick) {
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                onClick(event);
+            });
+        }
+        return button;
+    }
+
+    function iconEditSVG() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="m16.5 3.5 4 4L7 21H3v-4L16.5 3.5z"></path></svg>';
+    }
+
+    function iconTrashSVG() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg>';
+    }
+
     function rowNode(title, meta, actions) {
         const row = document.createElement('div');
         row.className = 'oauth-row';
@@ -6457,6 +6725,7 @@
                 state.oauth.resource = btn.dataset.oauthResource || 'zones';
                 if (state.oauth.resource !== 'workers') resetWorkerDetail();
                 if (state.oauth.resource !== 'storage') resetStorageDetail();
+                if (state.oauth.resource !== 'tunnels') state.oauth.tunnelCreateOpen = false;
                 state.oauth.dnsFormMode = '';
                 state.oauth.dnsEditingId = '';
                 if (state.oauth.resource !== 'snippets') resetSnippetDetail();

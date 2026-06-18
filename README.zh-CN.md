@@ -218,22 +218,28 @@ R2 object 详情视图还会提供复制 key、复制对象和移动对象操作
 1. 创建 Cloudflare OAuth app，并把 redirect URI 设置为 Worker relay 地址。
 2. 设置 `CFUI_OAUTH_CLIENT_ID` 为 OAuth client ID。
 3. `CFUI_OAUTH_RELAY_URL` 可以保持默认 relay（`https://oauth.omarchy.qzz.io/oauth/callback`），也可以换成你自己的 Worker relay。
-4. Worker relay 需要把 `code` 和 `state` 转发回 cfui 实例的 `/oauth/callback`，本地使用时通常是 `http://127.0.0.1:14333/oauth/callback`。可直接部署的 Worker 脚本在 `docs/cloudflare-oauth-worker.js`；如果 cfui callback 是固定地址，在 Worker 变量里设置 `CFUI_CALLBACK_URL`；如果要按本次运行动态指定 callback，可以在 `CFUI_OAUTH_RELAY_URL` 后追加 `?cfui_callback_url=<urlencoded cfui callback>`，例如 `CFUI_OAUTH_RELAY_URL=https://oauth.omarchy.qzz.io/oauth/callback?cfui_callback_url=http%3A%2F%2F10.10.68.168%3A14333%2Foauth%2Fcallback`。如果参数指向公网 origin，还需要把 Worker 变量 `CFUI_ALLOWED_CALLBACK_ORIGINS` 设置为逗号分隔的 origin 白名单；loopback 和局域网 callback host 默认允许。Cloudflare OAuth app 里的 redirect URI 要和实际使用的 relay callback URL 匹配，使用 `cfui_callback_url` 时也包括这段 query string。Worker 会暴露 `/health`，cfui 可在 OAuth setup 页面或通过 `GET /api/oauth/relay-check` 检查它。
+4. Worker relay 需要把 `code` 和 `state` 转发回 cfui 实例的 `/oauth/callback`，本地使用时通常是 `http://127.0.0.1:14333/oauth/callback`。可直接部署的 Worker 脚本在 `docs/cloudflare-oauth-worker.js`；如果 cfui callback 是固定地址，在 Worker 变量里设置 `CFUI_CALLBACK_URL`；如果要按本次运行动态指定 callback，可以在 `CFUI_OAUTH_RELAY_URL` 后追加 `?cfui_callback_url=<urlencoded cfui callback>`，例如 `CFUI_OAUTH_RELAY_URL=https://oauth.omarchy.qzz.io/oauth/callback?cfui_callback_url=https%3A%2F%2Fcfui.example.internal%2Foauth%2Fcallback`。如果参数指向公网 origin，还需要把 Worker 变量 `CFUI_ALLOWED_CALLBACK_ORIGINS` 设置为逗号分隔的 origin 白名单；loopback 和局域网 callback host 默认允许。Cloudflare OAuth app 里的 redirect URI 要和实际使用的 relay callback URL 匹配，使用 `cfui_callback_url` 时也包括这段 query string。Worker 会暴露 `/health`，cfui 可在 OAuth setup 页面或通过 `GET /api/oauth/relay-check` 检查它。
 
 Zone 概览会用 `GET /api/cf/dns/count` 读取 DNS 记录总数，避免为了计数加载全部记录。D1 会先加载数据库列表，再 best-effort 调用 `GET /api/cf/d1/databases/{database_id}` 回填每个数据库的表数量和文件大小，使展示口径与 Cloudflare 详情端点一致。详情回填失败不会阻塞数据库列表、SQL 控制台或表浏览。
 
 默认 OAuth scope 模板：
 
 ```text
-account-settings.read zone.read dns.read dns.write argotunnel.read
+account-settings.read zone.read dns.read dns.write cloudflare-tunnel.read
 ```
 
 可以通过 `CFUI_OAUTH_SCOPES` 覆盖。
 
+如果要创建 Cloudflare Tunnel 并关联成本地隧道配置，添加：
+
+```text
+cloudflare-tunnel.read cloudflare-tunnel.write
+```
+
 如果要使用 Zone settings 操作，可以为 OAuth app 添加对应 scopes，例如：
 
 ```text
-account-settings.read zone.read dns.read dns.write argotunnel.read zone-settings.read zone-settings.write cache.purge
+account-settings.read zone.read dns.read dns.write cloudflare-tunnel.read zone-settings.read zone-settings.write cache.purge
 ```
 
 如果要使用 R2 bucket 写操作，添加：
@@ -357,7 +363,7 @@ MCP token 只会在创建时显示一次。保存后的 token 列表只显示脱
 | `CFUI_TUNNEL_API_KEY` / `CLOUDFLARE_API_KEY` | Cloudflare Global API Key | 未设置 |
 | `CFUI_OAUTH_CLIENT_ID` | Cloudflare OAuth client ID | 未设置 |
 | `CFUI_OAUTH_RELAY_URL` / `CFUI_OAUTH_REDIRECT_URI` | 在 Cloudflare 注册的 OAuth Worker relay callback URL | `https://oauth.omarchy.qzz.io/oauth/callback` |
-| `CFUI_OAUTH_SCOPES` | 空格分隔的 OAuth scope 默认模板，用于初始化登录前选择器和直接访问 `/oauth/start` | `account-settings.read zone.read dns.read dns.write argotunnel.read` |
+| `CFUI_OAUTH_SCOPES` | 空格分隔的 OAuth scope 默认模板，用于初始化登录前选择器和直接访问 `/oauth/start` | `account-settings.read zone.read dns.read dns.write cloudflare-tunnel.read` |
 | `CFUI_OAUTH_AUTH_URL` | Cloudflare OAuth authorization endpoint 覆盖值 | Cloudflare 默认值 |
 | `CFUI_OAUTH_TOKEN_URL` | Cloudflare OAuth token endpoint 覆盖值 | Cloudflare 默认值 |
 | `CFUI_OAUTH_REVOKE_URL` | Cloudflare OAuth revoke endpoint 覆盖值 | Cloudflare 默认值 |

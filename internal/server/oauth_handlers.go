@@ -18,6 +18,7 @@ import (
 
 	"cfui/internal/cfaccount"
 	"cfui/internal/cfoauth"
+	"cfui/internal/config"
 
 	"nhooyr.io/websocket"
 )
@@ -110,7 +111,7 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if oauthErr := strings.TrimSpace(r.URL.Query().Get("error")); oauthErr != "" {
-		http.Redirect(w, r, "/cloudflare?oauth=error&message="+url.QueryEscape(oauthErr), http.StatusFound)
+		http.Redirect(w, r, "/cloudflare?oauth=error&message="+url.QueryEscape(oauthCallbackErrorMessage(r.URL.Query())), http.StatusFound)
 		return
 	}
 	code := strings.TrimSpace(r.URL.Query().Get("code"))
@@ -124,6 +125,18 @@ func (s *Server) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/cloudflare?oauth=success", http.StatusFound)
+}
+
+func oauthCallbackErrorMessage(values url.Values) string {
+	code := strings.TrimSpace(values.Get("error"))
+	if code == "" {
+		return "oauth_error"
+	}
+	description := strings.TrimSpace(values.Get("error_description"))
+	if description == "" {
+		return code
+	}
+	return code + ": " + description
 }
 
 func (s *Server) handleOAuthLogout(w http.ResponseWriter, r *http.Request) {
@@ -307,12 +320,116 @@ func (s *Server) handleCFDNSRecord(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCFTunnels(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
+		resp, err := s.ensureCFService().Tunnels(r.Context(), r.URL.Query().Get("account_id"))
+		writeCFResponse(w, resp, err)
+	case http.MethodPost:
+		var req cfTunnelCreateRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		accountID := r.URL.Query().Get("account_id")
+		result, err := s.ensureCFService().CreateTunnel(r.Context(), accountID, cfaccount.TunnelCreateRequest{Name: req.Name})
+		if err != nil {
+			writeCFResponse(w, nil, err)
+			return
+		}
+		var localProfile *cfLocalTunnelProfileSummary
+		if req.SaveLocalProfile {
+			localProfile, err = s.saveOAuthTunnelLocalProfile(result.Tunnel, result.Token, accountID, req.ActivateLocal)
+			if err != nil {
+				writeAPIError(w, http.StatusBadRequest, err)
+				return
+			}
+		}
+		writeJSON(w, cfTunnelCreateResponse{
+			Tunnel:       result.Tunnel,
+			LocalProfile: localProfile,
+			Session:      result.Session,
+			Capabilities: result.Capabilities,
+		})
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
 	}
-	resp, err := s.ensureCFService().Tunnels(r.Context(), r.URL.Query().Get("account_id"))
-	writeCFResponse(w, resp, err)
+}
+
+type cfTunnelCreateRequest struct {
+	Name             string `json:"name"`
+	SaveLocalProfile bool   `json:"save_local_profile"`
+	ActivateLocal    bool   `json:"activate_local"`
+}
+
+type cfTunnelCreateResponse struct {
+	Tunnel       cfaccount.Tunnel             `json:"tunnel"`
+	LocalProfile *cfLocalTunnelProfileSummary `json:"local_profile,omitempty"`
+	Session      cfoauth.SessionSummary       `json:"session"`
+	Capabilities cfoauth.CapabilityMatrix     `json:"capabilities"`
+}
+
+type cfLocalTunnelProfileSummary struct {
+	Key                     string `json:"key"`
+	Name                    string `json:"name"`
+	AccountID               string `json:"account_id,omitempty"`
+	TunnelID                string `json:"tunnel_id,omitempty"`
+	LocalEnabled            bool   `json:"local_enabled"`
+	RemoteManagementEnabled bool   `json:"remote_management_enabled"`
+	Active                  bool   `json:"active"`
+}
+
+func (s *Server) saveOAuthTunnelLocalProfile(tunnel cfaccount.Tunnel, token, accountID string, activate bool) (*cfLocalTunnelProfileSummary, error) {
+	profile := config.DefaultTunnelProfileConfig()
+	profile.Key = ""
+	profile.Name = strings.TrimSpace(tunnel.Name)
+	if profile.Name == "" {
+		profile.Name = strings.TrimSpace(tunnel.ID)
+	}
+	profile.Token = strings.TrimSpace(token)
+	profile.AccountID = strings.TrimSpace(accountID)
+	profile.TunnelID = strings.TrimSpace(tunnel.ID)
+	profile.LocalEnabled = true
+	profile.RemoteManagementEnabled = true
+
+	cfg, err := s.cfgMgr.SaveTunnelProfile("", profile)
+	if err != nil {
+		return nil, err
+	}
+	saved, ok := findTunnelProfileByTunnelID(cfg.Tunnels, profile.TunnelID)
+	if !ok {
+		return nil, fmt.Errorf("created local tunnel profile was not found")
+	}
+	if activate {
+		cfg, err = s.cfgMgr.ActivateTunnelProfile(saved.Key)
+		if err != nil {
+			return nil, err
+		}
+		saved, _ = findTunnelProfileByTunnelID(cfg.Tunnels, profile.TunnelID)
+	}
+	summary := summarizeLocalTunnelProfile(saved, cfg.ActiveTunnelKey)
+	return &summary, nil
+}
+
+func findTunnelProfileByTunnelID(profiles []config.TunnelProfileConfig, tunnelID string) (config.TunnelProfileConfig, bool) {
+	tunnelID = strings.TrimSpace(tunnelID)
+	for _, profile := range profiles {
+		if tunnelID != "" && profile.TunnelID == tunnelID {
+			return profile, true
+		}
+	}
+	return config.TunnelProfileConfig{}, false
+}
+
+func summarizeLocalTunnelProfile(profile config.TunnelProfileConfig, activeKey string) cfLocalTunnelProfileSummary {
+	return cfLocalTunnelProfileSummary{
+		Key:                     profile.Key,
+		Name:                    profile.Name,
+		AccountID:               profile.AccountID,
+		TunnelID:                profile.TunnelID,
+		LocalEnabled:            profile.LocalEnabled,
+		RemoteManagementEnabled: profile.RemoteManagementEnabled,
+		Active:                  profile.Key != "" && profile.Key == activeKey,
+	}
 }
 
 func (s *Server) handleCFWorkers(w http.ResponseWriter, r *http.Request) {

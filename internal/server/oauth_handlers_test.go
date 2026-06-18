@@ -40,6 +40,7 @@ func TestOAuthCloudflareResourceHandlersRequireLogin(t *testing.T) {
 		{name: "dns update", method: http.MethodPut, target: "/api/cf/dns/record-1?zone_id=zone-1", body: strings.NewReader(`{"type":"A","name":"a.example.com","content":"192.0.2.2"}`), handler: s.handleCFDNSRecord},
 		{name: "dns delete", method: http.MethodDelete, target: "/api/cf/dns/record-1?zone_id=zone-1", handler: s.handleCFDNSRecord},
 		{name: "tunnels", method: http.MethodGet, target: "/api/cf/tunnels?account_id=account-1", handler: s.handleCFTunnels},
+		{name: "tunnel create", method: http.MethodPost, target: "/api/cf/tunnels?account_id=account-1", body: strings.NewReader(`{"name":"edge","save_local_profile":true}`), handler: s.handleCFTunnels},
 		{name: "workers", method: http.MethodGet, target: "/api/cf/workers?account_id=account-1", handler: s.handleCFWorkers},
 		{name: "worker detail", method: http.MethodGet, target: "/api/cf/workers/script-one?account_id=account-1", handler: s.handleCFWorker},
 		{name: "worker metrics", method: http.MethodGet, target: "/api/cf/workers/script-one/metrics?account_id=account-1&range=24h", handler: s.handleCFWorker},
@@ -203,6 +204,20 @@ func TestOAuthLoginCallbackAndOverviewEndToEndWithFakeCloudflare(t *testing.T) {
 		t.Fatalf("callback location = %q, want success redirect", location)
 	}
 
+	errorReq := httptest.NewRequest(http.MethodGet, "/oauth/callback?error=invalid_scope&error_description="+url.QueryEscape("scope account-settings.read is not allowed"), nil)
+	errorRec := httptest.NewRecorder()
+	s.handleOAuthCallback(errorRec, errorReq)
+	if errorRec.Code != http.StatusFound {
+		t.Fatalf("error callback status %d: %s", errorRec.Code, errorRec.Body.String())
+	}
+	errorLocation, err := url.Parse(errorRec.Header().Get("Location"))
+	if err != nil {
+		t.Fatalf("parse error callback location: %v", err)
+	}
+	if got := errorLocation.Query().Get("message"); got != "invalid_scope: scope account-settings.read is not allowed" {
+		t.Fatalf("error callback message = %q", got)
+	}
+
 	assertOAuthSessionRows(t, s.cfgMgr.Dir(), 1)
 	assertNoJSONFiles(t, s.cfgMgr.Dir())
 
@@ -264,6 +279,76 @@ func TestOAuthLoginCallbackAndOverviewEndToEndWithFakeCloudflare(t *testing.T) {
 
 	if _, err := store.ConsumeState(ctx, state); err != cfoauth.ErrStateExpired {
 		t.Fatalf("expected consumed OAuth state to be gone, got %v", err)
+	}
+}
+
+func TestCFTunnelCreateCanSaveAndActivateLocalProfile(t *testing.T) {
+	api := newFakeOAuthCloudflareServer(t)
+	defer api.Close()
+
+	s := newServerTestServer(t)
+	store := cfoauth.NewStore(s.cfgMgr.Dir())
+	if err := store.SaveSession(context.Background(), cfoauth.Session{
+		ID:           "session-1",
+		Label:        "me@example.com",
+		AccessToken:  "access-token",
+		RefreshToken: "refresh-token",
+		ExpiresAt:    time.Now().UTC().Add(time.Hour),
+		Scope:        "cloudflare-tunnel.read cloudflare-tunnel.write",
+		Current:      true,
+	}); err != nil {
+		t.Fatalf("SaveSession: %v", err)
+	}
+	oauthSvc := cfoauth.NewService(cfoauth.Config{Configured: true}, store)
+	s.oauthSvc = oauthSvc
+	s.cfSvc = cfaccount.NewServiceWithEndpoints(oauthSvc, cfaccount.EndpointOverrides{
+		REST: api.URL + "/client/v4",
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/cf/tunnels?account_id=account-1", strings.NewReader(`{"name":"edge local","save_local_profile":true,"activate_local":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	s.handleCFTunnels(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("create tunnel status %d: %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "connector-token") {
+		t.Fatalf("connector token leaked in response: %s", rec.Body.String())
+	}
+	var resp struct {
+		Tunnel       cfaccount.Tunnel `json:"tunnel"`
+		LocalProfile *struct {
+			Key      string `json:"key"`
+			Name     string `json:"name"`
+			TunnelID string `json:"tunnel_id"`
+			Active   bool   `json:"active"`
+		} `json:"local_profile"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode create tunnel response: %v", err)
+	}
+	if resp.Tunnel.ID != "tunnel-created" || resp.Tunnel.Name != "edge local" {
+		t.Fatalf("unexpected tunnel response: %#v", resp.Tunnel)
+	}
+	if resp.LocalProfile == nil || resp.LocalProfile.Key == "" || !resp.LocalProfile.Active || resp.LocalProfile.TunnelID != "tunnel-created" {
+		t.Fatalf("unexpected local profile summary: %#v", resp.LocalProfile)
+	}
+
+	cfg := s.cfgMgr.Get()
+	if cfg.ActiveTunnelKey != resp.LocalProfile.Key {
+		t.Fatalf("active tunnel key = %q, want %q", cfg.ActiveTunnelKey, resp.LocalProfile.Key)
+	}
+	var savedToken string
+	for _, profile := range cfg.Tunnels {
+		if profile.Key == resp.LocalProfile.Key {
+			if !profile.LocalEnabled || !profile.RemoteManagementEnabled || profile.AccountID != "account-1" || profile.TunnelID != "tunnel-created" {
+				t.Fatalf("unexpected saved profile: %#v", profile)
+			}
+			savedToken = profile.Token
+		}
+	}
+	if savedToken != "connector-token" {
+		t.Fatalf("saved connector token = %q, want connector-token", savedToken)
 	}
 }
 
@@ -468,7 +553,32 @@ func newFakeOAuthCloudflareServer(t *testing.T) *fakeOAuthCloudflareServer {
 	})
 	mux.HandleFunc("/client/v4/accounts/account-1/cfd_tunnel", func(w http.ResponseWriter, r *http.Request) {
 		assertFakeBearer(t, api, r)
-		writeServerCFEnvelope(w, `[{"id":"tunnel-1"}]`, nil)
+		switch r.Method {
+		case http.MethodGet:
+			writeServerCFEnvelope(w, `[{"id":"tunnel-1"}]`, nil)
+		case http.MethodPost:
+			var req struct {
+				Name      string `json:"name"`
+				Secret    string `json:"tunnel_secret"`
+				ConfigSrc string `json:"config_src"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("decode create tunnel request: %v", err)
+			}
+			if req.Name != "edge local" || req.Secret == "" || req.ConfigSrc != "cloudflare" {
+				t.Fatalf("unexpected create tunnel request: %#v", req)
+			}
+			writeServerCFEnvelope(w, `{"id":"tunnel-created","name":"edge local","status":"inactive","tun_type":"cfd_tunnel","remote_config":true}`, nil)
+		default:
+			t.Fatalf("unexpected tunnel method = %s", r.Method)
+		}
+	})
+	mux.HandleFunc("/client/v4/accounts/account-1/cfd_tunnel/tunnel-created/token", func(w http.ResponseWriter, r *http.Request) {
+		assertFakeBearer(t, api, r)
+		if r.Method != http.MethodGet {
+			t.Fatalf("tunnel token method = %s", r.Method)
+		}
+		writeServerCFEnvelope(w, `"connector-token"`, nil)
 	})
 	mux.HandleFunc("/client/v4/accounts/account-1/workers/scripts", func(w http.ResponseWriter, r *http.Request) {
 		assertFakeBearer(t, api, r)

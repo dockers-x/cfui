@@ -25,6 +25,12 @@ other = "Cloudflare"
 [workspace_local_entry]
 other = "本地 cfui"
 
+[workspace_cloudflare_switch_title]
+other = "切换到 Cloudflare 控制台"
+
+[workspace_local_switch_title]
+other = "切换到本地 cfui"
+
 [tunnel_config]
 other = "隧道配置"
 
@@ -2104,6 +2110,39 @@ other = "DNS"
 [oauth_tunnels]
 other = "Tunnel"
 
+[oauth_tunnel_create]
+other = "创建 Tunnel"
+
+[oauth_tunnel_name]
+other = "Tunnel 名称"
+
+[oauth_tunnel_name_placeholder]
+other = "edge-prod"
+
+[oauth_tunnel_save_local_profile]
+other = "保存为本地隧道配置"
+
+[oauth_tunnel_activate_local_profile]
+other = "设为当前本地隧道"
+
+[oauth_tunnel_create_hint]
+other = "会创建远程管理的 Cloudflare Tunnel；勾选后只把 connector token 写入本地 SQLite 配置。"
+
+[oauth_tunnel_create_success]
+other = "Tunnel {name} 已创建。"
+
+[oauth_tunnel_create_success_with_profile]
+other = "Tunnel {name} 已创建并关联到本地配置 {profile}；{state}。"
+
+[oauth_tunnel_local_profile_saved]
+other = "本地配置已保存"
+
+[oauth_tunnel_local_profile_activated]
+other = "本地配置已激活"
+
+[oauth_tunnels_readonly]
+other = "当前 OAuth scope 只能读取 Tunnel。添加 cloudflare-tunnel.write 后才能创建并关联本地隧道。"
+
 [oauth_tunnel_connector_count]
 other = "{n} 个连接器"
 
@@ -2534,49 +2573,127 @@ other = "请先设置 CFUI_OAUTH_CLIENT_ID。"
 other = "OAuth 配置引导"
 
 [oauth_setup_subtitle]
-other = "先创建 Cloudflare OAuth app，把 relay callback 作为 redirect URI，然后用 client ID 重启 cfui。"
+other = "先创建 Cloudflare OAuth 客户端，把 relay 回调作为重定向 URI，然后用 client ID 重启 cfui。"
 
 [oauth_setup_oauth_app_title]
-other = "创建 Cloudflare OAuth app"
+other = "填写 Cloudflare OAuth 客户端表单"
 
 [oauth_setup_oauth_app_desc]
-other = "在 Cloudflare 创建 OAuth app，并登记这个 redirect URI。你可以使用默认托管 relay，也可以换成自己的 Worker URL。"
+other = "按下面这些选项填写 Cloudflare OAuth 客户端表单。cfui 使用 Authorization Code、Refresh Token 和 PKCE，不使用 client secret。"
+
+[oauth_setup_cloudflare_path]
+other = "Cloudflare 控制台路径"
+
+[oauth_setup_cloudflare_path_value]
+other = "管理账户 > OAuth 客户端 > 创建 OAuth 客户端"
+
+[oauth_setup_client_name]
+other = "客户端名称"
+
+[oauth_setup_response_type]
+other = "响应类型"
+
+[oauth_setup_response_type_value]
+other = "Code"
+
+[oauth_setup_grant_type]
+other = "令牌授权类型"
+
+[oauth_setup_grant_type_value]
+other = "Authorization Code, Refresh Token"
+
+[oauth_setup_token_auth_method]
+other = "令牌身份验证方法"
+
+[oauth_setup_token_auth_method_value]
+other = "None (PKCE)"
 
 [oauth_setup_redirect_uri]
-other = "OAuth redirect URI"
+other = "重定向回调 URL"
+
+[oauth_setup_redirect_uri_note]
+other = "这里填 Worker relay 的公网 HTTPS 回调地址，不是 cfui 的内网地址。必须和 Cloudflare OAuth Client 的 Redirect URLs 逐字一致；协议、域名、路径、query 和尾部斜杠都不能不同。Cloudflare OAuth 会先回到 Worker，再由 Worker 按 CFUI_CALLBACK_URL 跳回 cfui。"
+
+[oauth_setup_client_url]
+other = "客户端 URL"
+
+[oauth_setup_client_url_value]
+other = "私用可以留空；公开应用填写项目主页或文档 URL。"
 
 [oauth_setup_worker_title]
 other = "使用或自部署 relay Worker"
 
 [oauth_setup_worker_desc]
-other = "内置 Worker 会把 Cloudflare 返回的 code 和 state 转发回当前 cfui 实例。如果 cfui 不是默认本地地址，需要设置 Worker 变量。"
+other = "Worker 会把 Cloudflare 返回的授权码和 state 转发回当前 cfui 实例。打开或下载下面的内置文件，然后部署到 Cloudflare Workers。"
 
 [oauth_setup_worker_script]
-other = "Worker 脚本"
+other = "内置 Worker 文件"
+
+[oauth_setup_worker_deploy_path]
+other = "Cloudflare Worker 部署路径"
+
+[oauth_setup_worker_deploy_path_value]
+other = "Workers 和 Pages > 创建 > Worker > 编辑代码，粘贴此文件后部署"
 
 [oauth_setup_worker_callback_var]
-other = "Worker 变量"
+other = "固定回调 Worker 变量"
+
+[oauth_setup_worker_callback_param]
+other = "可选：动态回调 relay URL"
+
+[oauth_setup_worker_allowlist_var]
+other = "动态回调来源白名单"
+
+[oauth_setup_internal_dns_note]
+other = "cfui 使用内部 DNS 域名是可以的，只要用户浏览器能访问该域名。你这种固定 cfui 域名部署，推荐把它写进 Worker 的 CFUI_CALLBACK_URL。"
+
+[oauth_setup_dynamic_callback_note]
+other = "只有需要同一个 Worker 服务多个 cfui 域名时，才使用动态 cfui_callback_url 参数；此时 CFUI_OAUTH_RELAY_URL 和 Cloudflare OAuth Client 的重定向回调 URL 都要填写带参数的完整 relay URL，并配置来源白名单。"
+
+[oauth_setup_client_id_placeholder]
+other = "<你的 Cloudflare OAuth client ID>"
+
+[oauth_setup_relay_url_placeholder]
+other = "<你的 Worker relay 回调 URL>"
 
 [oauth_relay_check]
-other = "检查 relay"
+other = "检查中继服务"
 
 [oauth_relay_checking]
 other = "正在检查 relay..."
 
 [oauth_relay_check_ok]
-other = "relay 可访问"
+other = "中继服务可访问"
 
 [oauth_relay_check_failed]
-other = "relay 检查失败"
+other = "中继服务检查失败"
 
 [oauth_setup_env_title]
 other = "设置 cfui 环境变量"
 
 [oauth_setup_env_desc]
-other = "设置 OAuth client ID 和 relay URL 后重启 cfui。relay URL 必须和 Cloudflare OAuth app 里登记的 redirect URI 一致。"
+other = "设置 OAuth 客户端 ID 和 relay URL 后重启 cfui。relay URL 必须和 Cloudflare OAuth 客户端里登记的重定向 URI 一致。"
 
 [oauth_setup_env_vars]
 other = "环境变量"
+
+[oauth_setup_permissions_title]
+other = "选择 Cloudflare OAuth 权限"
+
+[oauth_setup_permissions_desc]
+other = "Cloudflare OAuth 的 scope 名称对应 API token permission。先按最小集合跑通；需要完整控制台时，再添加完整集合。"
+
+[oauth_setup_permissions_minimum]
+other = "最小可用：DNS + Tunnel"
+
+[oauth_setup_permissions_full]
+other = "完整工作台"
+
+[oauth_setup_permissions_categories]
+other = "在 Cloudflare 页面里通常分别位于 Account/Account Settings、DNS & Zones、Developer Platform、Cloudflare One/Zero Trust、Security/WAF、Analytics & Logs 这些分类。"
+
+[oauth_setup_permissions_write_note]
+other = "带 .write 或 cache.purge 的 scope 会允许 cfui 修改 Cloudflare 资源；只想浏览时不要勾写权限。"
 
 [oauth_authorization_scopes]
 other = "授权范围"
@@ -2585,13 +2702,13 @@ other = "授权范围"
 other = "选择下一次 OAuth 登录要申请的 Cloudflare 模块权限。"
 
 [oauth_current_scopes]
-other = "当前身份已授权 scopes"
+other = "当前身份已授权范围"
 
 [oauth_scope_preview]
-other = "OAuth scope 预览"
+other = "OAuth 权限范围预览"
 
 [oauth_no_scopes]
-other = "没有返回 scopes。"
+other = "没有返回权限范围。"
 
 [oauth_permission_required]
 other = "必选"
@@ -2633,7 +2750,7 @@ other = "浏览 D1 数据库并执行 SQL 查询。"
 other = "浏览 KV namespace 并编辑 UTF-8 key value。"
 
 [oauth_permission_tunnels_desc]
-other = "查看 Cloudflare Tunnel 控制面记录。"
+other = "查看 Cloudflare Tunnel 记录；开启写权限后可创建远程管理的 Tunnel。"
 
 [oauth_permission_waf_desc]
 other = "查看、新建、启停或删除 WAF 自定义规则。"
@@ -2650,6 +2767,9 @@ other = "Cloudflare 账号"
 [oauth_identities]
 other = "OAuth 身份"
 
+[oauth_current_identity]
+other = "当前 OAuth 身份"
+
 [oauth_no_identities]
 other = "还没有保存 OAuth 身份。"
 
@@ -2658,6 +2778,9 @@ other = "当前"
 
 [oauth_identity_switch]
 other = "切换"
+
+[oauth_identity_switch_to]
+other = "切换到 {label}"
 
 [oauth_identity_switching]
 other = "正在切换"
@@ -2688,6 +2811,12 @@ other = "移除 {label}？会尽量吊销它保存的 OAuth 会话。"
 
 [oauth_scope_count]
 other = "{n} 个 scope"
+
+[oauth_scope_edit]
+other = "编辑授权范围"
+
+[oauth_scope_summary_empty]
+other = "未选择 scope"
 
 [oauth_logged_in_as]
 other = "已登录：{label}"

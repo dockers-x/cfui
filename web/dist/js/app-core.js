@@ -125,6 +125,7 @@
             r2CreateOpen: false,
             r2ObjectCreateOpen: false,
             kvCreateOpen: false,
+            tunnelCreateOpen: false,
             snippetCreateOpen: false,
 	            snippetRuleCreateOpen: false,
 	            wafCreateOpen: false,

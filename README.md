@@ -220,22 +220,28 @@ To use OAuth mode:
 1. Create a Cloudflare OAuth app and set its redirect URI to the Worker relay URL.
 2. Set `CFUI_OAUTH_CLIENT_ID` to the OAuth client ID.
 3. Keep `CFUI_OAUTH_RELAY_URL` at the default relay (`https://oauth.omarchy.qzz.io/oauth/callback`) or point it to your own Worker relay.
-4. Configure the Worker relay to forward `code` and `state` back to your cfui instance's `/oauth/callback` endpoint, for example `http://127.0.0.1:14333/oauth/callback` for local use. A ready-to-deploy Worker script is available at `docs/cloudflare-oauth-worker.js`; set its `CFUI_CALLBACK_URL` Worker variable if your cfui callback is fixed, or append `?cfui_callback_url=<urlencoded cfui callback>` to `CFUI_OAUTH_RELAY_URL` for per-run callback selection, for example `CFUI_OAUTH_RELAY_URL=https://oauth.omarchy.qzz.io/oauth/callback?cfui_callback_url=http%3A%2F%2F10.10.68.168%3A14333%2Foauth%2Fcallback`. If the parameter points to a public origin, also set the Worker variable `CFUI_ALLOWED_CALLBACK_ORIGINS` to a comma-separated origin allowlist; loopback and private/LAN callback hosts are allowed by default. The Cloudflare OAuth app redirect URI must match the relay callback URL you use, including the query string when you use `cfui_callback_url`. The Worker exposes `/health`, and cfui can check it from the OAuth setup page or `GET /api/oauth/relay-check`.
+4. Configure the Worker relay to forward `code` and `state` back to your cfui instance's `/oauth/callback` endpoint, for example `http://127.0.0.1:14333/oauth/callback` for local use. A ready-to-deploy Worker script is available at `docs/cloudflare-oauth-worker.js`; set its `CFUI_CALLBACK_URL` Worker variable if your cfui callback is fixed, or append `?cfui_callback_url=<urlencoded cfui callback>` to `CFUI_OAUTH_RELAY_URL` for per-run callback selection, for example `CFUI_OAUTH_RELAY_URL=https://oauth.omarchy.qzz.io/oauth/callback?cfui_callback_url=https%3A%2F%2Fcfui.example.internal%2Foauth%2Fcallback`. If the parameter points to a public origin, also set the Worker variable `CFUI_ALLOWED_CALLBACK_ORIGINS` to a comma-separated origin allowlist; loopback and private/LAN callback hosts are allowed by default. The Cloudflare OAuth app redirect URI must match the relay callback URL you use, including the query string when you use `cfui_callback_url`. The Worker exposes `/health`, and cfui can check it from the OAuth setup page or `GET /api/oauth/relay-check`.
 
 Zone overview uses `GET /api/cf/dns/count` to fetch DNS record totals without loading every record. For D1, cfui loads the database list first and then best-effort refreshes each database with `GET /api/cf/d1/databases/{database_id}` so table count and file size match Cloudflare's detail endpoint. Failed detail lookups do not block the database list, SQL console, or table browser.
 
 The default OAuth scope template is:
 
 ```text
-account-settings.read zone.read dns.read dns.write argotunnel.read
+account-settings.read zone.read dns.read dns.write cloudflare-tunnel.read
 ```
 
 You can override them with `CFUI_OAUTH_SCOPES`.
 
+For Cloudflare Tunnel creation and local profile linking, add:
+
+```text
+cloudflare-tunnel.read cloudflare-tunnel.write
+```
+
 For zone settings actions, add the required scopes for your OAuth app, for example:
 
 ```text
-account-settings.read zone.read dns.read dns.write argotunnel.read zone-settings.read zone-settings.write cache.purge
+account-settings.read zone.read dns.read dns.write cloudflare-tunnel.read zone-settings.read zone-settings.write cache.purge
 ```
 
 For R2 bucket write actions, add:
@@ -359,7 +365,7 @@ The MCP token is shown only when it is created. Saved tokens are listed in maske
 | `CFUI_TUNNEL_API_KEY` / `CLOUDFLARE_API_KEY` | Cloudflare global API key | unset |
 | `CFUI_OAUTH_CLIENT_ID` | Cloudflare OAuth client ID | unset |
 | `CFUI_OAUTH_RELAY_URL` / `CFUI_OAUTH_REDIRECT_URI` | OAuth Worker relay callback URL registered in Cloudflare | `https://oauth.omarchy.qzz.io/oauth/callback` |
-| `CFUI_OAUTH_SCOPES` | Default space-separated OAuth scope template used to initialize the sign-in selector and direct `/oauth/start` | `account-settings.read zone.read dns.read dns.write argotunnel.read` |
+| `CFUI_OAUTH_SCOPES` | Default space-separated OAuth scope template used to initialize the sign-in selector and direct `/oauth/start` | `account-settings.read zone.read dns.read dns.write cloudflare-tunnel.read` |
 | `CFUI_OAUTH_AUTH_URL` | Cloudflare OAuth authorization endpoint override | Cloudflare default |
 | `CFUI_OAUTH_LOGOUT_URL` | Cloudflare logout endpoint used before adding another identity | Cloudflare default |
 | `CFUI_OAUTH_TOKEN_URL` | Cloudflare OAuth token endpoint override | Cloudflare default |

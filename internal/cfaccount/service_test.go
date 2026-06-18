@@ -3,6 +3,7 @@ package cfaccount
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -357,6 +358,77 @@ func TestCloudflareStatusUsesPublicStatuspageAPI(t *testing.T) {
 	}
 	if resp.FetchedAt.IsZero() {
 		t.Fatalf("expected fetched_at")
+	}
+}
+
+func TestCreateTunnelCreatesRemoteManagedTunnelAndFetchesToken(t *testing.T) {
+	ctx := context.Background()
+	createSeen := false
+	tokenSeen := false
+	mux := http.NewServeMux()
+	mux.HandleFunc("/client/v4/accounts/account-1/cfd_tunnel", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		if r.Method != http.MethodPost {
+			t.Fatalf("create tunnel method = %s", r.Method)
+		}
+		var req cloudflare.TunnelCreateParams
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode create tunnel request: %v", err)
+		}
+		if req.Name != "edge-prod" || req.ConfigSrc != "cloudflare" {
+			t.Fatalf("unexpected create tunnel request: %#v", req)
+		}
+		secret, err := base64.StdEncoding.DecodeString(req.Secret)
+		if err != nil {
+			t.Fatalf("tunnel secret is not base64: %v", err)
+		}
+		if len(secret) != 32 {
+			t.Fatalf("tunnel secret len = %d, want 32", len(secret))
+		}
+		createSeen = true
+		writeCFEnvelope(w, `{"id":"tunnel-1","name":"edge-prod","status":"inactive","tun_type":"cfd_tunnel","remote_config":true}`, nil)
+	})
+	mux.HandleFunc("/client/v4/accounts/account-1/cfd_tunnel/tunnel-1/token", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		if r.Method != http.MethodGet {
+			t.Fatalf("get tunnel token method = %s", r.Method)
+		}
+		tokenSeen = true
+		writeCFEnvelope(w, `"connector-token"`, nil)
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	svc := NewServiceWithEndpoints(testOAuthServiceWithScopes(t, "cloudflare-tunnel.read cloudflare-tunnel.write"), EndpointOverrides{
+		REST: server.URL + "/client/v4",
+	})
+	resp, err := svc.CreateTunnel(ctx, "account-1", TunnelCreateRequest{Name: " edge-prod "})
+	if err != nil {
+		t.Fatalf("CreateTunnel: %v", err)
+	}
+	if !createSeen || !tokenSeen {
+		t.Fatalf("expected create and token requests, create=%v token=%v", createSeen, tokenSeen)
+	}
+	if resp.Tunnel.ID != "tunnel-1" || resp.Tunnel.Name != "edge-prod" || !resp.Tunnel.RemoteConfig {
+		t.Fatalf("unexpected tunnel response: %#v", resp.Tunnel)
+	}
+	if resp.Token != "connector-token" {
+		t.Fatalf("unexpected connector token: %q", resp.Token)
+	}
+	if !resp.Capabilities["tunnels"].Write {
+		t.Fatalf("expected tunnel write capability: %#v", resp.Capabilities["tunnels"])
+	}
+}
+
+func TestCreateTunnelRequiresWriteScope(t *testing.T) {
+	svc := NewService(testOAuthServiceWithScopes(t, "cloudflare-tunnel.read"))
+	_, err := svc.CreateTunnel(context.Background(), "account-1", TunnelCreateRequest{Name: "edge"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var validationErr ValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("expected ValidationError, got %T", err)
 	}
 }
 

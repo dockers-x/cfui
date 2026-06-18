@@ -95,7 +95,7 @@ func DefaultScopes() string {
 		"zone.read",
 		"dns.read",
 		"dns.write",
-		"argotunnel.read",
+		"cloudflare-tunnel.read",
 	}, " ")
 }
 

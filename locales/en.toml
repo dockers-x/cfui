@@ -25,6 +25,12 @@ other = "Cloudflare"
 [workspace_local_entry]
 other = "Local cfui"
 
+[workspace_cloudflare_switch_title]
+other = "Switch to Cloudflare console"
+
+[workspace_local_switch_title]
+other = "Switch to local cfui"
+
 [tunnel_config]
 other = "Tunnel Configuration"
 
@@ -2104,6 +2110,39 @@ other = "DNS"
 [oauth_tunnels]
 other = "Tunnels"
 
+[oauth_tunnel_create]
+other = "Create Tunnel"
+
+[oauth_tunnel_name]
+other = "Tunnel name"
+
+[oauth_tunnel_name_placeholder]
+other = "edge-prod"
+
+[oauth_tunnel_save_local_profile]
+other = "Save as a local tunnel profile"
+
+[oauth_tunnel_activate_local_profile]
+other = "Use as the current local tunnel"
+
+[oauth_tunnel_create_hint]
+other = "Creates a remote-managed Cloudflare Tunnel and, if selected, stores its connector token in the local SQLite config."
+
+[oauth_tunnel_create_success]
+other = "Tunnel {name} created."
+
+[oauth_tunnel_create_success_with_profile]
+other = "Tunnel {name} created and linked to local profile {profile}; {state}."
+
+[oauth_tunnel_local_profile_saved]
+other = "local profile saved"
+
+[oauth_tunnel_local_profile_activated]
+other = "local profile activated"
+
+[oauth_tunnels_readonly]
+other = "Current OAuth scopes can read tunnels only. Add cloudflare-tunnel.write to create and link tunnels."
+
 [oauth_tunnel_connector_count]
 other = "{n} connectors"
 
@@ -2534,28 +2573,88 @@ other = "Set CFUI_OAUTH_CLIENT_ID before signing in."
 other = "OAuth setup"
 
 [oauth_setup_subtitle]
-other = "Create a Cloudflare OAuth app, use the relay callback as its redirect URI, then restart cfui with the client ID."
+other = "Create a Cloudflare OAuth client, use the relay callback as its redirect URI, then restart cfui with the client ID."
 
 [oauth_setup_oauth_app_title]
-other = "Create the Cloudflare OAuth app"
+other = "Fill the Cloudflare OAuth client form"
 
 [oauth_setup_oauth_app_desc]
-other = "In Cloudflare, create an OAuth app and register this redirect URI. You can use the hosted relay or replace it with your own Worker URL."
+other = "Use these exact choices in the Cloudflare OAuth client form. cfui uses Authorization Code with Refresh Token and PKCE, and does not use a client secret."
+
+[oauth_setup_cloudflare_path]
+other = "Cloudflare dashboard path"
+
+[oauth_setup_cloudflare_path_value]
+other = "Manage Account > OAuth Clients > Create OAuth Client"
+
+[oauth_setup_client_name]
+other = "Client name"
+
+[oauth_setup_response_type]
+other = "Response type"
+
+[oauth_setup_response_type_value]
+other = "Code"
+
+[oauth_setup_grant_type]
+other = "Grant type"
+
+[oauth_setup_grant_type_value]
+other = "Authorization Code, Refresh Token"
+
+[oauth_setup_token_auth_method]
+other = "Token endpoint authentication method"
+
+[oauth_setup_token_auth_method_value]
+other = "None (PKCE)"
 
 [oauth_setup_redirect_uri]
-other = "OAuth redirect URI"
+other = "Redirect callback URL"
+
+[oauth_setup_redirect_uri_note]
+other = "Use the public HTTPS callback URL of the relay Worker here, not the private cfui URL. It must exactly match one of the Cloudflare OAuth Client Redirect URLs; scheme, host, path, query, and trailing slash must not differ. Cloudflare OAuth returns to the Worker first, then the Worker redirects to cfui using CFUI_CALLBACK_URL."
+
+[oauth_setup_client_url]
+other = "Client URL"
+
+[oauth_setup_client_url_value]
+other = "Optional for private use; use your project or documentation URL for a public app."
 
 [oauth_setup_worker_title]
 other = "Use or self-host the relay Worker"
 
 [oauth_setup_worker_desc]
-other = "The bundled Worker forwards Cloudflare's code and state back to this cfui instance. Set its callback variable if cfui is not using the default local URL."
+other = "The Worker forwards Cloudflare's code and state back to this cfui instance. Download or open the built-in file below, then deploy it to Cloudflare Workers."
 
 [oauth_setup_worker_script]
-other = "Worker script"
+other = "Built-in Worker file"
+
+[oauth_setup_worker_deploy_path]
+other = "Cloudflare Worker deploy path"
+
+[oauth_setup_worker_deploy_path_value]
+other = "Workers & Pages > Create > Worker > Edit code, paste this file, then deploy"
 
 [oauth_setup_worker_callback_var]
-other = "Worker variable"
+other = "Fixed callback Worker variable"
+
+[oauth_setup_worker_callback_param]
+other = "Optional dynamic callback relay URL"
+
+[oauth_setup_worker_allowlist_var]
+other = "Dynamic callback origin allowlist"
+
+[oauth_setup_internal_dns_note]
+other = "An internal DNS name for cfui is fine as long as the user's browser can reach it. For a fixed cfui domain deployment, prefer setting that domain in the Worker's CFUI_CALLBACK_URL."
+
+[oauth_setup_dynamic_callback_note]
+other = "Use the dynamic cfui_callback_url parameter only when one Worker must serve multiple cfui domains. In that mode, CFUI_OAUTH_RELAY_URL and the Cloudflare OAuth Client redirect callback URL must both use the full relay URL with the parameter, and the origin allowlist must be configured."
+
+[oauth_setup_client_id_placeholder]
+other = "<your Cloudflare OAuth client ID>"
+
+[oauth_setup_relay_url_placeholder]
+other = "<your Worker relay callback URL>"
 
 [oauth_relay_check]
 other = "Check relay"
@@ -2577,6 +2676,24 @@ other = "Set the OAuth client ID and relay URL, then restart cfui. The relay URL
 
 [oauth_setup_env_vars]
 other = "Environment"
+
+[oauth_setup_permissions_title]
+other = "Choose Cloudflare OAuth permissions"
+
+[oauth_setup_permissions_desc]
+other = "Cloudflare OAuth scope names match API token permissions. Start with the minimum set, then add the full set when you want the whole console."
+
+[oauth_setup_permissions_minimum]
+other = "Minimum: DNS + Tunnel"
+
+[oauth_setup_permissions_full]
+other = "Full workspace"
+
+[oauth_setup_permissions_categories]
+other = "In the Cloudflare form these are usually under Account/Account Settings, DNS & Zones, Developer Platform, Cloudflare One/Zero Trust, Security/WAF, and Analytics & Logs."
+
+[oauth_setup_permissions_write_note]
+other = "Scopes ending in .write or cache.purge let cfui modify Cloudflare resources; skip write scopes when you only want a read-only console."
 
 [oauth_authorization_scopes]
 other = "Authorization scopes"
@@ -2633,7 +2750,7 @@ other = "Browse D1 databases and run SQL queries."
 other = "Browse KV namespaces and edit UTF-8 key values."
 
 [oauth_permission_tunnels_desc]
-other = "View Cloudflare Tunnel control-plane records."
+other = "View Cloudflare Tunnel records and create remote-managed tunnels when write scope is enabled."
 
 [oauth_permission_waf_desc]
 other = "View, create, toggle, or delete custom WAF rules."
@@ -2650,6 +2767,9 @@ other = "Cloudflare account"
 [oauth_identities]
 other = "OAuth identities"
 
+[oauth_current_identity]
+other = "Current OAuth identity"
+
 [oauth_no_identities]
 other = "No OAuth identities saved."
 
@@ -2658,6 +2778,9 @@ other = "Current"
 
 [oauth_identity_switch]
 other = "Switch"
+
+[oauth_identity_switch_to]
+other = "Switch to {label}"
 
 [oauth_identity_switching]
 other = "Switching"
@@ -2688,6 +2811,12 @@ other = "Remove {label}? Its stored OAuth session will be revoked when possible.
 
 [oauth_scope_count]
 other = "{n} scopes"
+
+[oauth_scope_edit]
+other = "Edit authorization scopes"
+
+[oauth_scope_summary_empty]
+other = "No scopes selected"
 
 [oauth_logged_in_as]
 other = "Signed in as {label}"

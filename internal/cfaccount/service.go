@@ -3,6 +3,8 @@ package cfaccount
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -64,6 +66,7 @@ const (
 	maxBrowserCacheTTLSeconds     = 31536000
 	maxWorkerScriptNameLen        = 128
 	maxWorkerScriptContentBytes   = 512 * 1024
+	maxTunnelNameLen              = 128
 	overviewDNSZoneCountLimit     = 50
 )
 
@@ -264,6 +267,17 @@ type Tunnel struct {
 	ConnectionsInactiveAt *time.Time         `json:"connections_inactive_at,omitempty"`
 	ConnectionCount       int                `json:"connection_count"`
 	Connections           []TunnelConnection `json:"connections,omitempty"`
+}
+
+type TunnelCreateRequest struct {
+	Name string `json:"name"`
+}
+
+type TunnelCreateResult struct {
+	Tunnel       Tunnel                   `json:"tunnel"`
+	Token        string                   `json:"-"`
+	Session      cfoauth.SessionSummary   `json:"session"`
+	Capabilities cfoauth.CapabilityMatrix `json:"capabilities"`
 }
 
 type TunnelConnection struct {
@@ -1597,6 +1611,50 @@ func (s *Service) Tunnels(ctx context.Context, accountID string) (ListResponse[T
 		data = append(data, mapTunnel(tunnel))
 	}
 	return ListResponse[Tunnel]{Data: data, Session: session, Capabilities: session.Capabilities}, nil
+}
+
+func (s *Service) CreateTunnel(ctx context.Context, accountID string, req TunnelCreateRequest) (TunnelCreateResult, error) {
+	client, session, err := s.currentClient(ctx)
+	if err != nil {
+		return TunnelCreateResult{}, err
+	}
+	if !session.Capabilities["tunnels"].Write {
+		return TunnelCreateResult{}, validationError("cloudflare tunnel write scope is required")
+	}
+	accountID = strings.TrimSpace(accountID)
+	name, err := normalizeTunnelName(req.Name)
+	if err != nil {
+		return TunnelCreateResult{}, err
+	}
+	if accountID == "" {
+		return TunnelCreateResult{}, validationError("account_id is required")
+	}
+	secret, err := generateTunnelSecret()
+	if err != nil {
+		return TunnelCreateResult{}, err
+	}
+	tunnel, err := client.CreateTunnel(ctx, cloudflare.AccountIdentifier(accountID), cloudflare.TunnelCreateParams{
+		Name:      name,
+		Secret:    secret,
+		ConfigSrc: "cloudflare",
+	})
+	if err != nil {
+		return TunnelCreateResult{}, err
+	}
+	token, err := client.GetTunnelToken(ctx, cloudflare.AccountIdentifier(accountID), tunnel.ID)
+	if err != nil {
+		return TunnelCreateResult{}, err
+	}
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return TunnelCreateResult{}, fmt.Errorf("cloudflare returned empty tunnel token")
+	}
+	return TunnelCreateResult{
+		Tunnel:       mapTunnel(tunnel),
+		Token:        token,
+		Session:      session,
+		Capabilities: session.Capabilities,
+	}, nil
 }
 
 func (s *Service) Workers(ctx context.Context, accountID string) (ListResponse[WorkerScript], error) {
@@ -5749,6 +5807,28 @@ func normalizeBrowserCacheTTL(value any) (int, error) {
 
 func validationError(format string, args ...any) error {
 	return ValidationError{Message: fmt.Sprintf(format, args...)}
+}
+
+func normalizeTunnelName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", validationError("tunnel name is required")
+	}
+	if !utf8.ValidString(name) {
+		return "", validationError("tunnel name must be valid UTF-8")
+	}
+	if utf8.RuneCountInString(name) > maxTunnelNameLen {
+		return "", validationError("tunnel name is too long")
+	}
+	return name, nil
+}
+
+func generateTunnelSecret() (string, error) {
+	secret := make([]byte, 32)
+	if _, err := rand.Read(secret); err != nil {
+		return "", fmt.Errorf("generate tunnel secret: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(secret), nil
 }
 
 func dnsRecordCountFromResult(records []cloudflare.DNSRecord, info *cloudflare.ResultInfo) int {

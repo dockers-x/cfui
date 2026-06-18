@@ -61,8 +61,22 @@
             </div>
             <div class="header-actions">
                 <nav class="workspace-entry" aria-label="Workspace" data-i18n-attr="aria-label|workspace_switch_label">
-                    <a id="workspace-cloudflare-link" class="workspace-link" href="/cloudflare" data-workspace-link data-workspace-target="cloudflare" data-i18n="workspace_cloudflare_entry">Cloudflare</a>
-                    <a id="workspace-local-link" class="workspace-link" href="/local" data-workspace-link data-workspace-target="local" data-i18n="workspace_local_entry">Local cfui</a>
+                    <a id="workspace-cloudflare-link" class="workspace-link" href="/cloudflare" data-workspace-link data-workspace-target="cloudflare" aria-label="Switch to Cloudflare console" title="Switch to Cloudflare console" data-i18n-attr="aria-label|workspace_cloudflare_switch_title;title|workspace_cloudflare_switch_title">
+                        <svg class="workspace-icon workspace-icon--cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M17.5 18H8.2a4.7 4.7 0 0 1-.7-9.35 6.2 6.2 0 0 1 11.7 1.95A3.75 3.75 0 0 1 17.5 18Z"></path>
+                        </svg>
+                        <span class="workspace-link-label" data-i18n="workspace_cloudflare_entry">Cloudflare</span>
+                    </a>
+                    <a id="workspace-local-link" class="workspace-link" href="/local" data-workspace-link data-workspace-target="local" aria-label="Switch to local cfui" title="Switch to local cfui" data-i18n-attr="aria-label|workspace_local_switch_title;title|workspace_local_switch_title">
+                        <svg class="workspace-icon workspace-icon--local" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="4" y="5" width="16" height="11" rx="2"></rect>
+                            <path d="M9 20h6"></path>
+                            <path d="M12 16v4"></path>
+                            <path d="m8 10 2 2-2 2"></path>
+                            <path d="M12.5 14h3.5"></path>
+                        </svg>
+                        <span class="workspace-link-label" data-i18n="workspace_local_entry">Local cfui</span>
+                    </a>
                 </nav>
                 <span id="status-pill" class="status-pill" data-state="loading" role="status" aria-live="polite">
                     <span class="dot"></span>
@@ -133,7 +147,6 @@
                             </div>
                             <div id="oauth-setup-guide" class="oauth-setup-guide" hidden></div>
                             <div id="oauth-scope-list" class="oauth-scope-list" aria-label="Granted scopes"></div>
-                            <div id="oauth-identity-list" class="oauth-identity-list"></div>
                         </div>
                     </div>
 
@@ -148,6 +161,8 @@
                                 </button>
                             </div>
                             <div class="card-body">
+                                <div id="oauth-identity-list" class="oauth-identity-list"></div>
+                                <div class="oauth-sidebar-divider" aria-hidden="true"></div>
                                 <div id="oauth-account-list" class="oauth-list"></div>
                             </div>
                         </aside>
@@ -1269,6 +1284,25 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- OAuth scope dialog -->
+    <div id="oauth-scope-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="oauth-scope-dialog-title" hidden>
+        <div class="modal modal--wide">
+            <div class="modal-head">
+                <div>
+                    <h2 id="oauth-scope-dialog-title" data-i18n="oauth_authorization_scopes">Authorization scopes</h2>
+                    <p class="subtitle" data-i18n="oauth_authorization_scopes_hint">Select which Cloudflare modules to request for the next sign-in.</p>
+                </div>
+                <button type="button" class="icon-btn" data-close-dialog aria-label="Close" title="Close" data-i18n-attr="aria-label|toast_close;title|toast_close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div id="oauth-scope-dialog-body" class="modal-body oauth-scope-dialog-body"></div>
+            <div class="modal-foot">
+                <button type="button" class="btn btn--ghost" data-close-dialog data-i18n="close">Close</button>
+            </div>
+        </div>
     </div>
 
     <!-- Manager entry dialog -->
