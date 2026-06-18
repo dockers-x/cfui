@@ -7,16 +7,32 @@
     <meta name="color-scheme" content="light dark">
     <title data-i18n="app_title">CloudFlared UI</title>
 
+    <script>
+        {
+            const path = location.pathname.replace(/\/+$/, '') || '/';
+            const workspace = path === '/cloudflare' || path.startsWith('/cloudflare/') ? 'cloudflare' : 'local';
+            document.documentElement.dataset.workspace = workspace;
+            if (workspace === 'cloudflare') document.title = 'Cloudflare Console';
+        }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
     <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        media="print" onload="this.media='all'">
     <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.1.0/style.css" />
-
-    <link rel="stylesheet" href="style.css">
+        href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.1.0/style.css"
+        media="print" onload="this.media='all'">
+    <noscript>
+        <link rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+        <link rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.1.0/style.css">
+    </noscript>
+    <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
@@ -36,13 +52,18 @@
                     </svg>
                 </div>
                 <div class="brand-text">
-                    <span class="brand-name" data-i18n="app_title">CloudFlared UI</span>
+                    <span class="brand-name brand-name--local" data-i18n="app_title">CloudFlared UI</span>
+                    <span class="brand-name brand-name--cloudflare" data-i18n="oauth_console_title">Cloudflare Console</span>
                     <span class="brand-meta">
                         <span id="version-info" class="version-tip" tabindex="0" aria-label="Version"></span>
                     </span>
                 </div>
             </div>
             <div class="header-actions">
+                <nav class="workspace-entry" aria-label="Workspace" data-i18n-attr="aria-label|workspace_switch_label">
+                    <a id="workspace-cloudflare-link" class="workspace-link" href="/cloudflare" data-workspace-link data-workspace-target="cloudflare" data-i18n="workspace_cloudflare_entry">Cloudflare</a>
+                    <a id="workspace-local-link" class="workspace-link" href="/local" data-workspace-link data-workspace-target="local" data-i18n="workspace_local_entry">Local cfui</a>
+                </nav>
                 <span id="status-pill" class="status-pill" data-state="loading" role="status" aria-live="polite">
                     <span class="dot"></span>
                     <span class="text" data-i18n="status_checking">Checking...</span>
@@ -68,6 +89,7 @@
 
         <!-- Tabs -->
         <nav class="tabs" role="tablist" aria-label="Sections">
+            <button class="tab" role="tab" id="tab-oauth" aria-selected="false" aria-controls="panel-oauth" data-tab="oauth" data-i18n="oauth_tab" tabindex="-1" hidden>Cloudflare</button>
             <button class="tab" role="tab" id="tab-local" aria-selected="true" aria-controls="panel-local" data-tab="local" data-i18n="local_tunnel_tab">Tunnel Configuration</button>
             <button class="tab" role="tab" id="tab-manager" aria-selected="false" aria-controls="panel-manager" data-tab="manager" data-i18n="remote_tunnel_tab" tabindex="-1" hidden>Remote Tunnel Manager</button>
             <button class="tab" role="tab" id="tab-ddns" aria-selected="false" aria-controls="panel-ddns" data-tab="ddns" data-i18n="ddns_tab" tabindex="-1" hidden>DDNS</button>
@@ -77,6 +99,88 @@
         </nav>
 
         <main id="main-content" tabindex="-1">
+            <!-- Cloudflare OAuth console -->
+            <section id="panel-oauth" class="tab-panel" role="tabpanel" aria-labelledby="tab-oauth" hidden>
+                <div class="oauth-shell">
+                    <div class="card">
+                        <div class="card-header oauth-hero">
+                            <div class="card-header-text">
+                                <h2 class="card-title" data-i18n="oauth_console_title">Cloudflare Console</h2>
+                                <p class="card-subtitle" data-i18n="oauth_console_subtitle">Manage Cloudflare account resources through OAuth. Local cfui tools stay in the separate workspace.</p>
+                            </div>
+                            <div class="btn-row">
+                                <button id="oauth-login" type="button" class="btn btn--primary">
+                                    <span class="spinner" aria-hidden="true"></span>
+                                    <span class="text" data-i18n="oauth_sign_in">Sign in</span>
+                                </button>
+                                <button id="oauth-logout" type="button" class="btn btn--ghost" hidden data-i18n="oauth_sign_out">Sign out</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="oauth-status" class="oauth-status" data-state="idle">
+                                <span class="dot"></span>
+                                <span class="text" data-i18n="oauth_status_checking">Checking OAuth status...</span>
+                            </div>
+                            <div class="oauth-config-grid">
+                                <div>
+                                    <div class="meta-label" data-i18n="oauth_relay_callback">Relay callback</div>
+                                    <div id="oauth-relay-url" class="mono oauth-code"></div>
+                                </div>
+                                <div>
+                                    <div class="meta-label" data-i18n="oauth_local_callback">Local callback</div>
+                                    <div id="oauth-local-callback-url" class="mono oauth-code"></div>
+                                </div>
+                            </div>
+                            <div id="oauth-setup-guide" class="oauth-setup-guide" hidden></div>
+                            <div id="oauth-scope-list" class="oauth-scope-list" aria-label="Granted scopes"></div>
+                            <div id="oauth-identity-list" class="oauth-identity-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="oauth-layout">
+                        <aside class="card oauth-sidebar">
+                            <div class="card-header">
+                                <div class="card-header-text">
+                                    <h3 class="card-title" data-i18n="oauth_accounts">Accounts</h3>
+                                </div>
+                                <button id="oauth-refresh" type="button" class="icon-btn" aria-label="Refresh Cloudflare data" title="Refresh" data-i18n-attr="aria-label|refresh;title|refresh">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10"></path><path d="M3.51 15a9 9 0 0 0 14.85 3.36L23 14"></path></svg>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="oauth-account-list" class="oauth-list"></div>
+                            </div>
+                        </aside>
+
+                        <section class="card oauth-main">
+                            <div class="card-header">
+                                <div class="card-header-text">
+                                    <h3 id="oauth-resource-title" class="card-title" data-i18n="oauth_resources">Resources</h3>
+                                    <p id="oauth-resource-subtitle" class="card-subtitle" data-i18n="oauth_resources_subtitle">Select an account or zone to load Cloudflare resources.</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="oauth-resource-tabs" role="tablist" aria-label="Cloudflare resources">
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="overview" aria-pressed="true" data-i18n="oauth_overview">Overview</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="zones" aria-pressed="false" data-i18n="oauth_zones">Zones</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="dns" aria-pressed="false" data-i18n="oauth_dns">DNS</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="tunnels" aria-pressed="false" data-i18n="oauth_tunnels">Tunnels</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="workers" aria-pressed="false" data-i18n="oauth_workers">Workers</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="storage" aria-pressed="false" data-i18n="oauth_storage">Storage</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="usage" aria-pressed="false" data-i18n="oauth_usage">Usage</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="snippets" aria-pressed="false" data-i18n="oauth_snippets">Snippets</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="waf" aria-pressed="false" data-i18n="oauth_waf">WAF</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="analytics" aria-pressed="false" data-i18n="oauth_analytics">Analytics</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="settings" aria-pressed="false" data-i18n="oauth_zone_settings">Settings</button>
+                                    <button type="button" class="oauth-resource-tab" data-oauth-resource="status" aria-pressed="false" data-i18n="oauth_cloudflare_status">Status</button>
+                                </div>
+                                <div id="oauth-resource-body" class="oauth-resource-body"></div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </section>
+
             <!-- Local tunnel panel -->
             <section id="panel-local" class="tab-panel" role="tabpanel" aria-labelledby="tab-local">
                 <!-- Tunnel error (surfaces the reason from /api/status) -->
@@ -1388,14 +1492,15 @@
         </div>
     </div>
 
-    <script src="js/app-core.js"></script>
-    <script src="js/app-ui.js"></script>
-    <script src="js/app-tunnel.js"></script>
-    <script src="js/app-logs.js"></script>
-    <script src="js/app-services.js"></script>
-    <script src="js/app-s3-wizard.js"></script>
-    <script src="js/app-s3.js"></script>
-    <script src="js/app-init.js"></script>
+    <script src="/js/app-core.js"></script>
+    <script src="/js/app-ui.js"></script>
+    <script src="/js/app-tunnel.js"></script>
+    <script src="/js/app-logs.js"></script>
+    <script src="/js/app-services.js"></script>
+    <script src="/js/app-oauth.js"></script>
+    <script src="/js/app-s3-wizard.js"></script>
+    <script src="/js/app-s3.js"></script>
+    <script src="/js/app-init.js"></script>
 </body>
 
 </html>

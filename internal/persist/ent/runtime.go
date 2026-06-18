@@ -8,6 +8,8 @@ import (
 	"cfui/internal/persist/ent/ddnsrecord"
 	"cfui/internal/persist/ent/ddnssetting"
 	"cfui/internal/persist/ent/mcptoken"
+	"cfui/internal/persist/ent/oauthsession"
+	"cfui/internal/persist/ent/oauthstate"
 	"cfui/internal/persist/ent/s3webdavsetting"
 	"cfui/internal/persist/ent/schema"
 	"cfui/internal/persist/ent/tunnelmanagement"
@@ -270,6 +272,64 @@ func init() {
 	mcptokenDescCreatedAt := mcptokenFields[4].Descriptor()
 	// mcptoken.DefaultCreatedAt holds the default value on creation for the created_at field.
 	mcptoken.DefaultCreatedAt = mcptokenDescCreatedAt.Default.(func() time.Time)
+	oauthsessionFields := schema.OAuthSession{}.Fields()
+	_ = oauthsessionFields
+	// oauthsessionDescSessionID is the schema descriptor for session_id field.
+	oauthsessionDescSessionID := oauthsessionFields[0].Descriptor()
+	// oauthsession.SessionIDValidator is a validator for the "session_id" field. It is called by the builders before save.
+	oauthsession.SessionIDValidator = oauthsessionDescSessionID.Validators[0].(func(string) error)
+	// oauthsessionDescLabel is the schema descriptor for label field.
+	oauthsessionDescLabel := oauthsessionFields[1].Descriptor()
+	// oauthsession.DefaultLabel holds the default value on creation for the label field.
+	oauthsession.DefaultLabel = oauthsessionDescLabel.Default.(string)
+	// oauthsessionDescAccessToken is the schema descriptor for access_token field.
+	oauthsessionDescAccessToken := oauthsessionFields[2].Descriptor()
+	// oauthsession.AccessTokenValidator is a validator for the "access_token" field. It is called by the builders before save.
+	oauthsession.AccessTokenValidator = oauthsessionDescAccessToken.Validators[0].(func(string) error)
+	// oauthsessionDescRefreshToken is the schema descriptor for refresh_token field.
+	oauthsessionDescRefreshToken := oauthsessionFields[3].Descriptor()
+	// oauthsession.DefaultRefreshToken holds the default value on creation for the refresh_token field.
+	oauthsession.DefaultRefreshToken = oauthsessionDescRefreshToken.Default.(string)
+	// oauthsessionDescScope is the schema descriptor for scope field.
+	oauthsessionDescScope := oauthsessionFields[5].Descriptor()
+	// oauthsession.DefaultScope holds the default value on creation for the scope field.
+	oauthsession.DefaultScope = oauthsessionDescScope.Default.(string)
+	// oauthsessionDescCurrent is the schema descriptor for current field.
+	oauthsessionDescCurrent := oauthsessionFields[6].Descriptor()
+	// oauthsession.DefaultCurrent holds the default value on creation for the current field.
+	oauthsession.DefaultCurrent = oauthsessionDescCurrent.Default.(bool)
+	// oauthsessionDescCreatedAt is the schema descriptor for created_at field.
+	oauthsessionDescCreatedAt := oauthsessionFields[7].Descriptor()
+	// oauthsession.DefaultCreatedAt holds the default value on creation for the created_at field.
+	oauthsession.DefaultCreatedAt = oauthsessionDescCreatedAt.Default.(func() time.Time)
+	// oauthsessionDescUpdatedAt is the schema descriptor for updated_at field.
+	oauthsessionDescUpdatedAt := oauthsessionFields[8].Descriptor()
+	// oauthsession.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	oauthsession.DefaultUpdatedAt = oauthsessionDescUpdatedAt.Default.(func() time.Time)
+	// oauthsession.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	oauthsession.UpdateDefaultUpdatedAt = oauthsessionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	oauthstateFields := schema.OAuthState{}.Fields()
+	_ = oauthstateFields
+	// oauthstateDescState is the schema descriptor for state field.
+	oauthstateDescState := oauthstateFields[0].Descriptor()
+	// oauthstate.StateValidator is a validator for the "state" field. It is called by the builders before save.
+	oauthstate.StateValidator = oauthstateDescState.Validators[0].(func(string) error)
+	// oauthstateDescCodeVerifier is the schema descriptor for code_verifier field.
+	oauthstateDescCodeVerifier := oauthstateFields[1].Descriptor()
+	// oauthstate.CodeVerifierValidator is a validator for the "code_verifier" field. It is called by the builders before save.
+	oauthstate.CodeVerifierValidator = oauthstateDescCodeVerifier.Validators[0].(func(string) error)
+	// oauthstateDescRedirectURI is the schema descriptor for redirect_uri field.
+	oauthstateDescRedirectURI := oauthstateFields[2].Descriptor()
+	// oauthstate.RedirectURIValidator is a validator for the "redirect_uri" field. It is called by the builders before save.
+	oauthstate.RedirectURIValidator = oauthstateDescRedirectURI.Validators[0].(func(string) error)
+	// oauthstateDescScope is the schema descriptor for scope field.
+	oauthstateDescScope := oauthstateFields[3].Descriptor()
+	// oauthstate.DefaultScope holds the default value on creation for the scope field.
+	oauthstate.DefaultScope = oauthstateDescScope.Default.(string)
+	// oauthstateDescCreatedAt is the schema descriptor for created_at field.
+	oauthstateDescCreatedAt := oauthstateFields[5].Descriptor()
+	// oauthstate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	oauthstate.DefaultCreatedAt = oauthstateDescCreatedAt.Default.(func() time.Time)
 	s3webdavsettingFields := schema.S3WebDAVSetting{}.Fields()
 	_ = s3webdavsettingFields
 	// s3webdavsettingDescKey is the schema descriptor for key field.

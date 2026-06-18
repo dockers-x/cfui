@@ -131,6 +131,41 @@ var (
 		Columns:    McpTokensColumns,
 		PrimaryKey: []*schema.Column{McpTokensColumns[0]},
 	}
+	// OauthSessionsColumns holds the columns for the "oauth_sessions" table.
+	OauthSessionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "session_id", Type: field.TypeString, Unique: true},
+		{Name: "label", Type: field.TypeString, Default: ""},
+		{Name: "access_token", Type: field.TypeString},
+		{Name: "refresh_token", Type: field.TypeString, Default: ""},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "scope", Type: field.TypeString, Default: ""},
+		{Name: "current", Type: field.TypeBool, Default: false},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// OauthSessionsTable holds the schema information for the "oauth_sessions" table.
+	OauthSessionsTable = &schema.Table{
+		Name:       "oauth_sessions",
+		Columns:    OauthSessionsColumns,
+		PrimaryKey: []*schema.Column{OauthSessionsColumns[0]},
+	}
+	// OauthStatesColumns holds the columns for the "oauth_states" table.
+	OauthStatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "state", Type: field.TypeString, Unique: true},
+		{Name: "code_verifier", Type: field.TypeString},
+		{Name: "redirect_uri", Type: field.TypeString},
+		{Name: "scope", Type: field.TypeString, Default: ""},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// OauthStatesTable holds the schema information for the "oauth_states" table.
+	OauthStatesTable = &schema.Table{
+		Name:       "oauth_states",
+		Columns:    OauthStatesColumns,
+		PrimaryKey: []*schema.Column{OauthStatesColumns[0]},
+	}
 	// S3WebdavSettingsColumns holds the columns for the "s3_webdav_settings" table.
 	S3WebdavSettingsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -240,6 +275,8 @@ var (
 		DdnsRecordsTable,
 		DdnsSettingsTable,
 		McpTokensTable,
+		OauthSessionsTable,
+		OauthStatesTable,
 		S3WebdavSettingsTable,
 		TunnelManagementsTable,
 		TunnelProfilesTable,

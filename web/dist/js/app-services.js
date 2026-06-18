@@ -23,13 +23,15 @@
 
     function applyFeatureVisibility(data) {
         const show = (id, on) => { const el = $(id); if (el) el.hidden = !on; };
-        show('tab-manager', !!data.tunnel_manager);
-        show('tab-ddns', !!data.ddns);
-        show('tab-mcp', !!data.mcp);
-        show('tab-s3', !!data.s3_webdav);
-        show('tab-features', true);
-        const active = document.querySelector('.tab[aria-selected="true"]');
-        if (active?.hidden) window.cfui.activateTab?.('local');
+        const classic = data.classic_enabled !== false;
+        show('tab-oauth', false);
+        show('tab-local', classic);
+        show('tab-manager', classic && !!data.tunnel_manager);
+        show('tab-ddns', classic && !!data.ddns);
+        show('tab-mcp', classic && !!data.mcp);
+        show('tab-s3', classic && !!data.s3_webdav);
+        show('tab-features', classic);
+        window.cfui.syncWorkspaceFromRoute?.();
     }
 
     const permissionLabelKeys = {

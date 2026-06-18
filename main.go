@@ -77,6 +77,11 @@ func main() {
 	logger.Sugar.Infof("Starting Cloudflared Web Controller %s", version.GetFullVersion())
 	logger.Sugar.Infof("Data directory: %s", configDir)
 	logger.Sugar.Infof("Log directory: %s", logConfig.LogDir)
+	runModeSelection := config.RunModeFromEnv()
+	if runModeSelection.InvalidRaw != "" {
+		logger.Sugar.Warnf("Invalid CFUI_RUN_MODE %q; falling back to %s", runModeSelection.InvalidRaw, runModeSelection.Mode)
+	}
+	logger.Sugar.Infof("Run mode: %s", runModeSelection.Mode)
 
 	cfgMgr, err := config.NewManager(configDir)
 	if err != nil {
@@ -95,11 +100,15 @@ func main() {
 	shutdown := make(chan os.Signal, 1)
 	cloudflared.OwnProcessSignals(shutdown, os.Interrupt, syscall.SIGTERM)
 
-	runner.Initialize()
-	logger.Sugar.Info("Tunnel runner initialized")
+	if runModeSelection.Mode.AutoStartsLocalRunner() {
+		runner.Initialize()
+		logger.Sugar.Info("Tunnel runner initialized")
+	} else {
+		logger.Sugar.Info("Tunnel runner auto-start skipped in oauth mode")
+	}
 
 	// Setup Server
-	srv := server.NewServer(cfgMgr, runner, assets, locales)
+	srv := server.NewServerWithMode(cfgMgr, runner, assets, locales, runModeSelection.Mode)
 
 	// Start DDNS service if enabled
 	srv.StartDDNS()
@@ -120,6 +129,7 @@ func main() {
 	serveAddr := fmt.Sprintf("%s:%s", bindHost, port)
 
 	fmt.Printf("Cloudflared Web Controller %s\n", version.GetFullVersion())
+	fmt.Printf("Run mode: %s\n", runModeSelection.Mode)
 	fmt.Printf("Server listening on %s\n", serveAddr)
 	fmt.Printf("Local access: http://localhost:%s\n", port)
 	fmt.Printf("Network access: http://<your-ip>:%s\n", port)

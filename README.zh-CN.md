@@ -59,6 +59,13 @@ Web UI 已内置在二进制文件中。配置保存在数据目录下的本地 
   - 未启用的功能不会显示对应 Tab。
   - DDNS 依赖远程 Tunnel 管理，因为它复用同一套 Cloudflare API 凭据。
 
+- **Cloudflare OAuth 控制台**
+  - 可选运行模式，用 Cloudflare OAuth access token 管理 Cloudflare 账号资源。
+  - 根据已授权 scope 显示账号、带套餐/名称服务器详情的 Zone、DNS 记录、Cloudflare Tunnel 控制面记录、Workers、R2、D1、KV、Snippets、WAF、Cloudflare 官方状态和部分 Zone 设置。
+  - OAuth session 和 PKCE state 保存到本地 SQLite 数据库，不写 JSON 文件。
+  - 可以保存并切换多个 OAuth 身份；当前身份决定所有 Cloudflare API 调用。
+  - 本地 cloudflared 运行器、MCP、S3 WebDAV 等 cfui 本地能力仍然独立。
+
 - **多语言 UI**
   - 内置英文、中文、日文界面翻译。
 
@@ -181,6 +188,84 @@ R2 bucket 列表/创建的可选权限：
 
 S3 WebDAV 的文件访问不使用 Cloudflare API token。它使用 S3 WebDAV 页面里配置的 S3 Access Key ID 和 Secret Access Key。
 
+## Cloudflare OAuth 模式
+
+cfui 支持三种顶层运行模式。运行模式只决定默认进入哪个工作台，以及本地 cloudflared runner 是否自动启动；不会把另一套工作台从进程里移除。
+
+- `classic`：默认模式。进入本地 cfui 工作台，并自动启动符合条件的本地 tunnel profile。
+- `oauth`：进入 Cloudflare OAuth 工作台，不自动启动本地 tunnel runner。
+- `both`：进入本地 cfui 工作台，同时保留 Cloudflare 工作台入口。
+
+两套工作台通过路由隔离：
+
+- `/` 和 `/local`：本地 cfui 工作台，包含 cloudflared runner、Remote Tunnel Manager、DDNS、MCP、S3 WebDAV 和功能设置。
+- `/cloudflare`：Cloudflare OAuth 工作台，用于管理 Cloudflare 账号资源。本地工作台只作为切换入口出现。
+
+通过环境变量设置：
+
+```bash
+CFUI_RUN_MODE=oauth ./cfui
+```
+
+OAuth 模式会直接使用当前 OAuth 身份的 bearer token 调用 Cloudflare API，不会替用户创建 API token。cfui 可以把多个 OAuth 身份保存到 SQLite，并在 OAuth 控制台里重命名、切换或移除；OAuth session 和 PKCE state 不会写入 JSON。每次登录前，OAuth 控制台都可以按已实现模块生成本次身份要申请的 scope 集合；已登录时添加身份会先通过 Cloudflare logout endpoint 打开授权页，避免浏览器 Cookie 静默复用当前账号；`CFUI_OAUTH_SCOPES` 仍作为默认模板和直接访问 `/oauth/start` 时的 fallback。OAuth 未配置时，Cloudflare 工作台会展示当前 relay callback、本地 callback、Worker 脚本路径、Worker 变量、relay 健康检查和 cfui 环境变量，引导完成配置。Cloudflare 页面是否可用取决于当前 OAuth app session 授权的 scopes；MCP 和 S3 WebDAV 保留在本地 cfui 工作台，不会显示在 `/cloudflare` 里。
+
+当前 OAuth 控制台已提供对齐 orange-cloud 的 Overview dashboard、账号、带套餐/名称服务器详情的 Zone、DNS 记录、Cloudflare Tunnel 控制面记录（状态、类型、remote config、活跃连接明细）、Workers 脚本、R2 bucket、object 和账号级指标、D1 数据库、KV namespace、Zone 级 Snippets、自定义 WAF 规则、托管 WAF 规则集覆盖和托管 WAF 例外、Zone Analytics、账号用量、Cloudflare 官方状态和部分 Zone 设置。Overview 通过一个后端端点聚合账号、Zone、DNS、Workers、Tunnel、R2、D1、KV、Snippets、WAF 和公开状态计数；scope 缺失或单个产品 API 失败会显示为不可用指标，不会拖垮整个控制台。DNS 记录支持本地搜索；授权包含 `dns.write` 时，A/AAAA/CNAME 可在列表中一键切换代理状态，DNS 记录也支持创建、更新和删除。Workers 支持列表和详情，详情会展示脚本元数据、设置、Tail consumers，并在授权包含 `workers-scripts.read` 时展示受大小限制的只读脚本预览；授权包含 `analytics.read` 或 `account-analytics.read` 时，通过 GraphQL Analytics API 展示单 Worker 指标；授权包含 `workers-tail.read` 时，可通过后端 SSE 代理查看 Live Tail 实时流。授权包含 `workers-r2.write` 时，R2 bucket 支持创建和删除；R2 object 列表、已加载对象本地搜索、受限制 UTF-8 预览、非 UTF-8 对象的受限 hexdump 样本预览、通过同源下载代理展示常见图片/音频/视频/PDF 预览、文本 object 创建/覆盖、单次 128 MiB 文件上传、同源文件下载、删除和账号级存储指标都通过后端 Cloudflare REST 调用提供，因为当前 Cloudflare Go SDK 只提供 bucket 级 R2 API。R2 指标按需读取，不在本地持久化快照。KV namespace 可进入 key 列表，查看 UTF-8 文本值，并在授权包含 `workers-kv-storage.write` 时编辑/删除值、创建文本 key。D1 数据库已提供 SQL 查询控制台、表浏览、分页行加载，并在授权包含 `d1.write` 时支持参数化更新/删除行。授权包含 `snippets.write` 时，Snippets 支持创建/删除、通过后端 `/content` REST 端点读取并编辑既有 snippet 代码正文，并支持触发规则的新增、启停和删除。授权包含 `zone-waf.write` 时，自定义 WAF 规则支持创建、编辑、启停和删除。WAF 简单编辑器支持 `block`、`challenge`、`managed_challenge`、`js_challenge`、`log`、`skip` 这些安全 action 子集；`skip` 规则支持 Cloudflare action parameters 里的 current ruleset、products 和 phases，表单也提供常用 `ratelimit` 字段的专用速率限制构建器。既有复杂 WAF 规则也可以通过 Advanced JSON 区块编辑 `action_parameters`、`ratelimit`、`logging`、`exposed_credential_check`；未修改的高级 JSON 字段不会提交，写入 `null` 会清空对应字段。WAF 更新采用 read-modify-write，未修改字段会保留既有高级结构。托管 WAF 规则集覆盖隔离在 `http_request_firewall_managed` 阶段，只创建或编辑带托管规则集 ID 的 `execute` 规则，并提供规则集、标签/分类和托管规则三层覆盖字段。托管 WAF 例外隔离在同一阶段，只创建或编辑 `skip` 规则，可跳过当前托管规则集、指定托管规则集或指定规则集下的托管规则 ID。复杂规则仍会展示 ref/version、raw action parameters、rate-limit、logging 和 exposed credential check 等元信息，并可复制审计 JSON，便于审计。授权包含 `analytics.read` 或 `account-analytics.read` 时，Zone Analytics 通过 Cloudflare Go SDK dashboard endpoint 展示 24h/7d/30d 流量汇总；账号用量通过后端 GraphQL Analytics API 查询展示所选账号的 Workers、近 1 小时 Workers 错误数、R2 操作数、D1、KV 用量，其中 R2 存储和对象数会 best-effort 用 REST `accounts/{account_id}/r2/metrics` 的 Standard class 快照覆盖，口径与 orange-cloud 一致；同时后端会 best-effort 调用 `accounts/{account_id}/subscriptions`，用于显示计费周期和 Workers/R2 是否为付费套餐。Cloudflare OAuth 通常没有开放 billing scope，因此订阅接口返回 403 时只会显示计费上下文不可用，不会阻塞用量数据。Cloudflare 状态通过 cfui 后端访问公开 Statuspage API，不需要 OAuth scope。授权包含对应 settings/cache scopes 时，Zone 设置支持 SSL/TLS 模式、development mode、security level、cache level、browser cache TTL、Always Use HTTPS、Automatic HTTPS Rewrites、Brotli、Rocket Loader 和全量 cache purge。大文件断点/分片 R2 上传仍属于后续阶段。当前 OAuth token 不包含所需 scope 时，UI 会隐藏对应模块。
+
+R2 object 详情视图还会提供复制 key、复制对象和移动对象操作，支持同账号跨 bucket 复制/移动，并展示大小、Content-Type、ETag、存储类型、最后修改时间和编码状态等元信息。非 UTF-8 对象会在详情里显示受限 hexdump 样本。媒体/PDF 内联预览上限为 50 MiB，超过后只提供下载查看；上传表单会直接禁用超过当前 128 MiB 单次上传上限的文件。
+
+使用 OAuth 模式：
+
+1. 创建 Cloudflare OAuth app，并把 redirect URI 设置为 Worker relay 地址。
+2. 设置 `CFUI_OAUTH_CLIENT_ID` 为 OAuth client ID。
+3. `CFUI_OAUTH_RELAY_URL` 可以保持默认 relay（`https://oauth.omarchy.qzz.io/oauth/callback`），也可以换成你自己的 Worker relay。
+4. Worker relay 需要把 `code` 和 `state` 转发回 cfui 实例的 `/oauth/callback`，本地使用时通常是 `http://127.0.0.1:14333/oauth/callback`。可直接部署的 Worker 脚本在 `docs/cloudflare-oauth-worker.js`；如果 cfui callback 是固定地址，在 Worker 变量里设置 `CFUI_CALLBACK_URL`；如果要按本次运行动态指定 callback，可以在 `CFUI_OAUTH_RELAY_URL` 后追加 `?cfui_callback_url=<urlencoded cfui callback>`，例如 `CFUI_OAUTH_RELAY_URL=https://oauth.omarchy.qzz.io/oauth/callback?cfui_callback_url=http%3A%2F%2F10.10.68.168%3A14333%2Foauth%2Fcallback`。如果参数指向公网 origin，还需要把 Worker 变量 `CFUI_ALLOWED_CALLBACK_ORIGINS` 设置为逗号分隔的 origin 白名单；loopback 和局域网 callback host 默认允许。Cloudflare OAuth app 里的 redirect URI 要和实际使用的 relay callback URL 匹配，使用 `cfui_callback_url` 时也包括这段 query string。Worker 会暴露 `/health`，cfui 可在 OAuth setup 页面或通过 `GET /api/oauth/relay-check` 检查它。
+
+Zone 概览会用 `GET /api/cf/dns/count` 读取 DNS 记录总数，避免为了计数加载全部记录。D1 会先加载数据库列表，再 best-effort 调用 `GET /api/cf/d1/databases/{database_id}` 回填每个数据库的表数量和文件大小，使展示口径与 Cloudflare 详情端点一致。详情回填失败不会阻塞数据库列表、SQL 控制台或表浏览。
+
+默认 OAuth scope 模板：
+
+```text
+account-settings.read zone.read dns.read dns.write argotunnel.read
+```
+
+可以通过 `CFUI_OAUTH_SCOPES` 覆盖。
+
+如果要使用 Zone settings 操作，可以为 OAuth app 添加对应 scopes，例如：
+
+```text
+account-settings.read zone.read dns.read dns.write argotunnel.read zone-settings.read zone-settings.write cache.purge
+```
+
+如果要使用 R2 bucket 写操作，添加：
+
+```text
+workers-r2.read workers-r2.write
+```
+
+如果要使用 Worker Tail 实时流，添加：
+
+```text
+workers-tail.read
+```
+
+如果要使用 Snippets 和触发规则管理，添加：
+
+```text
+snippets.read snippets.write
+```
+
+如果要使用自定义 WAF 规则管理，添加：
+
+```text
+zone-waf.read zone-waf.write
+```
+
+如果要使用 Zone Analytics，添加其中之一：
+
+```text
+analytics.read account-analytics.read
+```
+
 ## S3 WebDAV
 
 S3 WebDAV 是一个可选模块。先在 Features 页面启用，然后在 S3 WebDAV 页面创建挂载。
@@ -263,12 +348,20 @@ MCP token 只会在创建时显示一次。保存后的 token 列表只显示脱
 | `DATA_DIR` | 数据目录 | `./data` |
 | `LOG_DIR` | 日志目录 | `${DATA_DIR}/logs` |
 | `LOG_LEVEL` | `debug`、`info`、`warn`、`error` | `info` |
+| `CFUI_RUN_MODE` / `CFUI_MODE` | `classic`、`oauth` 或 `both` | `classic` |
 | `CFUI_TUNNEL_MGMT_ENABLED` / `CFUI_TUNNEL_MANAGEMENT_ENABLED` | 启用远程 Tunnel 管理 | 未设置 |
 | `CFUI_TUNNEL_ACCOUNT_ID` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_APP_ID` | Cloudflare account ID | 未设置 |
 | `CFUI_TUNNEL_ID` / `CLOUDFLARE_TUNNEL_ID` | Cloudflare tunnel ID | 未设置 |
 | `CFUI_TUNNEL_API_TOKEN` / `CLOUDFLARE_API_TOKEN` | Cloudflare API token | 未设置 |
 | `CFUI_TUNNEL_API_EMAIL` / `CLOUDFLARE_API_EMAIL` | 使用 Global API Key 时的 Cloudflare 账号邮箱 | 未设置 |
 | `CFUI_TUNNEL_API_KEY` / `CLOUDFLARE_API_KEY` | Cloudflare Global API Key | 未设置 |
+| `CFUI_OAUTH_CLIENT_ID` | Cloudflare OAuth client ID | 未设置 |
+| `CFUI_OAUTH_RELAY_URL` / `CFUI_OAUTH_REDIRECT_URI` | 在 Cloudflare 注册的 OAuth Worker relay callback URL | `https://oauth.omarchy.qzz.io/oauth/callback` |
+| `CFUI_OAUTH_SCOPES` | 空格分隔的 OAuth scope 默认模板，用于初始化登录前选择器和直接访问 `/oauth/start` | `account-settings.read zone.read dns.read dns.write argotunnel.read` |
+| `CFUI_OAUTH_AUTH_URL` | Cloudflare OAuth authorization endpoint 覆盖值 | Cloudflare 默认值 |
+| `CFUI_OAUTH_TOKEN_URL` | Cloudflare OAuth token endpoint 覆盖值 | Cloudflare 默认值 |
+| `CFUI_OAUTH_REVOKE_URL` | Cloudflare OAuth revoke endpoint 覆盖值 | Cloudflare 默认值 |
+| `CFUI_OAUTH_USERINFO_URL` | Cloudflare OAuth userinfo endpoint 覆盖值 | Cloudflare 默认值 |
 
 通过环境变量提供的 Cloudflare 凭据会在运行时覆盖 UI 中保存的值。
 
@@ -308,10 +401,17 @@ ${LOG_DIR}
 - `GET /api/logs/stream`
 - `GET /api/features`
 - `POST /api/features`
+- `GET /api/oauth/status`
+- `GET /api/oauth/relay-check`
+- `POST /api/oauth/login`
+- `POST /api/oauth/logout`
+- `POST /api/oauth/session`
+- `PATCH /api/oauth/session`
 - `GET /api/version`
 
 可选模块接口：
 
+- `/api/cf/*`
 - `/api/tunnel-manager/*`
 - `/api/ddns/*`
 - `/api/mcp/*`
@@ -320,6 +420,67 @@ ${LOG_DIR}
 - `/webdav/*`
 
 远程 Tunnel 管理接口支持可选的 `tunnel_key` 查询参数，例如 `/api/tunnel-manager/config?tunnel_key=office`，因此可以管理任意已保存配置的远程 ingress 规则。`GET /api/tunnel-manager/tunnel?tunnel_key=office` 可读取 Cloudflare Tunnel 元数据，例如 tunnel 名称。
+
+OAuth Cloudflare 接口：
+
+- `GET /api/cf/overview`
+- `GET /api/cf/accounts`
+- `GET /api/cf/status`
+- `GET /api/cf/usage/account`
+- `GET /api/cf/zones`
+- `GET /api/cf/zones/{zone_id}`
+- `GET /api/cf/dns/count`
+- `GET /api/cf/dns`
+- `POST /api/cf/dns`
+- `PUT /api/cf/dns/{id}`
+- `DELETE /api/cf/dns/{id}`
+- `GET /api/cf/tunnels`
+- `GET /api/cf/workers`
+- `GET /api/cf/workers/{script}`
+- `GET /api/cf/workers/{script}/metrics`
+- `GET /api/cf/workers/{script}/tail`
+- `GET /api/cf/r2/metrics`
+- `GET /api/cf/r2/buckets`
+- `POST /api/cf/r2/buckets`
+- `DELETE /api/cf/r2/buckets/{bucket}`
+- `GET /api/cf/r2/objects`
+- `GET /api/cf/r2/object`
+- `PUT /api/cf/r2/object`
+- `POST /api/cf/r2/object/upload`
+- `GET /api/cf/r2/object/download`
+- `DELETE /api/cf/r2/object`
+- `GET /api/cf/d1/databases`
+- `GET /api/cf/d1/databases/{database_id}`
+- `POST /api/cf/d1/query`
+- `GET /api/cf/d1/tables`
+- `GET /api/cf/d1/table`
+- `PATCH /api/cf/d1/table`
+- `DELETE /api/cf/d1/table`
+- `GET /api/cf/kv/namespaces`
+- `GET /api/cf/kv/keys`
+- `GET /api/cf/snippets`
+- `POST /api/cf/snippets`
+- `GET /api/cf/snippets/{name}/content`
+- `PUT /api/cf/snippets/{name}/content`
+- `DELETE /api/cf/snippets/{name}`
+- `GET /api/cf/snippets/rules`
+- `POST /api/cf/snippets/rules`
+- `PATCH /api/cf/snippets/rules/{id}`
+- `DELETE /api/cf/snippets/rules/{id}`
+- `GET /api/cf/waf`
+- `POST /api/cf/waf/rules`
+- `PATCH /api/cf/waf/rules/{id}`
+- `DELETE /api/cf/waf/rules/{id}`
+- `GET /api/cf/waf/managed-overrides`
+- `POST /api/cf/waf/managed-overrides/rules`
+- `PATCH /api/cf/waf/managed-overrides/rules/{id}`
+- `DELETE /api/cf/waf/managed-overrides/rules/{id}`
+- `GET /api/cf/waf/managed-exceptions`
+- `POST /api/cf/waf/managed-exceptions/rules`
+- `PATCH /api/cf/waf/managed-exceptions/rules/{id}`
+- `DELETE /api/cf/waf/managed-exceptions/rules/{id}`
+- `GET /api/cf/analytics/zone`
+- `GET /api/cf/zone-settings`
 
 ## 开发
 

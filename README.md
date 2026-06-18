@@ -59,6 +59,13 @@ The web UI is built into the binary. Configuration is stored in a local SQLite d
   - Disabled features stay hidden in the UI.
   - DDNS depends on Remote Tunnel Manager because it reuses the same Cloudflare API credentials.
 
+- **Cloudflare OAuth console**
+  - Optional run mode for managing Cloudflare account resources with a Cloudflare OAuth access token.
+  - Lists accounts, zones with plan/name-server detail, DNS records, Cloudflare Tunnel control-plane records, Workers, R2, D1, KV, Snippets, WAF, Cloudflare public status, and selected zone settings when the granted scopes allow it.
+  - OAuth sessions and PKCE state are stored in the local SQLite database, not JSON files.
+  - Multiple OAuth identities can be saved and switched; the current identity controls all Cloudflare API calls.
+  - Local cfui tools such as the cloudflared runner, MCP, and S3 WebDAV remain separate local capabilities.
+
 - **Internationalized UI**
   - English, Chinese, and Japanese UI translations are included.
 
@@ -181,6 +188,86 @@ Optional permission for R2 bucket list/create:
 
 S3 WebDAV file access does not use the Cloudflare API token. It uses the S3-compatible Access Key ID and Secret Access Key configured on the S3 WebDAV page.
 
+## Cloudflare OAuth Mode
+
+cfui supports three top-level run modes. They choose the default workspace and
+whether the local cloudflared runner auto-starts; they do not remove the other
+workspace from the process.
+
+- `classic`: default. Start in the local cfui workspace and auto-start eligible local tunnel profiles.
+- `oauth`: start in the Cloudflare OAuth workspace. The local tunnel runner is not auto-started.
+- `both`: start in the local cfui workspace while keeping the Cloudflare workspace entry available.
+
+The workspaces are route-isolated:
+
+- `/` and `/local`: local cfui workspace for cloudflared runner, Remote Tunnel Manager, DDNS, MCP, S3 WebDAV, and feature settings.
+- `/cloudflare`: Cloudflare OAuth workspace for Cloudflare account resources. The local workspace is only exposed as a switch entry.
+
+Set the mode with:
+
+```bash
+CFUI_RUN_MODE=oauth ./cfui
+```
+
+OAuth mode calls Cloudflare APIs directly with the current OAuth identity's bearer token. It does not create API tokens on behalf of the user. cfui can store multiple OAuth identities in SQLite and rename, switch, or remove them from the OAuth console; no OAuth session or PKCE state is written to JSON. Before each sign-in, the OAuth console can build a module-based scope set for the next identity; when adding an identity while already signed in, cfui opens Cloudflare through the logout endpoint first so browser cookies do not silently reuse the current account; `CFUI_OAUTH_SCOPES` remains the default template and fallback for direct `/oauth/start` use. When OAuth is not configured, the Cloudflare workspace shows the current relay callback, local callback, Worker script path, Worker variable, relay health check, and cfui environment variables needed to finish setup. Available Cloudflare pages are controlled by the scopes granted to the current OAuth app session; local MCP and S3 WebDAV remain in the local cfui workspace and are not shown inside `/cloudflare`.
+
+The OAuth console currently exposes an orange-cloud-style Overview dashboard, accounts, zones with plan/name-server detail, DNS records, Cloudflare Tunnel control-plane records with status/type/remote config/active connection detail, Workers scripts, R2 buckets, objects, and account-level metrics, D1 databases, KV namespaces, zone-level Snippets, custom WAF rules, managed WAF ruleset overrides, and managed WAF exceptions, Zone Analytics, Account Usage, Cloudflare public status, and selected zone settings. The Overview uses one backend endpoint to aggregate account, zone, DNS, Workers, Tunnel, R2, D1, KV, Snippets, WAF, and public status counts; missing scopes or per-product API failures are shown as unavailable metrics instead of breaking the whole console. DNS records can be searched locally; A/AAAA/CNAME proxy state can be toggled from the list, and records can be created, updated, and deleted when `dns.write` is granted. Workers include list and detail views with script metadata, settings, Tail consumers, a bounded read-only script preview when `workers-scripts.read` is granted, per-script metrics through the GraphQL Analytics API when `analytics.read` or `account-analytics.read` is granted, and Live Tail streaming through a backend SSE proxy when `workers-tail.read` is granted. R2 buckets can be created and deleted when `workers-r2.write` is granted; bucket object lists, local search over loaded objects, bounded UTF-8 previews, bounded hexdump previews for non-UTF-8 objects, common image/audio/video/PDF previews through the same-origin download proxy, text object create/update, single-shot file upload up to 128 MiB, same-origin file download, object delete, and account-level storage metrics are available through backend Cloudflare REST calls because the current Cloudflare Go SDK only exposes bucket-level R2 APIs. R2 metrics are read on demand and are not persisted as local snapshots. KV namespaces can drill into keys, view UTF-8 values, edit/delete values with `workers-kv-storage.write`, and create text keys. D1 databases include a SQL query console plus table browsing, paged row loading, and parameterized row update/delete when `d1.write` is granted. Snippets can be created/deleted, existing snippet code can be loaded and edited through the backend `/content` REST endpoint, and trigger rules can be added, enabled, disabled, or deleted when `snippets.write` is granted. Custom WAF rules can be created, edited, enabled, disabled, or deleted when `zone-waf.write` is granted. The simple WAF editor supports the safe action subset (`block`, `challenge`, `managed_challenge`, `js_challenge`, `log`, and `skip`); `skip` rules support Cloudflare action parameters for current ruleset, products, and phases, and the form includes a dedicated rate-limit builder for common `ratelimit` fields. Existing and complex WAF rules can also be edited through an Advanced JSON section for `action_parameters`, `ratelimit`, `logging`, and `exposed_credential_check`; unchanged advanced JSON fields are not submitted, and `null` clears a field. WAF updates use read-modify-write and preserve untouched advanced fields. Managed WAF ruleset overrides are isolated to the `http_request_firewall_managed` phase and only create or edit `execute` rules with a managed ruleset ID plus ruleset, tag/category, and managed-rule override fields. Managed WAF exceptions are isolated to the same phase and only create or edit `skip` rules for the current managed ruleset, selected managed rulesets, or selected managed rule IDs. Complex rules still expose ref/version, raw action parameters, rate-limit, logging, exposed credential check metadata, and a copyable audit JSON payload for auditing. Zone Analytics uses the Cloudflare Go SDK dashboard endpoint for 24h/7d/30d traffic summaries when `analytics.read` or `account-analytics.read` is granted. Account Usage uses backend GraphQL Analytics API queries to show Workers, last-hour Workers errors, R2 operations, D1, and KV usage for the selected account with the same analytics scopes; R2 storage and object count are best-effort overwritten from REST `accounts/{account_id}/r2/metrics` using the same Standard-class snapshot as orange-cloud. Account Usage also makes a best-effort backend call to `accounts/{account_id}/subscriptions` for billing period and Workers/R2 paid-plan context. Cloudflare OAuth normally does not expose a billing scope, so subscription 403 responses are shown as unavailable billing context and do not block usage data. Cloudflare Status uses the public Statuspage API through the cfui backend and does not require an OAuth scope. Zone settings support SSL/TLS mode, development mode, security level, cache level, browser cache TTL, Always Use HTTPS, Automatic HTTPS Rewrites, Brotli, Rocket Loader, and full cache purge when the matching settings/cache scopes are granted. Resumable large R2 uploads remain follow-up work. The UI hides modules when the current OAuth token does not include the required scope.
+
+R2 object detail views also expose copy-key, copy-object, and move-object actions, including same-account cross-bucket copies/moves, plus metadata including size, content type, ETag, storage class, last modified time, and encoding status. Non-UTF-8 objects show a bounded hexdump sample in the detail panel. Inline media/PDF previews are capped at 50 MiB; larger objects stay download-only. The upload form disables submit for files above the current 128 MiB single-upload limit.
+
+To use OAuth mode:
+
+1. Create a Cloudflare OAuth app and set its redirect URI to the Worker relay URL.
+2. Set `CFUI_OAUTH_CLIENT_ID` to the OAuth client ID.
+3. Keep `CFUI_OAUTH_RELAY_URL` at the default relay (`https://oauth.omarchy.qzz.io/oauth/callback`) or point it to your own Worker relay.
+4. Configure the Worker relay to forward `code` and `state` back to your cfui instance's `/oauth/callback` endpoint, for example `http://127.0.0.1:14333/oauth/callback` for local use. A ready-to-deploy Worker script is available at `docs/cloudflare-oauth-worker.js`; set its `CFUI_CALLBACK_URL` Worker variable if your cfui callback is fixed, or append `?cfui_callback_url=<urlencoded cfui callback>` to `CFUI_OAUTH_RELAY_URL` for per-run callback selection, for example `CFUI_OAUTH_RELAY_URL=https://oauth.omarchy.qzz.io/oauth/callback?cfui_callback_url=http%3A%2F%2F10.10.68.168%3A14333%2Foauth%2Fcallback`. If the parameter points to a public origin, also set the Worker variable `CFUI_ALLOWED_CALLBACK_ORIGINS` to a comma-separated origin allowlist; loopback and private/LAN callback hosts are allowed by default. The Cloudflare OAuth app redirect URI must match the relay callback URL you use, including the query string when you use `cfui_callback_url`. The Worker exposes `/health`, and cfui can check it from the OAuth setup page or `GET /api/oauth/relay-check`.
+
+Zone overview uses `GET /api/cf/dns/count` to fetch DNS record totals without loading every record. For D1, cfui loads the database list first and then best-effort refreshes each database with `GET /api/cf/d1/databases/{database_id}` so table count and file size match Cloudflare's detail endpoint. Failed detail lookups do not block the database list, SQL console, or table browser.
+
+The default OAuth scope template is:
+
+```text
+account-settings.read zone.read dns.read dns.write argotunnel.read
+```
+
+You can override them with `CFUI_OAUTH_SCOPES`.
+
+For zone settings actions, add the required scopes for your OAuth app, for example:
+
+```text
+account-settings.read zone.read dns.read dns.write argotunnel.read zone-settings.read zone-settings.write cache.purge
+```
+
+For R2 bucket write actions, add:
+
+```text
+workers-r2.read workers-r2.write
+```
+
+For Worker Tail streaming, add:
+
+```text
+workers-tail.read
+```
+
+For Snippets and trigger rule management, add:
+
+```text
+snippets.read snippets.write
+```
+
+For custom WAF rule management, add:
+
+```text
+zone-waf.read zone-waf.write
+```
+
+For Zone Analytics, add one of:
+
+```text
+analytics.read account-analytics.read
+```
+
 ## S3 WebDAV
 
 S3 WebDAV is a feature-gated module. Enable it from the Features page, then create a mount from the S3 WebDAV page.
@@ -263,12 +350,21 @@ The MCP token is shown only when it is created. Saved tokens are listed in maske
 | `DATA_DIR` | Data directory | `./data` |
 | `LOG_DIR` | Log directory | `${DATA_DIR}/logs` |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error` | `info` |
+| `CFUI_RUN_MODE` / `CFUI_MODE` | `classic`, `oauth`, or `both` | `classic` |
 | `CFUI_TUNNEL_MGMT_ENABLED` / `CFUI_TUNNEL_MANAGEMENT_ENABLED` | Enable Remote Tunnel Manager | unset |
 | `CFUI_TUNNEL_ACCOUNT_ID` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_APP_ID` | Cloudflare account ID | unset |
 | `CFUI_TUNNEL_ID` / `CLOUDFLARE_TUNNEL_ID` | Cloudflare tunnel ID | unset |
 | `CFUI_TUNNEL_API_TOKEN` / `CLOUDFLARE_API_TOKEN` | Cloudflare API token | unset |
 | `CFUI_TUNNEL_API_EMAIL` / `CLOUDFLARE_API_EMAIL` | Cloudflare account email for global API key auth | unset |
 | `CFUI_TUNNEL_API_KEY` / `CLOUDFLARE_API_KEY` | Cloudflare global API key | unset |
+| `CFUI_OAUTH_CLIENT_ID` | Cloudflare OAuth client ID | unset |
+| `CFUI_OAUTH_RELAY_URL` / `CFUI_OAUTH_REDIRECT_URI` | OAuth Worker relay callback URL registered in Cloudflare | `https://oauth.omarchy.qzz.io/oauth/callback` |
+| `CFUI_OAUTH_SCOPES` | Default space-separated OAuth scope template used to initialize the sign-in selector and direct `/oauth/start` | `account-settings.read zone.read dns.read dns.write argotunnel.read` |
+| `CFUI_OAUTH_AUTH_URL` | Cloudflare OAuth authorization endpoint override | Cloudflare default |
+| `CFUI_OAUTH_LOGOUT_URL` | Cloudflare logout endpoint used before adding another identity | Cloudflare default |
+| `CFUI_OAUTH_TOKEN_URL` | Cloudflare OAuth token endpoint override | Cloudflare default |
+| `CFUI_OAUTH_REVOKE_URL` | Cloudflare OAuth revoke endpoint override | Cloudflare default |
+| `CFUI_OAUTH_USERINFO_URL` | Cloudflare OAuth userinfo endpoint override | Cloudflare default |
 
 Environment-provided Cloudflare credentials override saved UI values at runtime.
 
@@ -308,10 +404,17 @@ Main endpoints:
 - `GET /api/logs/stream`
 - `GET /api/features`
 - `POST /api/features`
+- `GET /api/oauth/status`
+- `GET /api/oauth/relay-check`
+- `POST /api/oauth/login`
+- `POST /api/oauth/logout`
+- `POST /api/oauth/session`
+- `PATCH /api/oauth/session`
 - `GET /api/version`
 
 Optional module endpoints:
 
+- `/api/cf/*`
 - `/api/tunnel-manager/*`
 - `/api/ddns/*`
 - `/api/mcp/*`
@@ -320,6 +423,67 @@ Optional module endpoints:
 - `/webdav/*`
 
 Remote Tunnel Manager endpoints accept an optional `tunnel_key` query parameter, for example `/api/tunnel-manager/config?tunnel_key=office`, so remote ingress rules can be managed for any saved profile. `GET /api/tunnel-manager/tunnel?tunnel_key=office` reads Cloudflare Tunnel metadata such as the tunnel name.
+
+OAuth Cloudflare endpoints:
+
+- `GET /api/cf/overview`
+- `GET /api/cf/accounts`
+- `GET /api/cf/status`
+- `GET /api/cf/usage/account`
+- `GET /api/cf/zones`
+- `GET /api/cf/zones/{zone_id}`
+- `GET /api/cf/dns/count`
+- `GET /api/cf/dns`
+- `POST /api/cf/dns`
+- `PUT /api/cf/dns/{id}`
+- `DELETE /api/cf/dns/{id}`
+- `GET /api/cf/tunnels`
+- `GET /api/cf/workers`
+- `GET /api/cf/workers/{script}`
+- `GET /api/cf/workers/{script}/metrics`
+- `GET /api/cf/workers/{script}/tail`
+- `GET /api/cf/r2/metrics`
+- `GET /api/cf/r2/buckets`
+- `POST /api/cf/r2/buckets`
+- `DELETE /api/cf/r2/buckets/{bucket}`
+- `GET /api/cf/r2/objects`
+- `GET /api/cf/r2/object`
+- `PUT /api/cf/r2/object`
+- `POST /api/cf/r2/object/upload`
+- `GET /api/cf/r2/object/download`
+- `DELETE /api/cf/r2/object`
+- `GET /api/cf/d1/databases`
+- `GET /api/cf/d1/databases/{database_id}`
+- `POST /api/cf/d1/query`
+- `GET /api/cf/d1/tables`
+- `GET /api/cf/d1/table`
+- `PATCH /api/cf/d1/table`
+- `DELETE /api/cf/d1/table`
+- `GET /api/cf/kv/namespaces`
+- `GET /api/cf/kv/keys`
+- `GET /api/cf/snippets`
+- `POST /api/cf/snippets`
+- `GET /api/cf/snippets/{name}/content`
+- `PUT /api/cf/snippets/{name}/content`
+- `DELETE /api/cf/snippets/{name}`
+- `GET /api/cf/snippets/rules`
+- `POST /api/cf/snippets/rules`
+- `PATCH /api/cf/snippets/rules/{id}`
+- `DELETE /api/cf/snippets/rules/{id}`
+- `GET /api/cf/waf`
+- `POST /api/cf/waf/rules`
+- `PATCH /api/cf/waf/rules/{id}`
+- `DELETE /api/cf/waf/rules/{id}`
+- `GET /api/cf/waf/managed-overrides`
+- `POST /api/cf/waf/managed-overrides/rules`
+- `PATCH /api/cf/waf/managed-overrides/rules/{id}`
+- `DELETE /api/cf/waf/managed-overrides/rules/{id}`
+- `GET /api/cf/waf/managed-exceptions`
+- `POST /api/cf/waf/managed-exceptions/rules`
+- `PATCH /api/cf/waf/managed-exceptions/rules/{id}`
+- `DELETE /api/cf/waf/managed-exceptions/rules/{id}`
+- `GET /api/cf/analytics/zone`
+- `GET /api/cf/zone-settings`
 
 ## Development
 

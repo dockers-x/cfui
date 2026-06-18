@@ -16,6 +16,15 @@ other = "CloudFlared UI"
 [skip_to_content]
 other = "Skip to content"
 
+[workspace_switch_label]
+other = "Workspace"
+
+[workspace_cloudflare_entry]
+other = "Cloudflare"
+
+[workspace_local_entry]
+other = "Local cfui"
+
 [tunnel_config]
 other = "Tunnel Configuration"
 
@@ -363,6 +372,9 @@ other = "Edit"
 
 [delete]
 other = "Delete"
+
+[actions]
+other = "Actions"
 
 [service_required]
 other = "Service is required"
@@ -1005,6 +1017,9 @@ other = "Reconnecting…"
 
 [saving]
 other = "Saving…"
+
+[save]
+other = "Save"
 
 [theme_changed]
 other = "Theme changed"
@@ -1872,6 +1887,12 @@ other = "Enabled"
 [disabled]
 other = "Disabled"
 
+[yes]
+other = "Yes"
+
+[no]
+other = "No"
+
 [refresh]
 other = "Refresh"
 
@@ -1902,3 +1923,2019 @@ other = "This tunnel is currently running and will be stopped."
 
 [tunnels_running_ratio]
 other = "{n}/{m} running"
+
+[oauth_tab]
+other = "Cloudflare"
+
+[oauth_console_title]
+other = "Cloudflare Console"
+
+[oauth_console_subtitle]
+other = "Manage Cloudflare account resources through OAuth. Local cfui tools stay in the separate workspace."
+
+[oauth_sign_in]
+other = "Sign in"
+
+[oauth_add_identity]
+other = "Add identity"
+
+[oauth_add_identity_fresh_hint]
+other = "Open Cloudflare through logout first so browser cookies do not reuse the current account."
+
+[oauth_signing_in]
+other = "Signing in"
+
+[oauth_sign_out]
+other = "Sign out"
+
+[oauth_sign_out_current]
+other = "Sign out current"
+
+[oauth_status_checking]
+other = "Checking OAuth status..."
+
+[oauth_relay_callback]
+other = "Relay callback"
+
+[oauth_local_callback]
+other = "Local callback"
+
+[oauth_accounts]
+other = "Accounts"
+
+[oauth_resources]
+other = "Resources"
+
+[oauth_resources_subtitle]
+other = "Select an account or zone to load Cloudflare resources."
+
+[oauth_overview]
+other = "Overview"
+
+[oauth_overview_loading]
+other = "Loading overview..."
+
+[oauth_overview_empty]
+other = "No overview data yet."
+
+[oauth_overview_context]
+other = "Context"
+
+[oauth_overview_no_context]
+other = "Select an account to load account-scoped resources."
+
+[oauth_overview_status]
+other = "Cloudflare public status"
+
+[oauth_overview_metrics]
+other = "Dashboard metrics"
+
+[oauth_overview_limited]
+other = "first {{ .n }}"
+
+[oauth_overview_error_missing_scope]
+other = "scope required"
+
+[oauth_overview_error_missing_account]
+other = "select account"
+
+[oauth_overview_error_missing_zone]
+other = "select zone"
+
+[oauth_overview_error_permission_denied]
+other = "permission denied"
+
+[oauth_overview_error_not_found]
+other = "not found"
+
+[oauth_overview_error_request_failed]
+other = "request failed"
+
+[oauth_overview_error_unavailable]
+other = "unavailable"
+
+[oauth_unavailable]
+other = "Unavailable"
+
+[oauth_overview_metric_accounts]
+other = "Accounts"
+
+[oauth_overview_metric_zones]
+other = "Zones"
+
+[oauth_overview_metric_active_zones]
+other = "Active zones"
+
+[oauth_overview_metric_dns_records]
+other = "DNS records"
+
+[oauth_overview_metric_workers]
+other = "Workers"
+
+[oauth_overview_metric_tunnels]
+other = "Tunnels"
+
+[oauth_overview_metric_r2_buckets]
+other = "R2 buckets"
+
+[oauth_overview_metric_d1_databases]
+other = "D1 databases"
+
+[oauth_overview_metric_kv_namespaces]
+other = "KV namespaces"
+
+[oauth_overview_metric_snippets]
+other = "Snippets"
+
+[oauth_overview_metric_waf_rules]
+other = "WAF rules"
+
+[oauth_zones]
+other = "Zones"
+
+[oauth_zone_overview]
+other = "Zone overview"
+
+[oauth_zone_loading]
+other = "Loading zone detail..."
+
+[oauth_zone_unavailable]
+other = "Unavailable"
+
+[oauth_zone_status]
+other = "Status"
+
+[oauth_zone_plan]
+other = "Plan"
+
+[oauth_zone_type]
+other = "Type"
+
+[oauth_zone_account]
+other = "Account"
+
+[oauth_zone_dns_records]
+other = "DNS records"
+
+[oauth_zone_dns_loading]
+other = "Loading..."
+
+[oauth_zone_id]
+other = "Zone ID"
+
+[oauth_zone_name_servers]
+other = "Name servers"
+
+[oauth_zone_original_name_servers]
+other = "Original name servers"
+
+[oauth_zone_created]
+other = "Created"
+
+[oauth_zone_modified]
+other = "Modified"
+
+[oauth_zone_paused]
+other = "Paused"
+
+[oauth_dns]
+other = "DNS"
+
+[oauth_tunnels]
+other = "Tunnels"
+
+[oauth_tunnel_connector_count]
+other = "{n} connectors"
+
+[oauth_tunnel_id]
+other = "Tunnel ID"
+
+[oauth_tunnel_status]
+other = "Status"
+
+[oauth_tunnel_status_healthy]
+other = "Healthy"
+
+[oauth_tunnel_status_degraded]
+other = "Degraded"
+
+[oauth_tunnel_status_down]
+other = "Down"
+
+[oauth_tunnel_status_inactive]
+other = "Inactive"
+
+[oauth_tunnel_status_unknown]
+other = "Unknown"
+
+[oauth_tunnel_type]
+other = "Type"
+
+[oauth_tunnel_remote_config]
+other = "Remote config"
+
+[oauth_tunnel_created]
+other = "Created"
+
+[oauth_tunnel_deleted]
+other = "Deleted"
+
+[oauth_tunnel_connections_active_at]
+other = "Connections active"
+
+[oauth_tunnel_connections_inactive_at]
+other = "Connections inactive"
+
+[oauth_tunnel_connections]
+other = "Active connections"
+
+[oauth_tunnel_no_active_connections]
+other = "No active connections"
+
+[oauth_tunnel_client_version]
+other = "cloudflared {version}"
+
+[oauth_tunnel_opened_at]
+other = "opened {time}"
+
+[oauth_tunnel_pending_reconnect]
+other = "pending reconnect"
+
+[oauth_workers]
+other = "Workers"
+
+[oauth_worker_detail]
+other = "Worker detail"
+
+[oauth_worker_loading]
+other = "Loading Worker detail..."
+
+[oauth_worker_metadata]
+other = "Metadata"
+
+[oauth_worker_settings]
+other = "Settings"
+
+[oauth_worker_script]
+other = "Script"
+
+[oauth_worker_size]
+other = "Size"
+
+[oauth_worker_created]
+other = "Created"
+
+[oauth_worker_modified]
+other = "Modified"
+
+[oauth_worker_deployment]
+other = "Deployment"
+
+[oauth_worker_source]
+other = "Source"
+
+[oauth_worker_etag]
+other = "ETag"
+
+[oauth_worker_logpush]
+other = "Logpush"
+
+[oauth_worker_placement]
+other = "Placement"
+
+[oauth_worker_tail_consumers]
+other = "Tail consumers"
+
+[oauth_worker_no_tail_consumers]
+other = "No Tail consumers configured."
+
+[oauth_worker_metrics]
+other = "Metrics"
+
+[oauth_worker_metrics_range]
+other = "Worker metrics range"
+
+[oauth_worker_metrics_scope_required]
+other = "Grant account-analytics.read or analytics.read to view Worker metrics."
+
+[oauth_worker_metrics_loading]
+other = "Loading Worker metrics..."
+
+[oauth_worker_metrics_empty]
+other = "No Worker metrics loaded."
+
+[oauth_worker_metrics_requests]
+other = "Requests"
+
+[oauth_worker_metrics_errors]
+other = "Errors"
+
+[oauth_worker_metrics_subrequests]
+other = "Subrequests"
+
+[oauth_worker_metrics_error_rate]
+other = "Error rate"
+
+[oauth_worker_metrics_cpu_total]
+other = "CPU total"
+
+[oauth_worker_metrics_cpu_single]
+other = "CPU per invocation"
+
+[oauth_worker_metrics_status]
+other = "Invocation status"
+
+[oauth_worker_metrics_timeseries]
+other = "Recent trend"
+
+[oauth_worker_status_success]
+other = "Success"
+
+[oauth_worker_status_script_exception]
+other = "Script exception"
+
+[oauth_worker_status_exceeded_cpu]
+other = "Exceeded CPU"
+
+[oauth_worker_status_exceeded_memory]
+other = "Exceeded memory"
+
+[oauth_worker_status_client_disconnected]
+other = "Client disconnected"
+
+[oauth_worker_status_canceled]
+other = "Canceled"
+
+[oauth_worker_status_response_stream_disconnected]
+other = "Response stream disconnected"
+
+[oauth_worker_tail_live]
+other = "Live Tail"
+
+[oauth_worker_tail_start]
+other = "Start Tail"
+
+[oauth_worker_tail_stop]
+other = "Stop Tail"
+
+[oauth_worker_tail_pause]
+other = "Pause"
+
+[oauth_worker_tail_resume]
+other = "Resume"
+
+[oauth_worker_tail_clear]
+other = "Clear"
+
+[oauth_worker_tail_scope_required]
+other = "Grant workers-tail.read to stream live Worker logs."
+
+[oauth_worker_tail_empty]
+other = "No Tail events yet."
+
+[oauth_worker_tail_idle]
+other = "Idle"
+
+[oauth_worker_tail_connecting]
+other = "Connecting Tail..."
+
+[oauth_worker_tail_connected]
+other = "Tail connected: {id}"
+
+[oauth_worker_tail_connected_short]
+other = "Connected"
+
+[oauth_worker_tail_disconnected]
+other = "Tail disconnected."
+
+[oauth_worker_tail_failed]
+other = "Worker Tail failed."
+
+[oauth_worker_tail_stopped]
+other = "Tail stopped."
+
+[oauth_worker_tail_paused]
+other = "Paused"
+
+[oauth_worker_tail_dropped]
+other = "Dropped {count} Tail events while the browser was behind."
+
+[oauth_worker_no_metadata]
+other = "No metadata returned."
+
+[oauth_worker_script_truncated]
+other = "Preview truncated"
+
+[oauth_worker_script_binary]
+other = "Script content is not UTF-8 text ({bytes})."
+
+[oauth_storage]
+other = "Storage"
+
+[oauth_snippets]
+other = "Snippets"
+
+[oauth_waf]
+other = "WAF"
+
+[oauth_analytics]
+other = "Analytics"
+
+[oauth_usage]
+other = "Usage"
+
+[oauth_usage_loading]
+other = "Loading account usage..."
+
+[oauth_usage_empty]
+other = "No account usage loaded."
+
+[oauth_usage_scope_required]
+other = "Grant analytics.read or account-analytics.read to view account usage."
+
+[oauth_usage_period]
+other = "Usage period"
+
+[oauth_usage_billing]
+other = "Billing"
+
+[oauth_usage_billing_status]
+other = "Billing status"
+
+[oauth_usage_billing_reason_permission_denied]
+other = "Billing permission is not granted for this OAuth session."
+
+[oauth_usage_billing_reason_not_found]
+other = "No billing record was found for this account."
+
+[oauth_usage_billing_reason_request_failed]
+other = "Billing data could not be loaded."
+
+[oauth_usage_billing_reason_unavailable]
+other = "Billing data is unavailable."
+
+[oauth_usage_workers_paid]
+other = "Workers paid plan"
+
+[oauth_usage_r2_paid]
+other = "R2 paid plan"
+
+[oauth_usage_subscription_count]
+other = "Subscriptions"
+
+[oauth_usage_billing_period]
+other = "Billing period"
+
+[oauth_usage_subscription]
+other = "Subscription"
+
+[oauth_usage_no_subscriptions]
+other = "No account subscriptions returned."
+
+[oauth_usage_subscription_active]
+other = "Active"
+
+[oauth_usage_subscription_inactive]
+other = "Inactive"
+
+[oauth_usage_workers]
+other = "Workers"
+
+[oauth_usage_r2]
+other = "R2"
+
+[oauth_usage_d1]
+other = "D1"
+
+[oauth_usage_kv]
+other = "KV"
+
+[oauth_usage_requests_today]
+other = "Requests today"
+
+[oauth_usage_requests_period]
+other = "Requests in period"
+
+[oauth_usage_errors_period]
+other = "Errors in period"
+
+[oauth_usage_errors_last_hour]
+other = "Errors last hour"
+
+[oauth_usage_subrequests]
+other = "Subrequests"
+
+[oauth_usage_cpu_period]
+other = "CPU in period"
+
+[oauth_usage_cpu_today]
+other = "CPU today"
+
+[oauth_usage_cpu_single]
+other = "Single request CPU"
+
+[oauth_usage_r2_class_a]
+other = "Class A operations"
+
+[oauth_usage_r2_class_b]
+other = "Class B operations"
+
+[oauth_usage_r2_storage]
+other = "Storage"
+
+[oauth_usage_r2_objects]
+other = "Objects"
+
+[oauth_usage_d1_rows_read_today]
+other = "Rows read today"
+
+[oauth_usage_d1_rows_written_today]
+other = "Rows written today"
+
+[oauth_usage_d1_rows_read_period]
+other = "Rows read in period"
+
+[oauth_usage_d1_rows_written_period]
+other = "Rows written in period"
+
+[oauth_usage_d1_read_queries_period]
+other = "Read queries in period"
+
+[oauth_usage_d1_write_queries_period]
+other = "Write queries in period"
+
+[oauth_usage_kv_reads_today]
+other = "Reads today"
+
+[oauth_usage_kv_writes_today]
+other = "Writes today"
+
+[oauth_usage_kv_reads_period]
+other = "Reads in period"
+
+[oauth_usage_kv_writes_period]
+other = "Writes in period"
+
+[oauth_usage_kv_storage]
+other = "Storage"
+
+[oauth_usage_kv_keys]
+other = "Keys"
+
+[oauth_no_analytics]
+other = "No analytics data loaded for this zone."
+
+[oauth_no_analytics_timeseries]
+other = "No analytics time series returned for this range."
+
+[oauth_analytics_summary]
+other = "Summary"
+
+[oauth_analytics_timeseries]
+other = "Time series"
+
+[oauth_analytics_range]
+other = "Analytics range"
+
+[oauth_analytics_range_24h]
+other = "Last 24 hours"
+
+[oauth_analytics_range_7d]
+other = "Last 7 days"
+
+[oauth_analytics_range_30d]
+other = "Last 30 days"
+
+[oauth_analytics_requests]
+other = "Requests"
+
+[oauth_analytics_bandwidth]
+other = "Bandwidth"
+
+[oauth_analytics_threats]
+other = "Threats"
+
+[oauth_analytics_pageviews]
+other = "Page views"
+
+[oauth_analytics_uniques]
+other = "Uniques"
+
+[oauth_analytics_cache_hit]
+other = "Cache hit"
+
+[oauth_zone_settings]
+other = "Settings"
+
+[oauth_not_configured]
+other = "Set CFUI_OAUTH_CLIENT_ID before signing in."
+
+[oauth_setup_title]
+other = "OAuth setup"
+
+[oauth_setup_subtitle]
+other = "Create a Cloudflare OAuth app, use the relay callback as its redirect URI, then restart cfui with the client ID."
+
+[oauth_setup_oauth_app_title]
+other = "Create the Cloudflare OAuth app"
+
+[oauth_setup_oauth_app_desc]
+other = "In Cloudflare, create an OAuth app and register this redirect URI. You can use the hosted relay or replace it with your own Worker URL."
+
+[oauth_setup_redirect_uri]
+other = "OAuth redirect URI"
+
+[oauth_setup_worker_title]
+other = "Use or self-host the relay Worker"
+
+[oauth_setup_worker_desc]
+other = "The bundled Worker forwards Cloudflare's code and state back to this cfui instance. Set its callback variable if cfui is not using the default local URL."
+
+[oauth_setup_worker_script]
+other = "Worker script"
+
+[oauth_setup_worker_callback_var]
+other = "Worker variable"
+
+[oauth_relay_check]
+other = "Check relay"
+
+[oauth_relay_checking]
+other = "Checking relay..."
+
+[oauth_relay_check_ok]
+other = "Relay is reachable"
+
+[oauth_relay_check_failed]
+other = "Relay check failed"
+
+[oauth_setup_env_title]
+other = "Set cfui environment"
+
+[oauth_setup_env_desc]
+other = "Set the OAuth client ID and relay URL, then restart cfui. The relay URL must match the redirect URI registered in Cloudflare."
+
+[oauth_setup_env_vars]
+other = "Environment"
+
+[oauth_authorization_scopes]
+other = "Authorization scopes"
+
+[oauth_authorization_scopes_hint]
+other = "Choose the Cloudflare modules to request for the next OAuth sign-in."
+
+[oauth_current_scopes]
+other = "Current identity scopes"
+
+[oauth_scope_preview]
+other = "OAuth scope preview"
+
+[oauth_no_scopes]
+other = "No scopes returned."
+
+[oauth_permission_required]
+other = "Required"
+
+[oauth_permission_level]
+other = "Permission level"
+
+[oauth_permission_readonly]
+other = "Read only"
+
+[oauth_permission_readwrite]
+other = "Read and write"
+
+[oauth_permission_account_desc]
+other = "Read Cloudflare account identity and settings."
+
+[oauth_permission_zones_desc]
+other = "List zones and load zone overview details."
+
+[oauth_permission_dns_desc]
+other = "View or edit DNS records for selected zones."
+
+[oauth_permission_workers_desc]
+other = "List Workers scripts and load script metadata."
+
+[oauth_permission_workers_tail_desc]
+other = "Stream live Worker execution events through cfui."
+
+[oauth_permission_snippets_desc]
+other = "Manage zone-level Snippets and trigger rules."
+
+[oauth_permission_r2_desc]
+other = "Browse R2 buckets and manage bucket objects."
+
+[oauth_permission_d1_desc]
+other = "Browse D1 databases and run SQL queries."
+
+[oauth_permission_kv_desc]
+other = "Browse KV namespaces and edit UTF-8 key values."
+
+[oauth_permission_tunnels_desc]
+other = "View Cloudflare Tunnel control-plane records."
+
+[oauth_permission_waf_desc]
+other = "View, create, toggle, or delete custom WAF rules."
+
+[oauth_permission_zone_settings_desc]
+other = "Read zone settings, change supported settings, and purge cache."
+
+[oauth_permission_analytics_desc]
+other = "Load zone analytics, Worker metrics, and account usage."
+
+[oauth_account]
+other = "Cloudflare account"
+
+[oauth_identities]
+other = "OAuth identities"
+
+[oauth_no_identities]
+other = "No OAuth identities saved."
+
+[oauth_identity_current]
+other = "Current"
+
+[oauth_identity_switch]
+other = "Switch"
+
+[oauth_identity_switching]
+other = "Switching"
+
+[oauth_identity_remove]
+other = "Remove"
+
+[oauth_identity_rename]
+other = "Rename"
+
+[oauth_identity_rename_prompt]
+other = "Enter a new name for this OAuth identity"
+
+[oauth_identity_renamed]
+other = "OAuth identity renamed."
+
+[oauth_identity_removed]
+other = "OAuth identity removed."
+
+[oauth_identity_switched]
+other = "OAuth identity switched."
+
+[oauth_identity_remove_title]
+other = "Remove OAuth identity"
+
+[oauth_identity_remove_message]
+other = "Remove {label}? Its stored OAuth session will be revoked when possible."
+
+[oauth_scope_count]
+other = "{n} scopes"
+
+[oauth_logged_in_as]
+other = "Signed in as {label}"
+
+[oauth_not_logged_in]
+other = "Not signed in"
+
+[oauth_login_required]
+other = "Sign in with Cloudflare OAuth to load account resources."
+
+[oauth_no_accounts]
+other = "No accounts were returned for this token."
+
+[oauth_no_zones]
+other = "No zones available."
+
+[oauth_no_dns]
+other = "No DNS records available."
+
+[oauth_no_tunnels]
+other = "No tunnels available."
+
+[oauth_no_workers]
+other = "No Workers scripts available."
+
+[oauth_no_r2_buckets]
+other = "No R2 buckets available."
+
+[oauth_no_d1_databases]
+other = "No D1 databases available."
+
+[oauth_no_kv_namespaces]
+other = "No KV namespaces available."
+
+[oauth_no_snippets]
+other = "No Snippets available."
+
+[oauth_snippets_readonly]
+other = "Current token can read Snippets. Grant snippets.write to create snippets or manage rules."
+
+[oauth_snippet_create]
+other = "Create Snippet"
+
+[oauth_snippet_name]
+other = "Name"
+
+[oauth_snippet_main_file]
+other = "Main file"
+
+[oauth_snippet_code]
+other = "Code"
+
+[oauth_snippet_content]
+other = "Snippet code"
+
+[oauth_snippet_content_loading]
+other = "Loading Snippet code..."
+
+[oauth_snippet_content_unavailable]
+other = "Snippet code is not loaded."
+
+[oauth_snippet_content_binary]
+other = "Snippet code is not UTF-8 text and cannot be edited here."
+
+[oauth_snippet_content_truncated]
+other = "Snippet code is truncated. Save is not recommended until the full content can be loaded."
+
+[oauth_snippet_content_saved]
+other = "Snippet code saved."
+
+[oauth_snippet_saved]
+other = "Snippet saved."
+
+[oauth_snippet_deleted]
+other = "Snippet deleted."
+
+[oauth_snippet_delete_title]
+other = "Delete Snippet"
+
+[oauth_snippet_delete_message]
+other = "Delete {name}? This also removes its trigger rules."
+
+[oauth_snippet_rule_count]
+other = "{n} trigger rules"
+
+[oauth_snippet_rules]
+other = "Trigger rules"
+
+[oauth_snippet_no_rules]
+other = "No trigger rules for this Snippet."
+
+[oauth_snippet_rule_add]
+other = "Add rule"
+
+[oauth_snippet_rule_expression]
+other = "Expression"
+
+[oauth_snippet_rule_description]
+other = "Description"
+
+[oauth_snippet_rule_enabled]
+other = "Enabled"
+
+[oauth_snippet_rule_saved]
+other = "Snippet rule saved."
+
+[oauth_snippet_rule_deleted]
+other = "Snippet rule deleted."
+
+[oauth_snippet_rule_delete_title]
+other = "Delete Snippet rule"
+
+[oauth_snippet_rule_delete_message]
+other = "Delete this trigger rule? This cannot be undone."
+
+[oauth_no_waf_rules]
+other = "No custom WAF rules available."
+
+[oauth_waf_custom_rules]
+other = "Custom WAF rules"
+
+[oauth_waf_managed_exceptions]
+other = "Managed exceptions"
+
+[oauth_waf_managed_overrides]
+other = "Managed ruleset overrides"
+
+[oauth_no_waf_managed_exceptions]
+other = "No managed exceptions available."
+
+[oauth_no_waf_managed_overrides]
+other = "No managed ruleset overrides available."
+
+[oauth_waf_readonly]
+other = "Current token can read WAF rules. Grant zone-waf.write to create, edit, enable, disable, or delete rules."
+
+[oauth_waf_create_rule]
+other = "Create WAF rule"
+
+[oauth_waf_create_managed_exception]
+other = "Create exception"
+
+[oauth_waf_create_managed_override]
+other = "Create override"
+
+[oauth_waf_edit_rule]
+other = "Edit"
+
+[oauth_waf_edit_managed_exception]
+other = "Edit"
+
+[oauth_waf_edit_managed_override]
+other = "Edit"
+
+[oauth_waf_update_rule]
+other = "Update rule"
+
+[oauth_waf_update_managed_exception]
+other = "Update exception"
+
+[oauth_waf_update_managed_override]
+other = "Update override"
+
+[oauth_waf_action]
+other = "Action"
+
+[oauth_waf_expression]
+other = "Expression"
+
+[oauth_waf_description]
+other = "Description"
+
+[oauth_waf_enabled]
+other = "Enabled"
+
+[oauth_waf_copy_audit_json]
+other = "Copy audit JSON"
+
+[oauth_waf_advanced_json]
+other = "Advanced JSON"
+
+[oauth_waf_advanced_json_help]
+other = "Edit raw WAF structures for this rule. Use JSON objects, or null to clear a field; unchanged fields are not submitted."
+
+[oauth_waf_advanced_json_invalid]
+other = "{field} must be a JSON object or null."
+
+[oauth_waf_rule_saved]
+other = "WAF rule saved."
+
+[oauth_waf_rule_updated]
+other = "WAF rule updated."
+
+[oauth_waf_rule_deleted]
+other = "WAF rule deleted."
+
+[oauth_waf_managed_exception_saved]
+other = "Managed exception saved."
+
+[oauth_waf_managed_exception_updated]
+other = "Managed exception updated."
+
+[oauth_waf_managed_exception_deleted]
+other = "Managed exception deleted."
+
+[oauth_waf_managed_override_saved]
+other = "Managed ruleset override saved."
+
+[oauth_waf_managed_override_updated]
+other = "Managed ruleset override updated."
+
+[oauth_waf_managed_override_deleted]
+other = "Managed ruleset override deleted."
+
+[oauth_waf_delete_rule_title]
+other = "Delete WAF rule"
+
+[oauth_waf_delete_rule_message]
+other = "Delete this custom WAF rule? This cannot be undone."
+
+[oauth_waf_delete_managed_exception_title]
+other = "Delete managed exception"
+
+[oauth_waf_delete_managed_exception_message]
+other = "Delete this managed exception? This cannot be undone."
+
+[oauth_waf_delete_managed_override_title]
+other = "Delete managed override"
+
+[oauth_waf_delete_managed_override_message]
+other = "Delete this managed ruleset override? This cannot be undone."
+
+[oauth_waf_action_execute]
+other = "Execute"
+
+[oauth_waf_action_block]
+other = "Block"
+
+[oauth_waf_action_challenge]
+other = "Challenge"
+
+[oauth_waf_action_managed_challenge]
+other = "Managed challenge"
+
+[oauth_waf_action_js_challenge]
+other = "JS challenge"
+
+[oauth_waf_action_log]
+other = "Log"
+
+[oauth_waf_action_skip]
+other = "Skip"
+
+[oauth_waf_skip_options]
+other = "Skip options"
+
+[oauth_waf_skip_current_ruleset]
+other = "Skip remaining custom rules in this ruleset"
+
+[oauth_waf_skip_current_ruleset_short]
+other = "skip current ruleset"
+
+[oauth_waf_skip_products]
+other = "Security products"
+
+[oauth_waf_skip_phases]
+other = "Ruleset phases"
+
+[oauth_waf_skip_requires_option]
+other = "Choose at least one skip option."
+
+[oauth_waf_managed_exception_targets]
+other = "Exception targets"
+
+[oauth_waf_managed_exception_skip_current]
+other = "Skip all remaining managed rules"
+
+[oauth_waf_managed_rulesets]
+other = "Managed ruleset IDs"
+
+[oauth_waf_managed_rule_ruleset_id]
+other = "Ruleset ID"
+
+[oauth_waf_managed_rule_ids]
+other = "Managed rule IDs"
+
+[oauth_waf_managed_exception_add_rule_target]
+other = "Add rule target"
+
+[oauth_waf_managed_exception_rule_target_required]
+other = "Each rule target needs a ruleset ID and at least one managed rule ID."
+
+[oauth_waf_managed_ruleset_id]
+other = "Managed ruleset ID"
+
+[oauth_waf_managed_rule_id]
+other = "Managed rule ID"
+
+[oauth_waf_managed_override_overrides]
+other = "Override settings"
+
+[oauth_waf_managed_override_ruleset_action]
+other = "Ruleset action override"
+
+[oauth_waf_managed_override_ruleset_enabled]
+other = "Ruleset enabled override"
+
+[oauth_waf_managed_override_enabled_override]
+other = "Enabled override"
+
+[oauth_waf_managed_override_sensitivity]
+other = "Sensitivity"
+
+[oauth_waf_managed_override_no_action_override]
+other = "No action override"
+
+[oauth_waf_managed_override_no_enabled_override]
+other = "No enabled override"
+
+[oauth_waf_managed_override_no_sensitivity_override]
+other = "No sensitivity override"
+
+[oauth_waf_managed_override_categories]
+other = "Category overrides"
+
+[oauth_waf_managed_override_category]
+other = "Category tag"
+
+[oauth_waf_managed_override_add_category]
+other = "Add category override"
+
+[oauth_waf_managed_override_category_required]
+other = "Category override needs a tag."
+
+[oauth_waf_managed_override_rules]
+other = "Rule overrides"
+
+[oauth_waf_managed_override_add_rule]
+other = "Add rule override"
+
+[oauth_waf_managed_override_rule_required]
+other = "Rule override needs a managed rule ID."
+
+[oauth_waf_managed_override_score_threshold]
+other = "Score threshold"
+
+[oauth_waf_managed_override_score_invalid]
+other = "Score threshold must be an integer from 0 to 100."
+
+[oauth_waf_sensitivity_default]
+other = "Default"
+
+[oauth_waf_sensitivity_high]
+other = "High"
+
+[oauth_waf_sensitivity_medium]
+other = "Medium"
+
+[oauth_waf_sensitivity_low]
+other = "Low"
+
+[oauth_waf_sensitivity_eoff]
+other = "Essentially off"
+
+[oauth_waf_skip_products_summary]
+other = "{n} products"
+
+[oauth_waf_skip_phases_summary]
+other = "{n} phases"
+
+[oauth_waf_rulesets_summary]
+other = "{n} rulesets"
+
+[oauth_waf_rules_summary]
+other = "{n} managed rules"
+
+[oauth_waf_overrides_summary]
+other = "overrides"
+
+[oauth_waf_matched_data_summary]
+other = "matched data"
+
+[oauth_waf_response_summary]
+other = "custom response"
+
+[oauth_waf_rate_limit_summary]
+other = "rate limit"
+
+[oauth_waf_logging_summary]
+other = "logging"
+
+[oauth_waf_credential_check_summary]
+other = "credential check"
+
+[oauth_waf_ref]
+other = "Ref"
+
+[oauth_waf_version]
+other = "Version"
+
+[oauth_waf_score_threshold]
+other = "Score threshold"
+
+[oauth_waf_last_updated]
+other = "Last updated"
+
+[oauth_waf_action_parameters]
+other = "Action parameters"
+
+[oauth_waf_rate_limit]
+other = "Rate limit"
+
+[oauth_waf_rate_limit_help]
+other = "Configure common rate limiting fields without editing raw JSON. Advanced JSON can still override this field."
+
+[oauth_waf_rate_limit_enable]
+other = "Apply rate limit to this rule"
+
+[oauth_waf_rate_limit_characteristics]
+other = "Characteristics"
+
+[oauth_waf_rate_limit_period]
+other = "Period seconds"
+
+[oauth_waf_rate_limit_requests]
+other = "Requests per period"
+
+[oauth_waf_rate_limit_mitigation]
+other = "Mitigation timeout seconds"
+
+[oauth_waf_rate_limit_counting_expression]
+other = "Counting expression"
+
+[oauth_waf_rate_limit_requests_to_origin]
+other = "Count only requests that reach origin"
+
+[oauth_waf_rate_limit_score]
+other = "Score per period"
+
+[oauth_waf_rate_limit_score_header]
+other = "Score response header"
+
+[oauth_waf_rate_limit_required]
+other = "Rate limit requires at least one characteristic, a period, and either requests per period or score per period."
+
+[oauth_waf_rate_limit_invalid_number]
+other = "{field} must be a whole number in the allowed range."
+
+[oauth_waf_logging]
+other = "Logging"
+
+[oauth_waf_credential_check]
+other = "Credential check"
+
+[oauth_waf_json_truncated]
+other = "... truncated"
+
+[oauth_waf_skip_product_zone_lockdown]
+other = "Zone Lockdown"
+
+[oauth_waf_skip_product_ua_block]
+other = "User Agent Blocking"
+
+[oauth_waf_skip_product_bic]
+other = "Browser Integrity Check"
+
+[oauth_waf_skip_product_hot]
+other = "Hotlink Protection"
+
+[oauth_waf_skip_product_security_level]
+other = "Security Level"
+
+[oauth_waf_skip_product_rate_limit]
+other = "Rate limiting (previous version)"
+
+[oauth_waf_skip_product_waf]
+other = "Managed rules (previous version)"
+
+[oauth_waf_skip_phase_rate_limit]
+other = "Rate limiting rules"
+
+[oauth_waf_skip_phase_sbfm]
+other = "Super Bot Fight Mode"
+
+[oauth_waf_skip_phase_managed_waf]
+other = "WAF Managed Rules"
+
+[oauth_no_zone_settings]
+other = "No supported zone settings returned."
+
+[oauth_storage_scope_required]
+other = "Grant R2, D1, or KV read scopes to load storage resources."
+
+[oauth_select_account]
+other = "Select an account first."
+
+[oauth_select_zone]
+other = "Select a zone first."
+
+[oauth_login_success]
+other = "Cloudflare OAuth login completed."
+
+[oauth_login_failed]
+other = "Cloudflare OAuth login failed."
+
+[oauth_login_url_missing]
+other = "OAuth login URL was not returned."
+
+[oauth_logpush_off]
+other = "Logpush off"
+
+[oauth_modified]
+other = "Modified"
+
+[oauth_r2_buckets]
+other = "R2 buckets"
+
+[oauth_r2_metrics]
+other = "R2 metrics"
+
+[oauth_r2_metrics_loading]
+other = "Loading R2 metrics..."
+
+[oauth_r2_metrics_error]
+other = "R2 metrics unavailable: {error}"
+
+[oauth_r2_metrics_empty]
+other = "No R2 metrics returned."
+
+[oauth_r2_metrics_standard]
+other = "Standard"
+
+[oauth_r2_metrics_infrequent_access]
+other = "Infrequent Access"
+
+[oauth_r2_metrics_published]
+other = "Published"
+
+[oauth_r2_metrics_uploaded]
+other = "Uploaded"
+
+[oauth_r2_metrics_objects]
+other = "Objects"
+
+[oauth_r2_metrics_payload]
+other = "Payload"
+
+[oauth_r2_metrics_metadata]
+other = "Metadata"
+
+[oauth_r2_metrics_total]
+other = "Total"
+
+[oauth_r2_create_bucket]
+other = "Create bucket"
+
+[oauth_r2_bucket_name]
+other = "Bucket name"
+
+[oauth_r2_location_hint]
+other = "Location hint"
+
+[oauth_r2_created]
+other = "R2 bucket created."
+
+[oauth_r2_deleted]
+other = "R2 bucket deleted."
+
+[oauth_r2_delete_title]
+other = "Delete R2 bucket"
+
+[oauth_r2_delete_message]
+other = "Delete {name}? This cannot be undone."
+
+[oauth_r2_objects]
+other = "Objects"
+
+[oauth_r2_objects_readonly]
+other = "Grant workers-r2.write to create, edit, or delete R2 objects."
+
+[oauth_r2_no_objects]
+other = "No objects in this bucket."
+
+[oauth_r2_no_object_matches]
+other = "No loaded objects match this search."
+
+[oauth_r2_object_search_label]
+other = "Search R2 objects"
+
+[oauth_r2_object_search_placeholder]
+other = "Search key, content type, class, size..."
+
+[oauth_r2_object_search_count]
+other = "{n}/{m} loaded objects"
+
+[oauth_r2_load_more_objects]
+other = "Load more objects"
+
+[oauth_r2_select_object]
+other = "Select an object to preview it."
+
+[oauth_r2_object]
+other = "R2 object"
+
+[oauth_r2_object_create]
+other = "Create text object"
+
+[oauth_r2_object_upload]
+other = "Upload file"
+
+[oauth_r2_object_edit]
+other = "Edit text object"
+
+[oauth_r2_object_key]
+other = "Object key"
+
+[oauth_r2_object_copy_key]
+other = "Copy key"
+
+[oauth_r2_object_copy]
+other = "Copy object"
+
+[oauth_r2_object_move]
+other = "Move"
+
+[oauth_r2_object_copy_bucket_prompt]
+other = "Enter the destination bucket"
+
+[oauth_r2_object_move_bucket_prompt]
+other = "Enter the destination bucket"
+
+[oauth_r2_object_copy_prompt]
+other = "Enter the copied object's key"
+
+[oauth_r2_object_move_prompt]
+other = "Enter the moved object's key"
+
+[oauth_r2_object_copying]
+other = "Copying"
+
+[oauth_r2_object_moving]
+other = "Moving"
+
+[oauth_r2_object_copied]
+other = "R2 object copied."
+
+[oauth_r2_object_moved]
+other = "R2 object moved."
+
+[oauth_r2_object_destination_diff]
+other = "Destination key must differ from source key."
+
+[oauth_r2_object_detail]
+other = "Object detail"
+
+[oauth_r2_object_size]
+other = "Size"
+
+[oauth_r2_object_etag]
+other = "ETag"
+
+[oauth_r2_object_storage_class]
+other = "Storage class"
+
+[oauth_r2_object_last_modified]
+other = "Last modified"
+
+[oauth_r2_object_encoding]
+other = "Encoding"
+
+[oauth_r2_object_encoding_binary]
+other = "Binary"
+
+[oauth_r2_object_encoding_too_large]
+other = "Too large"
+
+[oauth_r2_object_encoding_text]
+other = "UTF-8 text"
+
+[oauth_r2_object_encoding_utf8]
+other = "UTF-8"
+
+[oauth_r2_object_key_required]
+other = "Object key is required."
+
+[oauth_r2_object_file]
+other = "File"
+
+[oauth_r2_object_file_required]
+other = "Choose a file to upload."
+
+[oauth_r2_object_upload_limit]
+other = "Single upload limit: {max}."
+
+[oauth_r2_object_upload_selected]
+other = "Selected file: {size}. Single upload limit: {max}."
+
+[oauth_r2_object_upload_too_large]
+other = "Selected file is {size}, above the current single upload limit of {max}."
+
+[oauth_r2_object_content_type]
+other = "Content-Type"
+
+[oauth_r2_object_value]
+other = "Value"
+
+[oauth_r2_object_loading]
+other = "Loading object..."
+
+[oauth_r2_object_truncated]
+other = "Preview truncated"
+
+[oauth_r2_object_binary]
+other = "Object content is not UTF-8 text ({bytes})."
+
+[oauth_r2_object_binary_preview]
+other = "Hex preview"
+
+[oauth_r2_object_binary_preview_meta]
+other = "First {bytes} of object content. Download for full content."
+
+[oauth_r2_object_preview]
+other = "Media preview"
+
+[oauth_r2_object_preview_too_large]
+other = "Objects over {max} are download-only. Download this object to inspect it."
+
+[oauth_r2_object_preview_failed]
+other = "Preview failed. Download the object to inspect it."
+
+[oauth_r2_object_saved]
+other = "R2 object saved."
+
+[oauth_r2_object_uploaded]
+other = "R2 object uploaded."
+
+[oauth_r2_object_deleted]
+other = "R2 object deleted."
+
+[oauth_r2_object_delete_title]
+other = "Delete R2 object"
+
+[oauth_r2_object_delete_message]
+other = "Delete object {key}? This cannot be undone."
+
+[oauth_d1_databases]
+other = "D1 databases"
+
+[oauth_d1_database_detail]
+other = "Database detail"
+
+[oauth_d1_file_size]
+other = "File size"
+
+[oauth_d1_version]
+other = "Version"
+
+[oauth_d1_created]
+other = "Created"
+
+[oauth_d1_unavailable]
+other = "Unavailable"
+
+[oauth_kv_namespaces]
+other = "KV namespaces"
+
+[oauth_tables]
+other = "tables"
+
+[oauth_disabled]
+other = "Disabled"
+
+[oauth_enabled_state]
+other = "Enabled"
+
+[oauth_editable]
+other = "Editable"
+
+[oauth_readonly]
+other = "Read only"
+
+[proxied]
+other = "Proxied"
+
+[dns_only]
+other = "DNS only"
+
+[oauth_dns_create]
+other = "Create record"
+
+[oauth_dns_edit]
+other = "Edit DNS record"
+
+[oauth_dns_update]
+other = "Update record"
+
+[oauth_dns_set_proxied]
+other = "Enable proxy"
+
+[oauth_dns_set_dns_only]
+other = "DNS only"
+
+[oauth_dns_type]
+other = "Type"
+
+[oauth_dns_name]
+other = "Name"
+
+[oauth_dns_content]
+other = "Content"
+
+[oauth_dns_ttl]
+other = "TTL"
+
+[oauth_dns_comment]
+other = "Comment"
+
+[oauth_dns_created]
+other = "DNS record created."
+
+[oauth_dns_updated]
+other = "DNS record updated."
+
+[oauth_dns_deleted]
+other = "DNS record deleted."
+
+[oauth_dns_delete_title]
+other = "Delete DNS record"
+
+[oauth_dns_delete_message]
+other = "Delete {name}? This cannot be undone."
+
+[oauth_dns_search_label]
+other = "Search DNS records"
+
+[oauth_dns_search_placeholder]
+other = "Search type, name, content, comment, or proxy state"
+
+[oauth_dns_search_count]
+other = "{n}/{m} records"
+
+[oauth_dns_no_matches]
+other = "No DNS records match this search."
+
+[oauth_zone_actions]
+other = "Zone actions"
+
+[oauth_development_mode]
+other = "Development mode"
+
+[oauth_security_level]
+other = "Security level"
+
+[oauth_security_essentially_off]
+other = "Essentially off"
+
+[oauth_security_low]
+other = "Low"
+
+[oauth_security_medium]
+other = "Medium"
+
+[oauth_security_high]
+other = "High"
+
+[oauth_security_under_attack]
+other = "Under attack"
+
+[oauth_always_use_https]
+other = "Always Use HTTPS"
+
+[oauth_automatic_https_rewrites]
+other = "Automatic HTTPS Rewrites"
+
+[oauth_brotli]
+other = "Brotli"
+
+[oauth_rocket_loader]
+other = "Rocket Loader"
+
+[oauth_ssl_mode]
+other = "SSL/TLS mode"
+
+[oauth_ssl_off]
+other = "Off"
+
+[oauth_ssl_flexible]
+other = "Flexible"
+
+[oauth_ssl_full]
+other = "Full"
+
+[oauth_ssl_strict]
+other = "Full (strict)"
+
+[oauth_ssl_origin_pull]
+other = "Origin Pull"
+
+[oauth_cache_level]
+other = "Cache level"
+
+[oauth_cache_level_aggressive]
+other = "Standard"
+
+[oauth_cache_level_basic]
+other = "No query string"
+
+[oauth_cache_level_simplified]
+other = "Ignore query string"
+
+[oauth_browser_cache_ttl]
+other = "Browser cache TTL"
+
+[oauth_browser_cache_ttl_origin]
+other = "Respect existing headers"
+
+[oauth_browser_cache_ttl_2h]
+other = "2 hours"
+
+[oauth_browser_cache_ttl_4h]
+other = "4 hours"
+
+[oauth_browser_cache_ttl_8h]
+other = "8 hours"
+
+[oauth_browser_cache_ttl_12h]
+other = "12 hours"
+
+[oauth_browser_cache_ttl_1d]
+other = "1 day"
+
+[oauth_browser_cache_ttl_3d]
+other = "3 days"
+
+[oauth_browser_cache_ttl_1w]
+other = "1 week"
+
+[oauth_browser_cache_ttl_1mo]
+other = "1 month"
+
+[oauth_browser_cache_ttl_1y]
+other = "1 year"
+
+[oauth_current_setting_value]
+other = "Current: {value}"
+
+[oauth_cache_purge]
+other = "Purge cache"
+
+[oauth_cache_purge_title]
+other = "Purge zone cache"
+
+[oauth_cache_purge_message]
+other = "Purge all cached files for this zone? Origin traffic may increase immediately."
+
+[oauth_cache_purged]
+other = "Zone cache purge requested."
+
+[oauth_zone_setting_saved]
+other = "Zone setting saved."
+
+[oauth_write_enabled]
+other = "Write enabled"
+
+[oauth_storage_back]
+other = "Back to storage"
+
+[oauth_kv_keys]
+other = "KV keys"
+
+[oauth_kv_load_more]
+other = "Load more keys"
+
+[oauth_kv_no_keys]
+other = "No keys in this namespace."
+
+[oauth_kv_select_key]
+other = "Select a key to view its value."
+
+[oauth_kv_create_key]
+other = "Create key"
+
+[oauth_kv_key_name]
+other = "Key"
+
+[oauth_kv_value]
+other = "Value"
+
+[oauth_kv_loading_value]
+other = "Loading value..."
+
+[oauth_kv_value_binary]
+other = "Binary value ({bytes}); text preview is not available."
+
+[oauth_kv_value_too_large]
+other = "Value is too large for the text editor ({bytes})."
+
+[oauth_kv_saved]
+other = "KV value saved."
+
+[oauth_kv_deleted]
+other = "KV key deleted."
+
+[oauth_kv_delete_title]
+other = "Delete KV key"
+
+[oauth_kv_delete_message]
+other = "Delete {key}? This cannot be undone."
+
+[oauth_kv_readonly]
+other = "Current token can read KV. Grant workers-kv-storage.write to edit values."
+
+[oauth_kv_expiration]
+other = "Expires"
+
+[oauth_d1_tables]
+other = "Tables"
+
+[oauth_d1_load_tables]
+other = "Load tables"
+
+[oauth_d1_no_tables]
+other = "No user tables in this database."
+
+[oauth_d1_table_meta]
+other = "{rows} rows loaded from offset {offset}"
+
+[oauth_d1_load_more_rows]
+other = "Load more rows"
+
+[oauth_d1_empty_table]
+other = "This table has no rows."
+
+[oauth_d1_edit_row_title]
+other = "Edit row {rowid}"
+
+[oauth_d1_edit_hint]
+other = "Values are saved as strings through parameterized D1 queries. Leave unchanged fields as-is."
+
+[oauth_d1_no_changes]
+other = "No changes to save."
+
+[oauth_d1_row_saved]
+other = "D1 row saved."
+
+[oauth_d1_row_deleted]
+other = "D1 row deleted."
+
+[oauth_d1_delete_row_title]
+other = "Delete D1 row"
+
+[oauth_d1_delete_row_message]
+other = "Delete row {rowid}? This cannot be undone."
+
+[oauth_d1_sql]
+other = "SQL"
+
+[oauth_d1_run]
+other = "Run query"
+
+[oauth_d1_running]
+other = "Running"
+
+[oauth_d1_query_done]
+other = "D1 query completed."
+
+[oauth_d1_results]
+other = "Results"
+
+[oauth_d1_no_results]
+other = "Run a query to show results."
+
+[oauth_d1_readonly_warning]
+other = "Current token is read-only for D1. Write statements may be rejected by Cloudflare."
+
+[oauth_d1_statement]
+other = "Statement {n}"
+
+[oauth_d1_rows_read]
+other = "read"
+
+[oauth_d1_rows_written]
+other = "written"
+
+[oauth_d1_failed]
+other = "Query failed."
+
+[oauth_d1_success_no_rows]
+other = "Query succeeded with no rows."
+
+[oauth_d1_rows_truncated]
+other = "Showing the first 100 of {n} rows."
+
+[oauth_cloudflare_status]
+other = "Status"
+
+[oauth_cf_status_public]
+other = "Public Cloudflare status, no OAuth scope required."
+
+[oauth_cf_status_loading]
+other = "Loading Cloudflare status..."
+
+[oauth_cf_status_empty]
+other = "No Cloudflare status data loaded."
+
+[oauth_cf_status_updated]
+other = "Updated"
+
+[oauth_cf_status_fetched]
+other = "Fetched"
+
+[oauth_cf_status_products]
+other = "Products"
+
+[oauth_cf_status_affected]
+other = "Affected"
+
+[oauth_cf_status_active_incidents]
+other = "Active incidents"
+
+[oauth_cf_status_maintenances]
+other = "Maintenances"
+
+[oauth_cf_status_affected_products]
+other = "Affected products"
+
+[oauth_cf_status_no_affected_products]
+other = "All product services are operational."
+
+[oauth_cf_status_regions]
+other = "Edge regions"
+
+[oauth_cf_status_region_impacted]
+other = "{n}/{m} nodes impacted"
+
+[oauth_cf_status_region_ok]
+other = "{n} nodes operational"
+
+[oauth_cf_status_no_regions]
+other = "No edge region data."
+
+[oauth_cf_status_active]
+other = "Active incidents"
+
+[oauth_cf_status_no_active]
+other = "No active incidents."
+
+[oauth_cf_status_maintenance]
+other = "Scheduled maintenance"
+
+[oauth_cf_status_no_maintenance]
+other = "No scheduled maintenance."
+
+[oauth_cf_status_recent]
+other = "Recent incidents"
+
+[oauth_cf_status_no_recent]
+other = "No recent incidents."
+
+[oauth_cf_status_indicator_none]
+other = "All systems operational"
+
+[oauth_cf_status_indicator_minor]
+other = "Minor service disruption"
+
+[oauth_cf_status_indicator_major]
+other = "Major service disruption"
+
+[oauth_cf_status_indicator_critical]
+other = "Critical service disruption"
+
+[oauth_cf_status_indicator_maintenance]
+other = "Maintenance in progress"
+
+[oauth_cf_status_component_operational]
+other = "Operational"
+
+[oauth_cf_status_component_degraded_performance]
+other = "Degraded performance"
+
+[oauth_cf_status_component_partial_outage]
+other = "Partial outage"
+
+[oauth_cf_status_component_major_outage]
+other = "Major outage"
+
+[oauth_cf_status_component_under_maintenance]
+other = "Under maintenance"
+
+[oauth_cf_status_incident_investigating]
+other = "Investigating"
+
+[oauth_cf_status_incident_identified]
+other = "Identified"
+
+[oauth_cf_status_incident_monitoring]
+other = "Monitoring"
+
+[oauth_cf_status_incident_resolved]
+other = "Resolved"
+
+[oauth_cf_status_incident_postmortem]
+other = "Postmortem"
+
+[oauth_cf_status_incident_scheduled]
+other = "Scheduled"
+
+[oauth_cf_status_incident_in_progress]
+other = "In progress"
+
+[oauth_cf_status_incident_verifying]
+other = "Verifying"
+
+[oauth_cf_status_incident_completed]
+other = "Completed"
+
+[oauth_cf_status_impact_critical]
+other = "Critical"
+
+[oauth_cf_status_impact_major]
+other = "Major"
+
+[oauth_cf_status_impact_minor]
+other = "Minor"
+
+[oauth_cf_status_impact_maintenance]
+other = "Maintenance"
+
+[oauth_cf_status_impact_none]
+other = "No impact"
+
+[oauth_cf_status_region_africa]
+other = "Africa"
+
+[oauth_cf_status_region_asia]
+other = "Asia"
+
+[oauth_cf_status_region_europe]
+other = "Europe"
+
+[oauth_cf_status_region_latin_america]
+other = "Latin America & the Caribbean"
+
+[oauth_cf_status_region_middle_east]
+other = "Middle East"
+
+[oauth_cf_status_region_north_america]
+other = "North America"
+
+[oauth_cf_status_region_oceania]
+other = "Oceania"

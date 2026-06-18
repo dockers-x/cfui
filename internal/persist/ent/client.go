@@ -16,6 +16,8 @@ import (
 	"cfui/internal/persist/ent/ddnsrecord"
 	"cfui/internal/persist/ent/ddnssetting"
 	"cfui/internal/persist/ent/mcptoken"
+	"cfui/internal/persist/ent/oauthsession"
+	"cfui/internal/persist/ent/oauthstate"
 	"cfui/internal/persist/ent/s3webdavsetting"
 	"cfui/internal/persist/ent/tunnelmanagement"
 	"cfui/internal/persist/ent/tunnelprofile"
@@ -41,6 +43,10 @@ type Client struct {
 	DDNSSetting *DDNSSettingClient
 	// MCPToken is the client for interacting with the MCPToken builders.
 	MCPToken *MCPTokenClient
+	// OAuthSession is the client for interacting with the OAuthSession builders.
+	OAuthSession *OAuthSessionClient
+	// OAuthState is the client for interacting with the OAuthState builders.
+	OAuthState *OAuthStateClient
 	// S3WebDAVSetting is the client for interacting with the S3WebDAVSetting builders.
 	S3WebDAVSetting *S3WebDAVSettingClient
 	// TunnelManagement is the client for interacting with the TunnelManagement builders.
@@ -65,6 +71,8 @@ func (c *Client) init() {
 	c.DDNSRecord = NewDDNSRecordClient(c.config)
 	c.DDNSSetting = NewDDNSSettingClient(c.config)
 	c.MCPToken = NewMCPTokenClient(c.config)
+	c.OAuthSession = NewOAuthSessionClient(c.config)
+	c.OAuthState = NewOAuthStateClient(c.config)
 	c.S3WebDAVSetting = NewS3WebDAVSettingClient(c.config)
 	c.TunnelManagement = NewTunnelManagementClient(c.config)
 	c.TunnelProfile = NewTunnelProfileClient(c.config)
@@ -166,6 +174,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		DDNSRecord:       NewDDNSRecordClient(cfg),
 		DDNSSetting:      NewDDNSSettingClient(cfg),
 		MCPToken:         NewMCPTokenClient(cfg),
+		OAuthSession:     NewOAuthSessionClient(cfg),
+		OAuthState:       NewOAuthStateClient(cfg),
 		S3WebDAVSetting:  NewS3WebDAVSettingClient(cfg),
 		TunnelManagement: NewTunnelManagementClient(cfg),
 		TunnelProfile:    NewTunnelProfileClient(cfg),
@@ -194,6 +204,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		DDNSRecord:       NewDDNSRecordClient(cfg),
 		DDNSSetting:      NewDDNSSettingClient(cfg),
 		MCPToken:         NewMCPTokenClient(cfg),
+		OAuthSession:     NewOAuthSessionClient(cfg),
+		OAuthState:       NewOAuthStateClient(cfg),
 		S3WebDAVSetting:  NewS3WebDAVSettingClient(cfg),
 		TunnelManagement: NewTunnelManagementClient(cfg),
 		TunnelProfile:    NewTunnelProfileClient(cfg),
@@ -228,7 +240,8 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AppSetting, c.DDNSIPSource, c.DDNSRecord, c.DDNSSetting, c.MCPToken,
-		c.S3WebDAVSetting, c.TunnelManagement, c.TunnelProfile, c.TunnelToken,
+		c.OAuthSession, c.OAuthState, c.S3WebDAVSetting, c.TunnelManagement,
+		c.TunnelProfile, c.TunnelToken,
 	} {
 		n.Use(hooks...)
 	}
@@ -239,7 +252,8 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AppSetting, c.DDNSIPSource, c.DDNSRecord, c.DDNSSetting, c.MCPToken,
-		c.S3WebDAVSetting, c.TunnelManagement, c.TunnelProfile, c.TunnelToken,
+		c.OAuthSession, c.OAuthState, c.S3WebDAVSetting, c.TunnelManagement,
+		c.TunnelProfile, c.TunnelToken,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -258,6 +272,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.DDNSSetting.mutate(ctx, m)
 	case *MCPTokenMutation:
 		return c.MCPToken.mutate(ctx, m)
+	case *OAuthSessionMutation:
+		return c.OAuthSession.mutate(ctx, m)
+	case *OAuthStateMutation:
+		return c.OAuthState.mutate(ctx, m)
 	case *S3WebDAVSettingMutation:
 		return c.S3WebDAVSetting.mutate(ctx, m)
 	case *TunnelManagementMutation:
@@ -936,6 +954,272 @@ func (c *MCPTokenClient) mutate(ctx context.Context, m *MCPTokenMutation) (Value
 	}
 }
 
+// OAuthSessionClient is a client for the OAuthSession schema.
+type OAuthSessionClient struct {
+	config
+}
+
+// NewOAuthSessionClient returns a client for the OAuthSession from the given config.
+func NewOAuthSessionClient(c config) *OAuthSessionClient {
+	return &OAuthSessionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `oauthsession.Hooks(f(g(h())))`.
+func (c *OAuthSessionClient) Use(hooks ...Hook) {
+	c.hooks.OAuthSession = append(c.hooks.OAuthSession, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `oauthsession.Intercept(f(g(h())))`.
+func (c *OAuthSessionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.OAuthSession = append(c.inters.OAuthSession, interceptors...)
+}
+
+// Create returns a builder for creating a OAuthSession entity.
+func (c *OAuthSessionClient) Create() *OAuthSessionCreate {
+	mutation := newOAuthSessionMutation(c.config, OpCreate)
+	return &OAuthSessionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OAuthSession entities.
+func (c *OAuthSessionClient) CreateBulk(builders ...*OAuthSessionCreate) *OAuthSessionCreateBulk {
+	return &OAuthSessionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OAuthSessionClient) MapCreateBulk(slice any, setFunc func(*OAuthSessionCreate, int)) *OAuthSessionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OAuthSessionCreateBulk{err: fmt.Errorf("calling to OAuthSessionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OAuthSessionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OAuthSessionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OAuthSession.
+func (c *OAuthSessionClient) Update() *OAuthSessionUpdate {
+	mutation := newOAuthSessionMutation(c.config, OpUpdate)
+	return &OAuthSessionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OAuthSessionClient) UpdateOne(_m *OAuthSession) *OAuthSessionUpdateOne {
+	mutation := newOAuthSessionMutation(c.config, OpUpdateOne, withOAuthSession(_m))
+	return &OAuthSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OAuthSessionClient) UpdateOneID(id int) *OAuthSessionUpdateOne {
+	mutation := newOAuthSessionMutation(c.config, OpUpdateOne, withOAuthSessionID(id))
+	return &OAuthSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OAuthSession.
+func (c *OAuthSessionClient) Delete() *OAuthSessionDelete {
+	mutation := newOAuthSessionMutation(c.config, OpDelete)
+	return &OAuthSessionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OAuthSessionClient) DeleteOne(_m *OAuthSession) *OAuthSessionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OAuthSessionClient) DeleteOneID(id int) *OAuthSessionDeleteOne {
+	builder := c.Delete().Where(oauthsession.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OAuthSessionDeleteOne{builder}
+}
+
+// Query returns a query builder for OAuthSession.
+func (c *OAuthSessionClient) Query() *OAuthSessionQuery {
+	return &OAuthSessionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOAuthSession},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a OAuthSession entity by its id.
+func (c *OAuthSessionClient) Get(ctx context.Context, id int) (*OAuthSession, error) {
+	return c.Query().Where(oauthsession.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OAuthSessionClient) GetX(ctx context.Context, id int) *OAuthSession {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *OAuthSessionClient) Hooks() []Hook {
+	return c.hooks.OAuthSession
+}
+
+// Interceptors returns the client interceptors.
+func (c *OAuthSessionClient) Interceptors() []Interceptor {
+	return c.inters.OAuthSession
+}
+
+func (c *OAuthSessionClient) mutate(ctx context.Context, m *OAuthSessionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OAuthSessionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OAuthSessionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OAuthSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OAuthSessionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown OAuthSession mutation op: %q", m.Op())
+	}
+}
+
+// OAuthStateClient is a client for the OAuthState schema.
+type OAuthStateClient struct {
+	config
+}
+
+// NewOAuthStateClient returns a client for the OAuthState from the given config.
+func NewOAuthStateClient(c config) *OAuthStateClient {
+	return &OAuthStateClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `oauthstate.Hooks(f(g(h())))`.
+func (c *OAuthStateClient) Use(hooks ...Hook) {
+	c.hooks.OAuthState = append(c.hooks.OAuthState, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `oauthstate.Intercept(f(g(h())))`.
+func (c *OAuthStateClient) Intercept(interceptors ...Interceptor) {
+	c.inters.OAuthState = append(c.inters.OAuthState, interceptors...)
+}
+
+// Create returns a builder for creating a OAuthState entity.
+func (c *OAuthStateClient) Create() *OAuthStateCreate {
+	mutation := newOAuthStateMutation(c.config, OpCreate)
+	return &OAuthStateCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OAuthState entities.
+func (c *OAuthStateClient) CreateBulk(builders ...*OAuthStateCreate) *OAuthStateCreateBulk {
+	return &OAuthStateCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OAuthStateClient) MapCreateBulk(slice any, setFunc func(*OAuthStateCreate, int)) *OAuthStateCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OAuthStateCreateBulk{err: fmt.Errorf("calling to OAuthStateClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OAuthStateCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OAuthStateCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OAuthState.
+func (c *OAuthStateClient) Update() *OAuthStateUpdate {
+	mutation := newOAuthStateMutation(c.config, OpUpdate)
+	return &OAuthStateUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OAuthStateClient) UpdateOne(_m *OAuthState) *OAuthStateUpdateOne {
+	mutation := newOAuthStateMutation(c.config, OpUpdateOne, withOAuthState(_m))
+	return &OAuthStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OAuthStateClient) UpdateOneID(id int) *OAuthStateUpdateOne {
+	mutation := newOAuthStateMutation(c.config, OpUpdateOne, withOAuthStateID(id))
+	return &OAuthStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OAuthState.
+func (c *OAuthStateClient) Delete() *OAuthStateDelete {
+	mutation := newOAuthStateMutation(c.config, OpDelete)
+	return &OAuthStateDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OAuthStateClient) DeleteOne(_m *OAuthState) *OAuthStateDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OAuthStateClient) DeleteOneID(id int) *OAuthStateDeleteOne {
+	builder := c.Delete().Where(oauthstate.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OAuthStateDeleteOne{builder}
+}
+
+// Query returns a query builder for OAuthState.
+func (c *OAuthStateClient) Query() *OAuthStateQuery {
+	return &OAuthStateQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOAuthState},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a OAuthState entity by its id.
+func (c *OAuthStateClient) Get(ctx context.Context, id int) (*OAuthState, error) {
+	return c.Query().Where(oauthstate.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OAuthStateClient) GetX(ctx context.Context, id int) *OAuthState {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *OAuthStateClient) Hooks() []Hook {
+	return c.hooks.OAuthState
+}
+
+// Interceptors returns the client interceptors.
+func (c *OAuthStateClient) Interceptors() []Interceptor {
+	return c.inters.OAuthState
+}
+
+func (c *OAuthStateClient) mutate(ctx context.Context, m *OAuthStateMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OAuthStateCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OAuthStateUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OAuthStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OAuthStateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown OAuthState mutation op: %q", m.Op())
+	}
+}
+
 // S3WebDAVSettingClient is a client for the S3WebDAVSetting schema.
 type S3WebDAVSettingClient struct {
 	config
@@ -1471,11 +1755,13 @@ func (c *TunnelTokenClient) mutate(ctx context.Context, m *TunnelTokenMutation) 
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		AppSetting, DDNSIPSource, DDNSRecord, DDNSSetting, MCPToken, S3WebDAVSetting,
-		TunnelManagement, TunnelProfile, TunnelToken []ent.Hook
+		AppSetting, DDNSIPSource, DDNSRecord, DDNSSetting, MCPToken, OAuthSession,
+		OAuthState, S3WebDAVSetting, TunnelManagement, TunnelProfile,
+		TunnelToken []ent.Hook
 	}
 	inters struct {
-		AppSetting, DDNSIPSource, DDNSRecord, DDNSSetting, MCPToken, S3WebDAVSetting,
-		TunnelManagement, TunnelProfile, TunnelToken []ent.Interceptor
+		AppSetting, DDNSIPSource, DDNSRecord, DDNSSetting, MCPToken, OAuthSession,
+		OAuthState, S3WebDAVSetting, TunnelManagement, TunnelProfile,
+		TunnelToken []ent.Interceptor
 	}
 )

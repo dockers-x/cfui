@@ -1,6 +1,9 @@
 package server
 
 import (
+	"bytes"
+	"cfui/internal/cfaccount"
+	"cfui/internal/cfoauth"
 	"cfui/internal/cloudflared"
 	"cfui/internal/config"
 	"cfui/internal/ddns"
@@ -104,6 +107,9 @@ type Server struct {
 	ddnsSvc   *ddns.Service
 	s3Svc     *s3dav.Service
 	s3WebDAV  *s3DedicatedServer
+	runMode   config.RunMode
+	oauthSvc  *cfoauth.Service
+	cfSvc     *cfaccount.Service
 	assets    embed.FS
 	locales   embed.FS
 
@@ -114,10 +120,15 @@ type Server struct {
 }
 
 func NewServer(cfgMgr *config.Manager, runner *service.Runner, assets embed.FS, locales embed.FS) *Server {
+	return NewServerWithMode(cfgMgr, runner, assets, locales, config.RunModeClassic)
+}
+
+func NewServerWithMode(cfgMgr *config.Manager, runner *service.Runner, assets embed.FS, locales embed.FS, runMode config.RunMode) *Server {
 	tunnelMgr := tunnelmgr.NewManager(cfgMgr)
 	tokenStore := mcpbridge.NewTokenStore(cfgMgr.Dir())
 	ddnsSvc := ddns.NewService(cfgMgr)
 	s3Svc := s3dav.NewService(cfgMgr)
+	oauthSvc := cfoauth.NewService(cfoauth.ConfigFromEnv(), cfoauth.NewStore(cfgMgr.Dir()))
 	return &Server{
 		cfgMgr:    cfgMgr,
 		runner:    runner,
@@ -126,6 +137,9 @@ func NewServer(cfgMgr *config.Manager, runner *service.Runner, assets embed.FS, 
 		ddnsSvc:   ddnsSvc,
 		s3Svc:     s3Svc,
 		s3WebDAV:  newS3DedicatedServer(),
+		runMode:   runMode,
+		oauthSvc:  oauthSvc,
+		cfSvc:     cfaccount.NewService(oauthSvc),
 		assets:    assets,
 		locales:   locales,
 		shutdownC: make(chan struct{}),
@@ -141,6 +155,23 @@ func (s *Server) PrepareShutdown() {
 	default:
 		close(s.shutdownC)
 	}
+}
+
+func (s *Server) ensureOAuthService() *cfoauth.Service {
+	if s.oauthSvc == nil {
+		s.oauthSvc = cfoauth.NewService(cfoauth.ConfigFromEnv(), cfoauth.NewStore(s.cfgMgr.Dir()))
+	}
+	if s.cfSvc == nil {
+		s.cfSvc = cfaccount.NewService(s.oauthSvc)
+	}
+	return s.oauthSvc
+}
+
+func (s *Server) effectiveRunMode() config.RunMode {
+	if s.runMode == "" {
+		return config.RunModeClassic
+	}
+	return s.runMode
 }
 
 // GetHandler creates and returns the HTTP handler
@@ -168,6 +199,58 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/mcp/tokens", s.handleMCPTokens)
 	mux.HandleFunc("/api/mcp/tokens/", s.handleMCPToken)
 	mux.HandleFunc("/api/features", s.handleFeatures)
+	mux.HandleFunc("/api/oauth/status", s.handleOAuthStatus)
+	mux.HandleFunc("/api/oauth/relay-check", s.handleOAuthRelayCheck)
+	mux.HandleFunc("/api/oauth/login", s.handleOAuthLogin)
+	mux.HandleFunc("/api/oauth/logout", s.handleOAuthLogout)
+	mux.HandleFunc("/api/oauth/session", s.handleOAuthSession)
+	mux.HandleFunc("/oauth/start", s.handleOAuthStart)
+	mux.HandleFunc("/oauth/callback", s.handleOAuthCallback)
+	mux.HandleFunc("/api/cf/overview", s.handleCFOverview)
+	mux.HandleFunc("/api/cf/accounts", s.handleCFAccounts)
+	mux.HandleFunc("/api/cf/status", s.handleCFStatus)
+	mux.HandleFunc("/api/cf/usage/account", s.handleCFAccountUsage)
+	mux.HandleFunc("/api/cf/zones", s.handleCFZones)
+	mux.HandleFunc("/api/cf/zones/", s.handleCFZone)
+	mux.HandleFunc("/api/cf/dns/count", s.handleCFDNSCount)
+	mux.HandleFunc("/api/cf/dns", s.handleCFDNSRecords)
+	mux.HandleFunc("/api/cf/dns/", s.handleCFDNSRecord)
+	mux.HandleFunc("/api/cf/tunnels", s.handleCFTunnels)
+	mux.HandleFunc("/api/cf/workers", s.handleCFWorkers)
+	mux.HandleFunc("/api/cf/workers/", s.handleCFWorker)
+	mux.HandleFunc("/api/cf/r2/metrics", s.handleCFR2Metrics)
+	mux.HandleFunc("/api/cf/r2/buckets", s.handleCFR2Buckets)
+	mux.HandleFunc("/api/cf/r2/buckets/", s.handleCFR2Bucket)
+	mux.HandleFunc("/api/cf/r2/objects", s.handleCFR2Objects)
+	mux.HandleFunc("/api/cf/r2/object/copy", s.handleCFR2ObjectCopy)
+	mux.HandleFunc("/api/cf/r2/object/upload", s.handleCFR2ObjectUpload)
+	mux.HandleFunc("/api/cf/r2/object/download", s.handleCFR2ObjectDownload)
+	mux.HandleFunc("/api/cf/r2/object", s.handleCFR2Object)
+	mux.HandleFunc("/api/cf/d1/databases", s.handleCFD1Databases)
+	mux.HandleFunc("/api/cf/d1/databases/", s.handleCFD1Database)
+	mux.HandleFunc("/api/cf/d1/query", s.handleCFD1Query)
+	mux.HandleFunc("/api/cf/d1/tables", s.handleCFD1Tables)
+	mux.HandleFunc("/api/cf/d1/table", s.handleCFD1Table)
+	mux.HandleFunc("/api/cf/kv/namespaces", s.handleCFKVNamespaces)
+	mux.HandleFunc("/api/cf/kv/keys", s.handleCFKVKeys)
+	mux.HandleFunc("/api/cf/kv/value", s.handleCFKVValue)
+	mux.HandleFunc("/api/cf/snippets", s.handleCFSnippets)
+	mux.HandleFunc("/api/cf/snippets/rules", s.handleCFSnippetRules)
+	mux.HandleFunc("/api/cf/snippets/rules/", s.handleCFSnippetRule)
+	mux.HandleFunc("/api/cf/snippets/", s.handleCFSnippet)
+	mux.HandleFunc("/api/cf/waf", s.handleCFWAF)
+	mux.HandleFunc("/api/cf/waf/managed-exceptions", s.handleCFWAFManagedExceptions)
+	mux.HandleFunc("/api/cf/waf/managed-exceptions/rules", s.handleCFWAFManagedExceptionRules)
+	mux.HandleFunc("/api/cf/waf/managed-exceptions/rules/", s.handleCFWAFManagedExceptionRule)
+	mux.HandleFunc("/api/cf/waf/managed-overrides", s.handleCFWAFManagedOverrides)
+	mux.HandleFunc("/api/cf/waf/managed-overrides/rules", s.handleCFWAFManagedOverrideRules)
+	mux.HandleFunc("/api/cf/waf/managed-overrides/rules/", s.handleCFWAFManagedOverrideRule)
+	mux.HandleFunc("/api/cf/waf/rules", s.handleCFWAFRules)
+	mux.HandleFunc("/api/cf/waf/rules/", s.handleCFWAFRule)
+	mux.HandleFunc("/api/cf/analytics/zone", s.handleCFZoneAnalytics)
+	mux.HandleFunc("/api/cf/zone-settings", s.handleCFZoneSettings)
+	mux.HandleFunc("/api/cf/zone-settings/", s.handleCFZoneSetting)
+	mux.HandleFunc("/api/cf/cache/purge", s.handleCFCachePurge)
 	mux.Handle("/mcp", s.mcpSvc.Handler())
 	mux.Handle("/mcp/", s.mcpSvc.Handler())
 	mux.Handle("/webdav/", s.mainWebDAVHandler())
@@ -203,10 +286,42 @@ func (s *Server) GetHandler() http.Handler {
 		logger.Sugar.Errorf("Failed to create sub filesystem: %v", err)
 		panic(err)
 	}
-	mux.Handle("/", http.FileServer(http.FS(fsys)))
+	indexHandler := serveEmbeddedIndex(fsys)
+	mux.HandleFunc("/cloudflare", indexHandler)
+	mux.HandleFunc("/cloudflare/", indexHandler)
+	mux.HandleFunc("/local", indexHandler)
+	mux.HandleFunc("/local/", indexHandler)
+	mux.Handle("/", s.staticHandler(fsys))
 
 	// Apply middleware chain: logging -> panic recovery -> handler
 	return ChainMiddleware(mux, LoggingMiddleware, PanicRecoveryMiddleware)
+}
+
+func serveEmbeddedIndex(fsys fs.FS) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		index, err := fs.ReadFile(fsys, "index.html")
+		if err != nil {
+			logger.Sugar.Errorf("Failed to read embedded index.html: %v", err)
+			http.NotFound(w, r)
+			return
+		}
+		http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(index))
+	}
+}
+
+func (s *Server) staticHandler(fsys fs.FS) http.Handler {
+	fileServer := http.FileServer(http.FS(fsys))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" && s.effectiveRunMode().DefaultWorkspace() == "cloudflare" {
+			http.Redirect(w, r, "/cloudflare", http.StatusFound)
+			return
+		}
+		fileServer.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleMCPStatus(w http.ResponseWriter, r *http.Request) {
@@ -224,11 +339,30 @@ func (s *Server) handleMCPStatus(w http.ResponseWriter, r *http.Request) {
 
 // FeaturesResponse describes feature toggle state.
 type FeaturesResponse struct {
-	TunnelManager bool                          `json:"tunnel_manager"`
-	DDNS          bool                          `json:"ddns"`
-	MCP           bool                          `json:"mcp"`
-	S3WebDAV      bool                          `json:"s3_webdav"`
-	Availability  map[string]s3dav.Availability `json:"availability,omitempty"`
+	Mode           string                        `json:"mode"`
+	ClassicEnabled bool                          `json:"classic_enabled"`
+	OAuthEnabled   bool                          `json:"oauth_enabled"`
+	Local          LocalFeaturesResponse         `json:"local"`
+	Cloudflare     CloudflareFeaturesResponse    `json:"cloudflare"`
+	TunnelManager  bool                          `json:"tunnel_manager"`
+	DDNS           bool                          `json:"ddns"`
+	MCP            bool                          `json:"mcp"`
+	S3WebDAV       bool                          `json:"s3_webdav"`
+	Availability   map[string]s3dav.Availability `json:"availability,omitempty"`
+}
+
+type LocalFeaturesResponse struct {
+	TunnelRunner bool `json:"tunnel_runner"`
+	DDNS         bool `json:"ddns"`
+	MCP          bool `json:"mcp"`
+	S3WebDAV     bool `json:"s3_webdav"`
+}
+
+type CloudflareFeaturesResponse struct {
+	Enabled       bool                     `json:"enabled"`
+	OAuth         cfoauth.Config           `json:"oauth"`
+	Capabilities  cfoauth.CapabilityMatrix `json:"capabilities"`
+	Authenticated bool                     `json:"authenticated"`
 }
 
 // FeaturesRequest carries partial feature toggle updates.
@@ -296,11 +430,32 @@ func (s *Server) handleFeatures(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) featuresResponse(ctx context.Context, cfg config.Config) FeaturesResponse {
+	runMode := s.effectiveRunMode()
+	tunnelManagerEnabled := cfg.TunnelManagement.Enabled
+	ddnsEnabled := cfg.DDNS.Enabled
+	mcpEnabled := cfg.MCPEnabled
+	s3WebDAVEnabled := cfg.S3WebDAV.Enabled
+	oauthStatus, _ := s.ensureOAuthService().Status(ctx)
 	return FeaturesResponse{
-		TunnelManager: cfg.TunnelManagement.Enabled,
-		DDNS:          cfg.DDNS.Enabled,
-		MCP:           cfg.MCPEnabled,
-		S3WebDAV:      cfg.S3WebDAV.Enabled,
+		Mode:           string(runMode),
+		ClassicEnabled: true,
+		OAuthEnabled:   true,
+		Local: LocalFeaturesResponse{
+			TunnelRunner: runMode.AutoStartsLocalRunner(),
+			DDNS:         ddnsEnabled,
+			MCP:          mcpEnabled,
+			S3WebDAV:     s3WebDAVEnabled,
+		},
+		Cloudflare: CloudflareFeaturesResponse{
+			Enabled:       true,
+			OAuth:         oauthStatus.Config,
+			Capabilities:  oauthStatus.Capabilities,
+			Authenticated: oauthStatus.LoggedIn,
+		},
+		TunnelManager: tunnelManagerEnabled,
+		DDNS:          ddnsEnabled,
+		MCP:           mcpEnabled,
+		S3WebDAV:      s3WebDAVEnabled,
 		Availability: map[string]s3dav.Availability{
 			"s3_webdav": s.s3Svc.FeatureAvailability(ctx, cfg.S3WebDAV),
 		},

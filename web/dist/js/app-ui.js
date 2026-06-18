@@ -38,7 +38,7 @@
                 if (attr && key) el.setAttribute(attr, t(key));
             });
         });
-        document.title = t('app_title');
+        updateWorkspaceChrome();
     }
 
     function applyLogTranslations() {
@@ -125,6 +125,23 @@
         }
     }
 
+    function closeAllDialogs() {
+        let hadOpenDialog = false;
+        $$('.modal-backdrop').forEach((dialog) => {
+            if (!dialog.hidden) hadOpenDialog = true;
+            dialog.hidden = true;
+        });
+        document.body.classList.remove('modal-open');
+        state.activeDialog = null;
+        state.dialogStack = [];
+        state.lastFocused = null;
+        if (state.confirmResolver) {
+            state.confirmResolver(false);
+            state.confirmResolver = null;
+        }
+        return hadOpenDialog;
+    }
+
     function confirm({ title, message, okText, okClass = 'btn--danger' }) {
         return new Promise((resolve) => {
             const dialog = $('confirm-dialog');
@@ -138,27 +155,125 @@
         });
     }
 
-    /* ---- Tabs ---- */
+    /* ---- Workspace routing + local tabs ---- */
+
+    function normalizeWorkspace(value) {
+        return value === 'cloudflare' ? 'cloudflare' : 'local';
+    }
+
+    function workspaceFromPath(pathname = window.location.pathname) {
+        const path = pathname.replace(/\/+$/, '') || '/';
+        if (path === '/cloudflare' || path.startsWith('/cloudflare/')) return 'cloudflare';
+        if (path === '/local' || path.startsWith('/local/')) return 'local';
+        return '';
+    }
+
+    function defaultWorkspace() {
+        return state.features?.mode === 'oauth' ? 'cloudflare' : 'local';
+    }
+
+    function workspacePath(workspace) {
+        return normalizeWorkspace(workspace) === 'cloudflare' ? '/cloudflare' : '/local';
+    }
+
+    function currentWorkspace() {
+        return normalizeWorkspace(state.workspace);
+    }
+
+    function updateWorkspaceChrome() {
+        const workspace = currentWorkspace();
+        const titleKey = workspace === 'cloudflare' ? 'oauth_console_title' : 'app_title';
+        document.title = t(titleKey);
+    }
+
+    function visibleLocalTabs() {
+        return $$('.tab').filter((tab) => tab.dataset.tab !== 'oauth' && !tab.hidden);
+    }
 
     function activateTab(name) {
+        if (name === 'oauth') {
+            setWorkspace('cloudflare');
+            return true;
+        }
         const tab = document.querySelector(`.tab[data-tab="${name}"]`);
-        if (!tab || tab.hidden) return;
+        if (!tab || tab.hidden || tab.dataset.tab === 'oauth') return false;
+        if (currentWorkspace() !== 'local') setWorkspace('local');
         $$('.tab').forEach((t_) => {
             const sel = t_ === tab;
             t_.setAttribute('aria-selected', String(sel));
             t_.tabIndex = sel ? 0 : -1;
         });
         $$('.tab-panel').forEach((p) => { p.hidden = p.id !== `panel-${name}`; });
+        localStorage.setItem('lastLocalTab', name);
         localStorage.setItem('lastTab', name);
         document.dispatchEvent(new CustomEvent('tabchange', { detail: { name } }));
+        return true;
+    }
+
+    function activateDefaultLocalTab() {
+        const candidates = [
+            localStorage.getItem('lastLocalTab'),
+            localStorage.getItem('lastTab') === 'oauth' ? '' : localStorage.getItem('lastTab'),
+            'local',
+        ].filter(Boolean);
+        for (const name of candidates) {
+            if (activateTab(name)) return;
+        }
+        const first = visibleLocalTabs()[0];
+        if (first) activateTab(first.dataset.tab);
+    }
+
+    function applyWorkspacePanels() {
+        const workspace = currentWorkspace();
+        document.documentElement.dataset.workspace = workspace;
+        updateWorkspaceChrome();
+        if (workspace === 'cloudflare') {
+            $$('.tab').forEach((tab) => {
+                tab.setAttribute('aria-selected', 'false');
+                tab.tabIndex = -1;
+            });
+            $$('.tab-panel').forEach((panel) => { panel.hidden = panel.id !== 'panel-oauth'; });
+            localStorage.setItem('workspace', 'cloudflare');
+            document.dispatchEvent(new CustomEvent('tabchange', { detail: { name: 'oauth' } }));
+            return;
+        }
+        localStorage.setItem('workspace', 'local');
+        const oauthPanel = $('panel-oauth');
+        if (oauthPanel) oauthPanel.hidden = true;
+        activateDefaultLocalTab();
+    }
+
+    function setWorkspace(workspace, options = {}) {
+        const next = normalizeWorkspace(workspace);
+        const previous = currentWorkspace();
+        state.workspace = next;
+        if (previous !== next) closeAllDialogs();
+        applyWorkspacePanels();
+        if (options.updateRoute !== false) {
+            const target = workspacePath(next);
+            const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+            if (currentPath !== target) {
+                const method = options.replace ? 'replaceState' : 'pushState';
+                history[method]({ workspace: next }, '', target);
+            }
+        }
+        if (previous !== next) {
+            document.dispatchEvent(new CustomEvent('workspacechange', { detail: { workspace: next } }));
+        }
+    }
+
+    function syncWorkspaceFromRoute(options = {}) {
+        const explicit = workspaceFromPath();
+        const workspace = explicit || defaultWorkspace();
+        setWorkspace(workspace, { updateRoute: false });
+        if (!explicit && options.replaceDefault && workspace === 'cloudflare') {
+            history.replaceState({ workspace }, '', workspacePath(workspace));
+        }
+        return workspace;
     }
 
     function restoreLastTab() {
-        const last = localStorage.getItem('lastTab');
-        if (last) {
-            const tab = document.querySelector(`.tab[data-tab="${last}"]`);
-            if (tab && !tab.hidden) activateTab(last);
-        }
+        return syncWorkspaceFromRoute({ replaceDefault: true });
     }
 
     /* ---- Language menu ---- */
@@ -190,6 +305,12 @@
 
         /* Dialog backdrop / close-button click */
         document.addEventListener('click', (e) => {
+            const workspaceLink = e.target.closest('[data-workspace-link]');
+            if (workspaceLink) {
+                e.preventDefault();
+                setWorkspace(workspaceLink.dataset.workspaceTarget);
+                return;
+            }
             const close = e.target.closest('[data-close-dialog]');
             if (close) { e.preventDefault(); const dlg = close.closest('.modal-backdrop'); if (dlg) closeDialog(dlg); return; }
             if (e.target.classList?.contains('modal-backdrop') && e.target.id !== 'lang-menu') closeDialog(e.target);
@@ -215,6 +336,7 @@
             if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
                 e.preventDefault();
                 const tabs = $$('.tab').filter((t_) => !t_.hidden);
+                if (!tabs.length) return;
                 const idx = tabs.indexOf(e.target);
                 const next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
                 tabs[next].focus();
@@ -225,6 +347,7 @@
         /* Header actions */
         $('theme-btn')?.addEventListener('click', toggleTheme);
         $('lang-btn')?.addEventListener('click', openLangMenu);
+        window.addEventListener('popstate', () => syncWorkspaceFromRoute());
 
         /* Language buttons */
         $$('[data-lang]').forEach((b) => {
@@ -241,8 +364,12 @@
     ns.toggleTheme = toggleTheme;
     ns.openDialog = openDialog;
     ns.closeDialog = closeDialog;
+    ns.closeAllDialogs = closeAllDialogs;
     ns.confirm = confirm;
     ns.activateTab = activateTab;
     ns.restoreLastTab = restoreLastTab;
+    ns.setWorkspace = setWorkspace;
+    ns.syncWorkspaceFromRoute = syncWorkspaceFromRoute;
+    ns.currentWorkspace = currentWorkspace;
     ns.wireUI = wireUI;
 })();

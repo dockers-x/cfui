@@ -21,6 +21,12 @@ type DDNSSetting func(*sql.Selector)
 // MCPToken is the predicate function for mcptoken builders.
 type MCPToken func(*sql.Selector)
 
+// OAuthSession is the predicate function for oauthsession builders.
+type OAuthSession func(*sql.Selector)
+
+// OAuthState is the predicate function for oauthstate builders.
+type OAuthState func(*sql.Selector)
+
 // S3WebDAVSetting is the predicate function for s3webdavsetting builders.
 type S3WebDAVSetting func(*sql.Selector)
 

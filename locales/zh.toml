@@ -16,6 +16,15 @@ other = "CloudFlared UI"
 [skip_to_content]
 other = "跳到主要内容"
 
+[workspace_switch_label]
+other = "工作台"
+
+[workspace_cloudflare_entry]
+other = "Cloudflare"
+
+[workspace_local_entry]
+other = "本地 cfui"
+
 [tunnel_config]
 other = "隧道配置"
 
@@ -363,6 +372,9 @@ other = "编辑"
 
 [delete]
 other = "删除"
+
+[actions]
+other = "操作"
 
 [service_required]
 other = "服务地址必填"
@@ -1005,6 +1017,9 @@ other = "重新连接中…"
 
 [saving]
 other = "保存中…"
+
+[save]
+other = "保存"
 
 [theme_changed]
 other = "主题已切换"
@@ -1872,6 +1887,12 @@ other = "已启用"
 [disabled]
 other = "已禁用"
 
+[yes]
+other = "是"
+
+[no]
+other = "否"
+
 [refresh]
 other = "刷新"
 
@@ -1902,3 +1923,2019 @@ other = "该隧道正在运行，删除后将被停止。"
 
 [tunnels_running_ratio]
 other = "{n}/{m} 运行中"
+
+[oauth_tab]
+other = "Cloudflare"
+
+[oauth_console_title]
+other = "Cloudflare 控制台"
+
+[oauth_console_subtitle]
+other = "通过 OAuth 管理 Cloudflare 账号资源。本机 cfui 工具保留在独立工作台。"
+
+[oauth_sign_in]
+other = "登录"
+
+[oauth_add_identity]
+other = "添加身份"
+
+[oauth_add_identity_fresh_hint]
+other = "会先打开 Cloudflare 退出页，避免浏览器 Cookie 复用当前账号。"
+
+[oauth_signing_in]
+other = "正在登录"
+
+[oauth_sign_out]
+other = "退出"
+
+[oauth_sign_out_current]
+other = "退出当前身份"
+
+[oauth_status_checking]
+other = "正在检查 OAuth 状态..."
+
+[oauth_relay_callback]
+other = "中转回调"
+
+[oauth_local_callback]
+other = "本地回调"
+
+[oauth_accounts]
+other = "账号"
+
+[oauth_resources]
+other = "资源"
+
+[oauth_resources_subtitle]
+other = "选择账号或域名后加载 Cloudflare 资源。"
+
+[oauth_overview]
+other = "总览"
+
+[oauth_overview_loading]
+other = "正在加载总览..."
+
+[oauth_overview_empty]
+other = "暂无总览数据。"
+
+[oauth_overview_context]
+other = "上下文"
+
+[oauth_overview_no_context]
+other = "选择账号后加载账号级资源。"
+
+[oauth_overview_status]
+other = "Cloudflare 公共状态"
+
+[oauth_overview_metrics]
+other = "Dashboard 指标"
+
+[oauth_overview_limited]
+other = "前 {{ .n }} 个"
+
+[oauth_overview_error_missing_scope]
+other = "需要 scope"
+
+[oauth_overview_error_missing_account]
+other = "请选择账号"
+
+[oauth_overview_error_missing_zone]
+other = "请选择域名"
+
+[oauth_overview_error_permission_denied]
+other = "权限不足"
+
+[oauth_overview_error_not_found]
+other = "未找到"
+
+[oauth_overview_error_request_failed]
+other = "请求失败"
+
+[oauth_overview_error_unavailable]
+other = "不可用"
+
+[oauth_unavailable]
+other = "不可用"
+
+[oauth_overview_metric_accounts]
+other = "账号"
+
+[oauth_overview_metric_zones]
+other = "域名"
+
+[oauth_overview_metric_active_zones]
+other = "活跃域名"
+
+[oauth_overview_metric_dns_records]
+other = "DNS 记录"
+
+[oauth_overview_metric_workers]
+other = "Workers"
+
+[oauth_overview_metric_tunnels]
+other = "Tunnels"
+
+[oauth_overview_metric_r2_buckets]
+other = "R2 bucket"
+
+[oauth_overview_metric_d1_databases]
+other = "D1 数据库"
+
+[oauth_overview_metric_kv_namespaces]
+other = "KV namespace"
+
+[oauth_overview_metric_snippets]
+other = "Snippets"
+
+[oauth_overview_metric_waf_rules]
+other = "WAF 规则"
+
+[oauth_zones]
+other = "域名"
+
+[oauth_zone_overview]
+other = "域名概览"
+
+[oauth_zone_loading]
+other = "正在加载域名详情..."
+
+[oauth_zone_unavailable]
+other = "不可用"
+
+[oauth_zone_status]
+other = "状态"
+
+[oauth_zone_plan]
+other = "套餐"
+
+[oauth_zone_type]
+other = "类型"
+
+[oauth_zone_account]
+other = "账号"
+
+[oauth_zone_dns_records]
+other = "DNS 记录"
+
+[oauth_zone_dns_loading]
+other = "加载中..."
+
+[oauth_zone_id]
+other = "Zone ID"
+
+[oauth_zone_name_servers]
+other = "名称服务器"
+
+[oauth_zone_original_name_servers]
+other = "原始名称服务器"
+
+[oauth_zone_created]
+other = "创建时间"
+
+[oauth_zone_modified]
+other = "更新时间"
+
+[oauth_zone_paused]
+other = "已暂停"
+
+[oauth_dns]
+other = "DNS"
+
+[oauth_tunnels]
+other = "Tunnel"
+
+[oauth_tunnel_connector_count]
+other = "{n} 个连接器"
+
+[oauth_tunnel_id]
+other = "Tunnel ID"
+
+[oauth_tunnel_status]
+other = "状态"
+
+[oauth_tunnel_status_healthy]
+other = "健康"
+
+[oauth_tunnel_status_degraded]
+other = "降级"
+
+[oauth_tunnel_status_down]
+other = "离线"
+
+[oauth_tunnel_status_inactive]
+other = "未活跃"
+
+[oauth_tunnel_status_unknown]
+other = "未知"
+
+[oauth_tunnel_type]
+other = "类型"
+
+[oauth_tunnel_remote_config]
+other = "远程配置"
+
+[oauth_tunnel_created]
+other = "创建时间"
+
+[oauth_tunnel_deleted]
+other = "删除时间"
+
+[oauth_tunnel_connections_active_at]
+other = "连接活跃时间"
+
+[oauth_tunnel_connections_inactive_at]
+other = "连接失活时间"
+
+[oauth_tunnel_connections]
+other = "活跃连接"
+
+[oauth_tunnel_no_active_connections]
+other = "没有活跃连接"
+
+[oauth_tunnel_client_version]
+other = "cloudflared {version}"
+
+[oauth_tunnel_opened_at]
+other = "打开于 {time}"
+
+[oauth_tunnel_pending_reconnect]
+other = "等待重连"
+
+[oauth_workers]
+other = "Workers"
+
+[oauth_worker_detail]
+other = "Worker 详情"
+
+[oauth_worker_loading]
+other = "正在加载 Worker 详情..."
+
+[oauth_worker_metadata]
+other = "元数据"
+
+[oauth_worker_settings]
+other = "设置"
+
+[oauth_worker_script]
+other = "脚本"
+
+[oauth_worker_size]
+other = "大小"
+
+[oauth_worker_created]
+other = "创建时间"
+
+[oauth_worker_modified]
+other = "修改时间"
+
+[oauth_worker_deployment]
+other = "部署"
+
+[oauth_worker_source]
+other = "来源"
+
+[oauth_worker_etag]
+other = "ETag"
+
+[oauth_worker_logpush]
+other = "Logpush"
+
+[oauth_worker_placement]
+other = "Placement"
+
+[oauth_worker_tail_consumers]
+other = "Tail consumers"
+
+[oauth_worker_no_tail_consumers]
+other = "没有配置 Tail consumers。"
+
+[oauth_worker_metrics]
+other = "指标"
+
+[oauth_worker_metrics_range]
+other = "Worker 指标时间范围"
+
+[oauth_worker_metrics_scope_required]
+other = "授权 account-analytics.read 或 analytics.read 后可查看 Worker 指标。"
+
+[oauth_worker_metrics_loading]
+other = "正在加载 Worker 指标..."
+
+[oauth_worker_metrics_empty]
+other = "还没有加载 Worker 指标。"
+
+[oauth_worker_metrics_requests]
+other = "请求"
+
+[oauth_worker_metrics_errors]
+other = "错误"
+
+[oauth_worker_metrics_subrequests]
+other = "子请求"
+
+[oauth_worker_metrics_error_rate]
+other = "错误率"
+
+[oauth_worker_metrics_cpu_total]
+other = "CPU 合计"
+
+[oauth_worker_metrics_cpu_single]
+other = "单次 CPU"
+
+[oauth_worker_metrics_status]
+other = "调用状态"
+
+[oauth_worker_metrics_timeseries]
+other = "近期趋势"
+
+[oauth_worker_status_success]
+other = "成功"
+
+[oauth_worker_status_script_exception]
+other = "脚本异常"
+
+[oauth_worker_status_exceeded_cpu]
+other = "超出 CPU 限制"
+
+[oauth_worker_status_exceeded_memory]
+other = "超出内存限制"
+
+[oauth_worker_status_client_disconnected]
+other = "客户端断开"
+
+[oauth_worker_status_canceled]
+other = "已取消"
+
+[oauth_worker_status_response_stream_disconnected]
+other = "响应流断开"
+
+[oauth_worker_tail_live]
+other = "实时 Tail"
+
+[oauth_worker_tail_start]
+other = "开始 Tail"
+
+[oauth_worker_tail_stop]
+other = "停止 Tail"
+
+[oauth_worker_tail_pause]
+other = "暂停"
+
+[oauth_worker_tail_resume]
+other = "继续"
+
+[oauth_worker_tail_clear]
+other = "清空"
+
+[oauth_worker_tail_scope_required]
+other = "授权 workers-tail.read 后可查看 Worker 实时日志。"
+
+[oauth_worker_tail_empty]
+other = "还没有 Tail 事件。"
+
+[oauth_worker_tail_idle]
+other = "空闲"
+
+[oauth_worker_tail_connecting]
+other = "正在连接 Tail..."
+
+[oauth_worker_tail_connected]
+other = "Tail 已连接：{id}"
+
+[oauth_worker_tail_connected_short]
+other = "已连接"
+
+[oauth_worker_tail_disconnected]
+other = "Tail 已断开。"
+
+[oauth_worker_tail_failed]
+other = "Worker Tail 失败。"
+
+[oauth_worker_tail_stopped]
+other = "Tail 已停止。"
+
+[oauth_worker_tail_paused]
+other = "已暂停"
+
+[oauth_worker_tail_dropped]
+other = "浏览器处理不及时，已丢弃 {count} 条 Tail 事件。"
+
+[oauth_worker_no_metadata]
+other = "没有返回元数据。"
+
+[oauth_worker_script_truncated]
+other = "预览已截断"
+
+[oauth_worker_script_binary]
+other = "脚本内容不是 UTF-8 文本（{bytes}）。"
+
+[oauth_storage]
+other = "存储"
+
+[oauth_snippets]
+other = "Snippets"
+
+[oauth_waf]
+other = "WAF"
+
+[oauth_analytics]
+other = "Analytics"
+
+[oauth_usage]
+other = "用量"
+
+[oauth_usage_loading]
+other = "正在加载账号用量..."
+
+[oauth_usage_empty]
+other = "还没有加载账号用量。"
+
+[oauth_usage_scope_required]
+other = "授权 analytics.read 或 account-analytics.read 后可查看账号用量。"
+
+[oauth_usage_period]
+other = "用量周期"
+
+[oauth_usage_billing]
+other = "计费"
+
+[oauth_usage_billing_status]
+other = "计费状态"
+
+[oauth_usage_billing_reason_permission_denied]
+other = "当前 OAuth session 未授权计费读取权限。"
+
+[oauth_usage_billing_reason_not_found]
+other = "没有找到该账号的计费记录。"
+
+[oauth_usage_billing_reason_request_failed]
+other = "无法加载计费数据。"
+
+[oauth_usage_billing_reason_unavailable]
+other = "计费数据不可用。"
+
+[oauth_usage_workers_paid]
+other = "Workers 付费套餐"
+
+[oauth_usage_r2_paid]
+other = "R2 付费套餐"
+
+[oauth_usage_subscription_count]
+other = "订阅数"
+
+[oauth_usage_billing_period]
+other = "计费周期"
+
+[oauth_usage_subscription]
+other = "订阅"
+
+[oauth_usage_no_subscriptions]
+other = "Cloudflare 未返回账号订阅。"
+
+[oauth_usage_subscription_active]
+other = "有效"
+
+[oauth_usage_subscription_inactive]
+other = "无效"
+
+[oauth_usage_workers]
+other = "Workers"
+
+[oauth_usage_r2]
+other = "R2"
+
+[oauth_usage_d1]
+other = "D1"
+
+[oauth_usage_kv]
+other = "KV"
+
+[oauth_usage_requests_today]
+other = "今日请求"
+
+[oauth_usage_requests_period]
+other = "周期内请求"
+
+[oauth_usage_errors_period]
+other = "周期内错误"
+
+[oauth_usage_errors_last_hour]
+other = "近 1 小时错误"
+
+[oauth_usage_subrequests]
+other = "子请求"
+
+[oauth_usage_cpu_period]
+other = "周期内 CPU"
+
+[oauth_usage_cpu_today]
+other = "今日 CPU"
+
+[oauth_usage_cpu_single]
+other = "单次请求 CPU"
+
+[oauth_usage_r2_class_a]
+other = "Class A 操作"
+
+[oauth_usage_r2_class_b]
+other = "Class B 操作"
+
+[oauth_usage_r2_storage]
+other = "存储"
+
+[oauth_usage_r2_objects]
+other = "对象数"
+
+[oauth_usage_d1_rows_read_today]
+other = "今日读取行"
+
+[oauth_usage_d1_rows_written_today]
+other = "今日写入行"
+
+[oauth_usage_d1_rows_read_period]
+other = "周期内读取行"
+
+[oauth_usage_d1_rows_written_period]
+other = "周期内写入行"
+
+[oauth_usage_d1_read_queries_period]
+other = "周期内读查询"
+
+[oauth_usage_d1_write_queries_period]
+other = "周期内写查询"
+
+[oauth_usage_kv_reads_today]
+other = "今日读取"
+
+[oauth_usage_kv_writes_today]
+other = "今日写入"
+
+[oauth_usage_kv_reads_period]
+other = "周期内读取"
+
+[oauth_usage_kv_writes_period]
+other = "周期内写入"
+
+[oauth_usage_kv_storage]
+other = "存储"
+
+[oauth_usage_kv_keys]
+other = "Key 数"
+
+[oauth_no_analytics]
+other = "该域名还没有加载 Analytics 数据。"
+
+[oauth_no_analytics_timeseries]
+other = "当前时间范围没有返回 Analytics 时间序列。"
+
+[oauth_analytics_summary]
+other = "汇总"
+
+[oauth_analytics_timeseries]
+other = "时间序列"
+
+[oauth_analytics_range]
+other = "Analytics 时间范围"
+
+[oauth_analytics_range_24h]
+other = "最近 24 小时"
+
+[oauth_analytics_range_7d]
+other = "最近 7 天"
+
+[oauth_analytics_range_30d]
+other = "最近 30 天"
+
+[oauth_analytics_requests]
+other = "请求数"
+
+[oauth_analytics_bandwidth]
+other = "带宽"
+
+[oauth_analytics_threats]
+other = "威胁"
+
+[oauth_analytics_pageviews]
+other = "页面浏览"
+
+[oauth_analytics_uniques]
+other = "独立访客"
+
+[oauth_analytics_cache_hit]
+other = "缓存命中"
+
+[oauth_zone_settings]
+other = "设置"
+
+[oauth_not_configured]
+other = "请先设置 CFUI_OAUTH_CLIENT_ID。"
+
+[oauth_setup_title]
+other = "OAuth 配置引导"
+
+[oauth_setup_subtitle]
+other = "先创建 Cloudflare OAuth app，把 relay callback 作为 redirect URI，然后用 client ID 重启 cfui。"
+
+[oauth_setup_oauth_app_title]
+other = "创建 Cloudflare OAuth app"
+
+[oauth_setup_oauth_app_desc]
+other = "在 Cloudflare 创建 OAuth app，并登记这个 redirect URI。你可以使用默认托管 relay，也可以换成自己的 Worker URL。"
+
+[oauth_setup_redirect_uri]
+other = "OAuth redirect URI"
+
+[oauth_setup_worker_title]
+other = "使用或自部署 relay Worker"
+
+[oauth_setup_worker_desc]
+other = "内置 Worker 会把 Cloudflare 返回的 code 和 state 转发回当前 cfui 实例。如果 cfui 不是默认本地地址，需要设置 Worker 变量。"
+
+[oauth_setup_worker_script]
+other = "Worker 脚本"
+
+[oauth_setup_worker_callback_var]
+other = "Worker 变量"
+
+[oauth_relay_check]
+other = "检查 relay"
+
+[oauth_relay_checking]
+other = "正在检查 relay..."
+
+[oauth_relay_check_ok]
+other = "relay 可访问"
+
+[oauth_relay_check_failed]
+other = "relay 检查失败"
+
+[oauth_setup_env_title]
+other = "设置 cfui 环境变量"
+
+[oauth_setup_env_desc]
+other = "设置 OAuth client ID 和 relay URL 后重启 cfui。relay URL 必须和 Cloudflare OAuth app 里登记的 redirect URI 一致。"
+
+[oauth_setup_env_vars]
+other = "环境变量"
+
+[oauth_authorization_scopes]
+other = "授权范围"
+
+[oauth_authorization_scopes_hint]
+other = "选择下一次 OAuth 登录要申请的 Cloudflare 模块权限。"
+
+[oauth_current_scopes]
+other = "当前身份已授权 scopes"
+
+[oauth_scope_preview]
+other = "OAuth scope 预览"
+
+[oauth_no_scopes]
+other = "没有返回 scopes。"
+
+[oauth_permission_required]
+other = "必选"
+
+[oauth_permission_level]
+other = "权限级别"
+
+[oauth_permission_readonly]
+other = "只读"
+
+[oauth_permission_readwrite]
+other = "读写"
+
+[oauth_permission_account_desc]
+other = "读取 Cloudflare 账号身份和设置。"
+
+[oauth_permission_zones_desc]
+other = "列出域名并加载域名概览详情。"
+
+[oauth_permission_dns_desc]
+other = "查看或编辑所选域名的 DNS 记录。"
+
+[oauth_permission_workers_desc]
+other = "列出 Workers 脚本并加载脚本元数据。"
+
+[oauth_permission_workers_tail_desc]
+other = "通过 cfui 流式查看 Worker 实时执行事件。"
+
+[oauth_permission_snippets_desc]
+other = "管理 Zone 级 Snippets 和触发规则。"
+
+[oauth_permission_r2_desc]
+other = "浏览 R2 bucket 并管理 bucket 对象。"
+
+[oauth_permission_d1_desc]
+other = "浏览 D1 数据库并执行 SQL 查询。"
+
+[oauth_permission_kv_desc]
+other = "浏览 KV namespace 并编辑 UTF-8 key value。"
+
+[oauth_permission_tunnels_desc]
+other = "查看 Cloudflare Tunnel 控制面记录。"
+
+[oauth_permission_waf_desc]
+other = "查看、新建、启停或删除 WAF 自定义规则。"
+
+[oauth_permission_zone_settings_desc]
+other = "读取 Zone 设置、修改已支持设置并清理缓存。"
+
+[oauth_permission_analytics_desc]
+other = "加载 Zone Analytics、Worker 指标和账号用量。"
+
+[oauth_account]
+other = "Cloudflare 账号"
+
+[oauth_identities]
+other = "OAuth 身份"
+
+[oauth_no_identities]
+other = "还没有保存 OAuth 身份。"
+
+[oauth_identity_current]
+other = "当前"
+
+[oauth_identity_switch]
+other = "切换"
+
+[oauth_identity_switching]
+other = "正在切换"
+
+[oauth_identity_remove]
+other = "移除"
+
+[oauth_identity_rename]
+other = "重命名"
+
+[oauth_identity_rename_prompt]
+other = "输入这个 OAuth 身份的新名称"
+
+[oauth_identity_renamed]
+other = "OAuth 身份已重命名。"
+
+[oauth_identity_removed]
+other = "OAuth 身份已移除。"
+
+[oauth_identity_switched]
+other = "OAuth 身份已切换。"
+
+[oauth_identity_remove_title]
+other = "移除 OAuth 身份"
+
+[oauth_identity_remove_message]
+other = "移除 {label}？会尽量吊销它保存的 OAuth 会话。"
+
+[oauth_scope_count]
+other = "{n} 个 scope"
+
+[oauth_logged_in_as]
+other = "已登录：{label}"
+
+[oauth_not_logged_in]
+other = "未登录"
+
+[oauth_login_required]
+other = "使用 Cloudflare OAuth 登录后加载账号资源。"
+
+[oauth_no_accounts]
+other = "当前 token 没有返回账号。"
+
+[oauth_no_zones]
+other = "没有可用域名。"
+
+[oauth_no_dns]
+other = "没有 DNS 记录。"
+
+[oauth_no_tunnels]
+other = "没有 Tunnel。"
+
+[oauth_no_workers]
+other = "没有 Workers 脚本。"
+
+[oauth_no_r2_buckets]
+other = "没有 R2 bucket。"
+
+[oauth_no_d1_databases]
+other = "没有 D1 数据库。"
+
+[oauth_no_kv_namespaces]
+other = "没有 KV namespace。"
+
+[oauth_no_snippets]
+other = "没有 Snippets。"
+
+[oauth_snippets_readonly]
+other = "当前 token 只能读取 Snippets。授权 snippets.write 后可创建 snippet 或管理规则。"
+
+[oauth_snippet_create]
+other = "创建 Snippet"
+
+[oauth_snippet_name]
+other = "名称"
+
+[oauth_snippet_main_file]
+other = "主文件"
+
+[oauth_snippet_code]
+other = "代码"
+
+[oauth_snippet_content]
+other = "Snippet 代码"
+
+[oauth_snippet_content_loading]
+other = "正在加载 Snippet 代码..."
+
+[oauth_snippet_content_unavailable]
+other = "Snippet 代码尚未加载。"
+
+[oauth_snippet_content_binary]
+other = "Snippet 代码不是 UTF-8 文本，无法在这里编辑。"
+
+[oauth_snippet_content_truncated]
+other = "Snippet 代码已截断。建议完整加载后再保存。"
+
+[oauth_snippet_content_saved]
+other = "Snippet 代码已保存。"
+
+[oauth_snippet_saved]
+other = "Snippet 已保存。"
+
+[oauth_snippet_deleted]
+other = "Snippet 已删除。"
+
+[oauth_snippet_delete_title]
+other = "删除 Snippet"
+
+[oauth_snippet_delete_message]
+other = "删除 {name}？它的触发规则也会一并移除。"
+
+[oauth_snippet_rule_count]
+other = "{n} 条触发规则"
+
+[oauth_snippet_rules]
+other = "触发规则"
+
+[oauth_snippet_no_rules]
+other = "该 Snippet 暂无触发规则。"
+
+[oauth_snippet_rule_add]
+other = "添加规则"
+
+[oauth_snippet_rule_expression]
+other = "表达式"
+
+[oauth_snippet_rule_description]
+other = "描述"
+
+[oauth_snippet_rule_enabled]
+other = "启用"
+
+[oauth_snippet_rule_saved]
+other = "Snippet 规则已保存。"
+
+[oauth_snippet_rule_deleted]
+other = "Snippet 规则已删除。"
+
+[oauth_snippet_rule_delete_title]
+other = "删除 Snippet 规则"
+
+[oauth_snippet_rule_delete_message]
+other = "删除该触发规则？此操作不可撤销。"
+
+[oauth_no_waf_rules]
+other = "没有自定义 WAF 规则。"
+
+[oauth_waf_custom_rules]
+other = "自定义 WAF 规则"
+
+[oauth_waf_managed_exceptions]
+other = "托管规则例外"
+
+[oauth_waf_managed_overrides]
+other = "托管规则集覆盖"
+
+[oauth_no_waf_managed_exceptions]
+other = "没有托管规则例外。"
+
+[oauth_no_waf_managed_overrides]
+other = "没有托管规则集覆盖。"
+
+[oauth_waf_readonly]
+other = "当前 token 只能读取 WAF 规则。授权 zone-waf.write 后可创建、编辑、启停或删除规则。"
+
+[oauth_waf_create_rule]
+other = "创建 WAF 规则"
+
+[oauth_waf_create_managed_exception]
+other = "创建例外"
+
+[oauth_waf_create_managed_override]
+other = "创建覆盖"
+
+[oauth_waf_edit_rule]
+other = "编辑"
+
+[oauth_waf_edit_managed_exception]
+other = "编辑"
+
+[oauth_waf_edit_managed_override]
+other = "编辑"
+
+[oauth_waf_update_rule]
+other = "更新规则"
+
+[oauth_waf_update_managed_exception]
+other = "更新例外"
+
+[oauth_waf_update_managed_override]
+other = "更新覆盖"
+
+[oauth_waf_action]
+other = "动作"
+
+[oauth_waf_expression]
+other = "表达式"
+
+[oauth_waf_description]
+other = "描述"
+
+[oauth_waf_enabled]
+other = "启用"
+
+[oauth_waf_copy_audit_json]
+other = "复制审计 JSON"
+
+[oauth_waf_advanced_json]
+other = "高级 JSON"
+
+[oauth_waf_advanced_json_help]
+other = "编辑该规则的原始 WAF 结构。请填写 JSON 对象；如需清空字段请写 null；未修改字段不会提交。"
+
+[oauth_waf_advanced_json_invalid]
+other = "{field} 必须是 JSON 对象或 null。"
+
+[oauth_waf_rule_saved]
+other = "WAF 规则已保存。"
+
+[oauth_waf_rule_updated]
+other = "WAF 规则已更新。"
+
+[oauth_waf_rule_deleted]
+other = "WAF 规则已删除。"
+
+[oauth_waf_managed_exception_saved]
+other = "托管规则例外已保存。"
+
+[oauth_waf_managed_exception_updated]
+other = "托管规则例外已更新。"
+
+[oauth_waf_managed_exception_deleted]
+other = "托管规则例外已删除。"
+
+[oauth_waf_managed_override_saved]
+other = "托管规则集覆盖已保存。"
+
+[oauth_waf_managed_override_updated]
+other = "托管规则集覆盖已更新。"
+
+[oauth_waf_managed_override_deleted]
+other = "托管规则集覆盖已删除。"
+
+[oauth_waf_delete_rule_title]
+other = "删除 WAF 规则"
+
+[oauth_waf_delete_rule_message]
+other = "删除该自定义 WAF 规则？此操作不可撤销。"
+
+[oauth_waf_delete_managed_exception_title]
+other = "删除托管规则例外"
+
+[oauth_waf_delete_managed_exception_message]
+other = "删除该托管规则例外？此操作不可撤销。"
+
+[oauth_waf_delete_managed_override_title]
+other = "删除托管规则集覆盖"
+
+[oauth_waf_delete_managed_override_message]
+other = "删除该托管规则集覆盖？此操作不可撤销。"
+
+[oauth_waf_action_execute]
+other = "执行"
+
+[oauth_waf_action_block]
+other = "阻断"
+
+[oauth_waf_action_challenge]
+other = "挑战"
+
+[oauth_waf_action_managed_challenge]
+other = "托管挑战"
+
+[oauth_waf_action_js_challenge]
+other = "JS 挑战"
+
+[oauth_waf_action_log]
+other = "记录"
+
+[oauth_waf_action_skip]
+other = "跳过"
+
+[oauth_waf_skip_options]
+other = "跳过选项"
+
+[oauth_waf_skip_current_ruleset]
+other = "跳过当前规则集内剩余自定义规则"
+
+[oauth_waf_skip_current_ruleset_short]
+other = "跳过当前规则集"
+
+[oauth_waf_skip_products]
+other = "安全产品"
+
+[oauth_waf_skip_phases]
+other = "规则集阶段"
+
+[oauth_waf_skip_requires_option]
+other = "至少选择一个跳过选项。"
+
+[oauth_waf_managed_exception_targets]
+other = "例外目标"
+
+[oauth_waf_managed_exception_skip_current]
+other = "跳过剩余所有托管规则"
+
+[oauth_waf_managed_rulesets]
+other = "托管规则集 ID"
+
+[oauth_waf_managed_rule_ruleset_id]
+other = "规则集 ID"
+
+[oauth_waf_managed_rule_ids]
+other = "托管规则 ID"
+
+[oauth_waf_managed_exception_add_rule_target]
+other = "添加规则目标"
+
+[oauth_waf_managed_exception_rule_target_required]
+other = "每个规则目标都需要规则集 ID 和至少一个托管规则 ID。"
+
+[oauth_waf_managed_ruleset_id]
+other = "托管规则集 ID"
+
+[oauth_waf_managed_rule_id]
+other = "托管规则 ID"
+
+[oauth_waf_managed_override_overrides]
+other = "覆盖设置"
+
+[oauth_waf_managed_override_ruleset_action]
+other = "规则集动作覆盖"
+
+[oauth_waf_managed_override_ruleset_enabled]
+other = "规则集启用覆盖"
+
+[oauth_waf_managed_override_enabled_override]
+other = "启用覆盖"
+
+[oauth_waf_managed_override_sensitivity]
+other = "敏感度"
+
+[oauth_waf_managed_override_no_action_override]
+other = "不覆盖动作"
+
+[oauth_waf_managed_override_no_enabled_override]
+other = "不覆盖启用状态"
+
+[oauth_waf_managed_override_no_sensitivity_override]
+other = "不覆盖敏感度"
+
+[oauth_waf_managed_override_categories]
+other = "分类覆盖"
+
+[oauth_waf_managed_override_category]
+other = "分类标签"
+
+[oauth_waf_managed_override_add_category]
+other = "添加分类覆盖"
+
+[oauth_waf_managed_override_category_required]
+other = "分类覆盖需要标签。"
+
+[oauth_waf_managed_override_rules]
+other = "规则覆盖"
+
+[oauth_waf_managed_override_add_rule]
+other = "添加规则覆盖"
+
+[oauth_waf_managed_override_rule_required]
+other = "规则覆盖需要托管规则 ID。"
+
+[oauth_waf_managed_override_score_threshold]
+other = "评分阈值"
+
+[oauth_waf_managed_override_score_invalid]
+other = "评分阈值必须是 0 到 100 的整数。"
+
+[oauth_waf_sensitivity_default]
+other = "默认"
+
+[oauth_waf_sensitivity_high]
+other = "高"
+
+[oauth_waf_sensitivity_medium]
+other = "中"
+
+[oauth_waf_sensitivity_low]
+other = "低"
+
+[oauth_waf_sensitivity_eoff]
+other = "基本关闭"
+
+[oauth_waf_skip_products_summary]
+other = "{n} 个产品"
+
+[oauth_waf_skip_phases_summary]
+other = "{n} 个阶段"
+
+[oauth_waf_rulesets_summary]
+other = "{n} 个规则集"
+
+[oauth_waf_rules_summary]
+other = "{n} 条托管规则"
+
+[oauth_waf_overrides_summary]
+other = "覆盖配置"
+
+[oauth_waf_matched_data_summary]
+other = "匹配数据"
+
+[oauth_waf_response_summary]
+other = "自定义响应"
+
+[oauth_waf_rate_limit_summary]
+other = "速率限制"
+
+[oauth_waf_logging_summary]
+other = "日志"
+
+[oauth_waf_credential_check_summary]
+other = "凭据检查"
+
+[oauth_waf_ref]
+other = "Ref"
+
+[oauth_waf_version]
+other = "版本"
+
+[oauth_waf_score_threshold]
+other = "分数阈值"
+
+[oauth_waf_last_updated]
+other = "最后更新"
+
+[oauth_waf_action_parameters]
+other = "动作参数"
+
+[oauth_waf_rate_limit]
+other = "速率限制"
+
+[oauth_waf_rate_limit_help]
+other = "不用编辑原始 JSON，也可以配置常用速率限制字段。高级 JSON 仍可覆盖该字段。"
+
+[oauth_waf_rate_limit_enable]
+other = "为此规则应用速率限制"
+
+[oauth_waf_rate_limit_characteristics]
+other = "特征字段"
+
+[oauth_waf_rate_limit_period]
+other = "周期秒数"
+
+[oauth_waf_rate_limit_requests]
+other = "每周期请求数"
+
+[oauth_waf_rate_limit_mitigation]
+other = "缓解超时秒数"
+
+[oauth_waf_rate_limit_counting_expression]
+other = "计数表达式"
+
+[oauth_waf_rate_limit_requests_to_origin]
+other = "只统计到达源站的请求"
+
+[oauth_waf_rate_limit_score]
+other = "每周期分数"
+
+[oauth_waf_rate_limit_score_header]
+other = "分数响应头"
+
+[oauth_waf_rate_limit_required]
+other = "速率限制至少需要一个特征字段、周期，并填写每周期请求数或每周期分数。"
+
+[oauth_waf_rate_limit_invalid_number]
+other = "{field} 必须是允许范围内的整数。"
+
+[oauth_waf_logging]
+other = "日志"
+
+[oauth_waf_credential_check]
+other = "凭据检查"
+
+[oauth_waf_json_truncated]
+other = "... 已截断"
+
+[oauth_waf_skip_product_zone_lockdown]
+other = "Zone Lockdown"
+
+[oauth_waf_skip_product_ua_block]
+other = "User Agent Blocking"
+
+[oauth_waf_skip_product_bic]
+other = "Browser Integrity Check"
+
+[oauth_waf_skip_product_hot]
+other = "Hotlink Protection"
+
+[oauth_waf_skip_product_security_level]
+other = "Security Level"
+
+[oauth_waf_skip_product_rate_limit]
+other = "速率限制（旧版本）"
+
+[oauth_waf_skip_product_waf]
+other = "托管规则（旧版本）"
+
+[oauth_waf_skip_phase_rate_limit]
+other = "速率限制规则"
+
+[oauth_waf_skip_phase_sbfm]
+other = "Super Bot Fight Mode"
+
+[oauth_waf_skip_phase_managed_waf]
+other = "WAF 托管规则"
+
+[oauth_no_zone_settings]
+other = "没有返回支持展示的 Zone 设置。"
+
+[oauth_storage_scope_required]
+other = "授权 R2、D1 或 KV 读取 scope 后才能加载存储资源。"
+
+[oauth_select_account]
+other = "请先选择账号。"
+
+[oauth_select_zone]
+other = "请先选择域名。"
+
+[oauth_login_success]
+other = "Cloudflare OAuth 登录已完成。"
+
+[oauth_login_failed]
+other = "Cloudflare OAuth 登录失败。"
+
+[oauth_login_url_missing]
+other = "后端没有返回 OAuth 登录地址。"
+
+[oauth_logpush_off]
+other = "Logpush 关闭"
+
+[oauth_modified]
+other = "修改"
+
+[oauth_r2_buckets]
+other = "R2 buckets"
+
+[oauth_r2_metrics]
+other = "R2 指标"
+
+[oauth_r2_metrics_loading]
+other = "正在加载 R2 指标..."
+
+[oauth_r2_metrics_error]
+other = "R2 指标不可用：{error}"
+
+[oauth_r2_metrics_empty]
+other = "没有返回 R2 指标。"
+
+[oauth_r2_metrics_standard]
+other = "Standard"
+
+[oauth_r2_metrics_infrequent_access]
+other = "Infrequent Access"
+
+[oauth_r2_metrics_published]
+other = "已发布"
+
+[oauth_r2_metrics_uploaded]
+other = "已上传"
+
+[oauth_r2_metrics_objects]
+other = "对象数"
+
+[oauth_r2_metrics_payload]
+other = "Payload"
+
+[oauth_r2_metrics_metadata]
+other = "Metadata"
+
+[oauth_r2_metrics_total]
+other = "总量"
+
+[oauth_r2_create_bucket]
+other = "创建 bucket"
+
+[oauth_r2_bucket_name]
+other = "Bucket 名称"
+
+[oauth_r2_location_hint]
+other = "Location hint"
+
+[oauth_r2_created]
+other = "R2 bucket 已创建。"
+
+[oauth_r2_deleted]
+other = "R2 bucket 已删除。"
+
+[oauth_r2_delete_title]
+other = "删除 R2 bucket"
+
+[oauth_r2_delete_message]
+other = "删除 {name}？此操作不可撤销。"
+
+[oauth_r2_objects]
+other = "对象"
+
+[oauth_r2_objects_readonly]
+other = "授权 workers-r2.write 后可创建、编辑或删除 R2 对象。"
+
+[oauth_r2_no_objects]
+other = "这个 bucket 里还没有对象。"
+
+[oauth_r2_no_object_matches]
+other = "已加载对象中没有匹配项。"
+
+[oauth_r2_object_search_label]
+other = "搜索 R2 对象"
+
+[oauth_r2_object_search_placeholder]
+other = "搜索 key、Content-Type、存储类型、大小..."
+
+[oauth_r2_object_search_count]
+other = "已加载对象 {n}/{m}"
+
+[oauth_r2_load_more_objects]
+other = "加载更多对象"
+
+[oauth_r2_select_object]
+other = "选择一个对象进行预览。"
+
+[oauth_r2_object]
+other = "R2 对象"
+
+[oauth_r2_object_create]
+other = "创建文本对象"
+
+[oauth_r2_object_upload]
+other = "上传文件"
+
+[oauth_r2_object_edit]
+other = "编辑文本对象"
+
+[oauth_r2_object_key]
+other = "对象 key"
+
+[oauth_r2_object_copy_key]
+other = "复制 key"
+
+[oauth_r2_object_copy]
+other = "复制对象"
+
+[oauth_r2_object_move]
+other = "移动"
+
+[oauth_r2_object_copy_bucket_prompt]
+other = "输入目标 bucket"
+
+[oauth_r2_object_move_bucket_prompt]
+other = "输入目标 bucket"
+
+[oauth_r2_object_copy_prompt]
+other = "输入复制后的对象 key"
+
+[oauth_r2_object_move_prompt]
+other = "输入移动后的对象 key"
+
+[oauth_r2_object_copying]
+other = "正在复制"
+
+[oauth_r2_object_moving]
+other = "正在移动"
+
+[oauth_r2_object_copied]
+other = "R2 对象已复制。"
+
+[oauth_r2_object_moved]
+other = "R2 对象已移动。"
+
+[oauth_r2_object_destination_diff]
+other = "目标 key 必须和源 key 不同。"
+
+[oauth_r2_object_detail]
+other = "对象详情"
+
+[oauth_r2_object_size]
+other = "大小"
+
+[oauth_r2_object_etag]
+other = "ETag"
+
+[oauth_r2_object_storage_class]
+other = "存储类型"
+
+[oauth_r2_object_last_modified]
+other = "最后修改"
+
+[oauth_r2_object_encoding]
+other = "编码"
+
+[oauth_r2_object_encoding_binary]
+other = "二进制"
+
+[oauth_r2_object_encoding_too_large]
+other = "过大"
+
+[oauth_r2_object_encoding_text]
+other = "UTF-8 文本"
+
+[oauth_r2_object_encoding_utf8]
+other = "UTF-8"
+
+[oauth_r2_object_key_required]
+other = "对象 key 必填。"
+
+[oauth_r2_object_file]
+other = "文件"
+
+[oauth_r2_object_file_required]
+other = "请选择要上传的文件。"
+
+[oauth_r2_object_upload_limit]
+other = "单次上传上限：{max}。"
+
+[oauth_r2_object_upload_selected]
+other = "已选文件：{size}。单次上传上限：{max}。"
+
+[oauth_r2_object_upload_too_large]
+other = "已选文件大小为 {size}，超过当前 {max} 的单次上传上限。"
+
+[oauth_r2_object_content_type]
+other = "Content-Type"
+
+[oauth_r2_object_value]
+other = "内容"
+
+[oauth_r2_object_loading]
+other = "正在加载对象..."
+
+[oauth_r2_object_truncated]
+other = "预览已截断"
+
+[oauth_r2_object_binary]
+other = "对象内容不是 UTF-8 文本（{bytes}）。"
+
+[oauth_r2_object_binary_preview]
+other = "十六进制预览"
+
+[oauth_r2_object_binary_preview_meta]
+other = "对象内容前 {bytes}。完整内容请下载查看。"
+
+[oauth_r2_object_preview]
+other = "媒体预览"
+
+[oauth_r2_object_preview_too_large]
+other = "超过 {max} 的对象只支持下载查看。"
+
+[oauth_r2_object_preview_failed]
+other = "预览失败。请下载对象查看。"
+
+[oauth_r2_object_saved]
+other = "R2 对象已保存。"
+
+[oauth_r2_object_uploaded]
+other = "R2 对象已上传。"
+
+[oauth_r2_object_deleted]
+other = "R2 对象已删除。"
+
+[oauth_r2_object_delete_title]
+other = "删除 R2 对象"
+
+[oauth_r2_object_delete_message]
+other = "删除对象 {key}？此操作不可撤销。"
+
+[oauth_d1_databases]
+other = "D1 数据库"
+
+[oauth_d1_database_detail]
+other = "数据库详情"
+
+[oauth_d1_file_size]
+other = "文件大小"
+
+[oauth_d1_version]
+other = "版本"
+
+[oauth_d1_created]
+other = "创建时间"
+
+[oauth_d1_unavailable]
+other = "不可用"
+
+[oauth_kv_namespaces]
+other = "KV namespaces"
+
+[oauth_tables]
+other = "张表"
+
+[oauth_disabled]
+other = "已禁用"
+
+[oauth_enabled_state]
+other = "已启用"
+
+[oauth_editable]
+other = "可编辑"
+
+[oauth_readonly]
+other = "只读"
+
+[proxied]
+other = "已代理"
+
+[dns_only]
+other = "仅 DNS"
+
+[oauth_dns_create]
+other = "创建记录"
+
+[oauth_dns_edit]
+other = "编辑 DNS 记录"
+
+[oauth_dns_update]
+other = "更新记录"
+
+[oauth_dns_set_proxied]
+other = "开启代理"
+
+[oauth_dns_set_dns_only]
+other = "仅 DNS"
+
+[oauth_dns_type]
+other = "类型"
+
+[oauth_dns_name]
+other = "名称"
+
+[oauth_dns_content]
+other = "内容"
+
+[oauth_dns_ttl]
+other = "TTL"
+
+[oauth_dns_comment]
+other = "备注"
+
+[oauth_dns_created]
+other = "DNS 记录已创建。"
+
+[oauth_dns_updated]
+other = "DNS 记录已更新。"
+
+[oauth_dns_deleted]
+other = "DNS 记录已删除。"
+
+[oauth_dns_delete_title]
+other = "删除 DNS 记录"
+
+[oauth_dns_delete_message]
+other = "删除 {name}？此操作不可撤销。"
+
+[oauth_dns_search_label]
+other = "搜索 DNS 记录"
+
+[oauth_dns_search_placeholder]
+other = "搜索类型、名称、内容、备注或代理状态"
+
+[oauth_dns_search_count]
+other = "{n}/{m} 条记录"
+
+[oauth_dns_no_matches]
+other = "没有匹配此搜索的 DNS 记录。"
+
+[oauth_zone_actions]
+other = "Zone 操作"
+
+[oauth_development_mode]
+other = "开发模式"
+
+[oauth_security_level]
+other = "安全等级"
+
+[oauth_security_essentially_off]
+other = "基本关闭"
+
+[oauth_security_low]
+other = "低"
+
+[oauth_security_medium]
+other = "中"
+
+[oauth_security_high]
+other = "高"
+
+[oauth_security_under_attack]
+other = "Under Attack"
+
+[oauth_always_use_https]
+other = "始终使用 HTTPS"
+
+[oauth_automatic_https_rewrites]
+other = "自动 HTTPS 重写"
+
+[oauth_brotli]
+other = "Brotli 压缩"
+
+[oauth_rocket_loader]
+other = "Rocket Loader"
+
+[oauth_ssl_mode]
+other = "SSL/TLS 模式"
+
+[oauth_ssl_off]
+other = "关闭"
+
+[oauth_ssl_flexible]
+other = "灵活"
+
+[oauth_ssl_full]
+other = "完全"
+
+[oauth_ssl_strict]
+other = "完全（严格）"
+
+[oauth_ssl_origin_pull]
+other = "Origin Pull"
+
+[oauth_cache_level]
+other = "缓存等级"
+
+[oauth_cache_level_aggressive]
+other = "标准"
+
+[oauth_cache_level_basic]
+other = "无查询字符串"
+
+[oauth_cache_level_simplified]
+other = "忽略查询字符串"
+
+[oauth_browser_cache_ttl]
+other = "浏览器缓存 TTL"
+
+[oauth_browser_cache_ttl_origin]
+other = "遵循现有响应头"
+
+[oauth_browser_cache_ttl_2h]
+other = "2 小时"
+
+[oauth_browser_cache_ttl_4h]
+other = "4 小时"
+
+[oauth_browser_cache_ttl_8h]
+other = "8 小时"
+
+[oauth_browser_cache_ttl_12h]
+other = "12 小时"
+
+[oauth_browser_cache_ttl_1d]
+other = "1 天"
+
+[oauth_browser_cache_ttl_3d]
+other = "3 天"
+
+[oauth_browser_cache_ttl_1w]
+other = "1 周"
+
+[oauth_browser_cache_ttl_1mo]
+other = "1 个月"
+
+[oauth_browser_cache_ttl_1y]
+other = "1 年"
+
+[oauth_current_setting_value]
+other = "当前：{value}"
+
+[oauth_cache_purge]
+other = "清理缓存"
+
+[oauth_cache_purge_title]
+other = "清理 Zone 缓存"
+
+[oauth_cache_purge_message]
+other = "清理该 Zone 的全部缓存文件？源站流量可能会立刻升高。"
+
+[oauth_cache_purged]
+other = "已请求清理 Zone 缓存。"
+
+[oauth_zone_setting_saved]
+other = "Zone 设置已保存。"
+
+[oauth_write_enabled]
+other = "可写"
+
+[oauth_storage_back]
+other = "返回存储"
+
+[oauth_kv_keys]
+other = "KV keys"
+
+[oauth_kv_load_more]
+other = "加载更多 key"
+
+[oauth_kv_no_keys]
+other = "该 namespace 暂无 key。"
+
+[oauth_kv_select_key]
+other = "选择一个 key 查看值。"
+
+[oauth_kv_create_key]
+other = "创建 key"
+
+[oauth_kv_key_name]
+other = "Key"
+
+[oauth_kv_value]
+other = "值"
+
+[oauth_kv_loading_value]
+other = "正在加载值..."
+
+[oauth_kv_value_binary]
+other = "二进制值（{bytes}），暂不支持文本预览。"
+
+[oauth_kv_value_too_large]
+other = "该值过大，无法在文本编辑器中打开（{bytes}）。"
+
+[oauth_kv_saved]
+other = "KV 值已保存。"
+
+[oauth_kv_deleted]
+other = "KV key 已删除。"
+
+[oauth_kv_delete_title]
+other = "删除 KV key"
+
+[oauth_kv_delete_message]
+other = "删除 {key}？此操作不可撤销。"
+
+[oauth_kv_readonly]
+other = "当前 token 只能读取 KV。授权 workers-kv-storage.write 后可编辑值。"
+
+[oauth_kv_expiration]
+other = "过期"
+
+[oauth_d1_tables]
+other = "表"
+
+[oauth_d1_load_tables]
+other = "加载表"
+
+[oauth_d1_no_tables]
+other = "该数据库暂无用户表。"
+
+[oauth_d1_table_meta]
+other = "已从偏移 {offset} 加载 {rows} 行"
+
+[oauth_d1_load_more_rows]
+other = "加载更多行"
+
+[oauth_d1_empty_table]
+other = "该表暂无行。"
+
+[oauth_d1_edit_row_title]
+other = "编辑行 {rowid}"
+
+[oauth_d1_edit_hint]
+other = "值会通过参数化 D1 查询按字符串保存。未修改的字段保持不变。"
+
+[oauth_d1_no_changes]
+other = "没有需要保存的修改。"
+
+[oauth_d1_row_saved]
+other = "D1 行已保存。"
+
+[oauth_d1_row_deleted]
+other = "D1 行已删除。"
+
+[oauth_d1_delete_row_title]
+other = "删除 D1 行"
+
+[oauth_d1_delete_row_message]
+other = "删除行 {rowid}？此操作不可撤销。"
+
+[oauth_d1_sql]
+other = "SQL"
+
+[oauth_d1_run]
+other = "执行查询"
+
+[oauth_d1_running]
+other = "执行中"
+
+[oauth_d1_query_done]
+other = "D1 查询已完成。"
+
+[oauth_d1_results]
+other = "结果"
+
+[oauth_d1_no_results]
+other = "执行查询后显示结果。"
+
+[oauth_d1_readonly_warning]
+other = "当前 token 对 D1 只读。写入语句可能会被 Cloudflare 拒绝。"
+
+[oauth_d1_statement]
+other = "语句 {n}"
+
+[oauth_d1_rows_read]
+other = "读取"
+
+[oauth_d1_rows_written]
+other = "写入"
+
+[oauth_d1_failed]
+other = "查询失败。"
+
+[oauth_d1_success_no_rows]
+other = "查询成功，没有返回行。"
+
+[oauth_d1_rows_truncated]
+other = "当前只显示 {n} 行中的前 100 行。"
+
+[oauth_cloudflare_status]
+other = "状态"
+
+[oauth_cf_status_public]
+other = "Cloudflare 官方公开状态，无需 OAuth scope。"
+
+[oauth_cf_status_loading]
+other = "正在加载 Cloudflare 状态..."
+
+[oauth_cf_status_empty]
+other = "尚未加载 Cloudflare 状态数据。"
+
+[oauth_cf_status_updated]
+other = "更新"
+
+[oauth_cf_status_fetched]
+other = "拉取"
+
+[oauth_cf_status_products]
+other = "产品"
+
+[oauth_cf_status_affected]
+other = "受影响"
+
+[oauth_cf_status_active_incidents]
+other = "进行中事件"
+
+[oauth_cf_status_maintenances]
+other = "计划维护"
+
+[oauth_cf_status_affected_products]
+other = "受影响产品"
+
+[oauth_cf_status_no_affected_products]
+other = "所有产品服务均正常。"
+
+[oauth_cf_status_regions]
+other = "边缘大区"
+
+[oauth_cf_status_region_impacted]
+other = "{n}/{m} 个节点异常"
+
+[oauth_cf_status_region_ok]
+other = "{n} 个节点正常"
+
+[oauth_cf_status_no_regions]
+other = "没有边缘大区数据。"
+
+[oauth_cf_status_active]
+other = "进行中事件"
+
+[oauth_cf_status_no_active]
+other = "没有进行中的事件。"
+
+[oauth_cf_status_maintenance]
+other = "计划维护"
+
+[oauth_cf_status_no_maintenance]
+other = "没有计划维护。"
+
+[oauth_cf_status_recent]
+other = "最近事件"
+
+[oauth_cf_status_no_recent]
+other = "没有最近事件。"
+
+[oauth_cf_status_indicator_none]
+other = "所有系统正常运行"
+
+[oauth_cf_status_indicator_minor]
+other = "轻微服务异常"
+
+[oauth_cf_status_indicator_major]
+other = "严重服务异常"
+
+[oauth_cf_status_indicator_critical]
+other = "重大服务中断"
+
+[oauth_cf_status_indicator_maintenance]
+other = "维护进行中"
+
+[oauth_cf_status_component_operational]
+other = "正常"
+
+[oauth_cf_status_component_degraded_performance]
+other = "性能下降"
+
+[oauth_cf_status_component_partial_outage]
+other = "部分中断"
+
+[oauth_cf_status_component_major_outage]
+other = "大面积中断"
+
+[oauth_cf_status_component_under_maintenance]
+other = "维护中"
+
+[oauth_cf_status_incident_investigating]
+other = "调查中"
+
+[oauth_cf_status_incident_identified]
+other = "已定位"
+
+[oauth_cf_status_incident_monitoring]
+other = "监控中"
+
+[oauth_cf_status_incident_resolved]
+other = "已解决"
+
+[oauth_cf_status_incident_postmortem]
+other = "事后分析"
+
+[oauth_cf_status_incident_scheduled]
+other = "已排期"
+
+[oauth_cf_status_incident_in_progress]
+other = "进行中"
+
+[oauth_cf_status_incident_verifying]
+other = "验证中"
+
+[oauth_cf_status_incident_completed]
+other = "已完成"
+
+[oauth_cf_status_impact_critical]
+other = "重大"
+
+[oauth_cf_status_impact_major]
+other = "严重"
+
+[oauth_cf_status_impact_minor]
+other = "轻微"
+
+[oauth_cf_status_impact_maintenance]
+other = "维护"
+
+[oauth_cf_status_impact_none]
+other = "无影响"
+
+[oauth_cf_status_region_africa]
+other = "非洲"
+
+[oauth_cf_status_region_asia]
+other = "亚洲"
+
+[oauth_cf_status_region_europe]
+other = "欧洲"
+
+[oauth_cf_status_region_latin_america]
+other = "拉丁美洲和加勒比"
+
+[oauth_cf_status_region_middle_east]
+other = "中东"
+
+[oauth_cf_status_region_north_america]
+other = "北美"
+
+[oauth_cf_status_region_oceania]
+other = "大洋洲"
