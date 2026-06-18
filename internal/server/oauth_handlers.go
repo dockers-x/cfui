@@ -323,7 +323,16 @@ func (s *Server) handleCFTunnels(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		resp, err := s.ensureCFService().Tunnels(r.Context(), r.URL.Query().Get("account_id"))
-		writeCFResponse(w, resp, err)
+		if err != nil {
+			writeCFResponse(w, nil, err)
+			return
+		}
+		writeJSON(w, cfTunnelsResponse{
+			Data:          resp.Data,
+			LocalProfiles: s.localTunnelProfileSummaries(r.URL.Query().Get("account_id")),
+			Session:       resp.Session,
+			Capabilities:  resp.Capabilities,
+		})
 	case http.MethodPost:
 		var req cfTunnelCreateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -353,6 +362,13 @@ func (s *Server) handleCFTunnels(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+type cfTunnelsResponse struct {
+	Data          []cfaccount.Tunnel            `json:"data"`
+	LocalProfiles []cfLocalTunnelProfileSummary `json:"local_profiles,omitempty"`
+	Session       cfoauth.SessionSummary        `json:"session"`
+	Capabilities  cfoauth.CapabilityMatrix      `json:"capabilities"`
 }
 
 type cfTunnelCreateRequest struct {
@@ -408,6 +424,22 @@ func (s *Server) saveOAuthTunnelLocalProfile(tunnel cfaccount.Tunnel, token, acc
 	}
 	summary := summarizeLocalTunnelProfile(saved, cfg.ActiveTunnelKey)
 	return &summary, nil
+}
+
+func (s *Server) localTunnelProfileSummaries(accountID string) []cfLocalTunnelProfileSummary {
+	accountID = strings.TrimSpace(accountID)
+	cfg := s.cfgMgr.Get()
+	out := make([]cfLocalTunnelProfileSummary, 0, len(cfg.Tunnels))
+	for _, profile := range cfg.Tunnels {
+		if strings.TrimSpace(profile.TunnelID) == "" {
+			continue
+		}
+		if accountID != "" && strings.TrimSpace(profile.AccountID) != "" && profile.AccountID != accountID {
+			continue
+		}
+		out = append(out, summarizeLocalTunnelProfile(profile, cfg.ActiveTunnelKey))
+	}
+	return out
 }
 
 func findTunnelProfileByTunnelID(profiles []config.TunnelProfileConfig, tunnelID string) (config.TunnelProfileConfig, bool) {

@@ -384,6 +384,18 @@
         return profile.name || profile.key;
     }
 
+    function shortIdentifier(value) {
+        const text = String(value || '').trim();
+        if (text.length <= 12) return text;
+        return `${text.slice(0, 8)}...${text.slice(-4)}`;
+    }
+
+    function remoteTunnelProfileLabel(profile) {
+        if (!profile?.remote_management_enabled && !profile?.tunnel_id && !profile?.account_id) return '';
+        const id = shortIdentifier(profile.tunnel_id || profile.account_id || '');
+        return id ? t('tunnel_profile_cloudflare_linked_id', { id }) : t('tunnel_profile_cloudflare_linked');
+    }
+
     function appendTunnelProfileOptions(select, profiles) {
         select.innerHTML = '';
         for (const profile of profiles) {
@@ -437,6 +449,13 @@
         name.className = 'tunnel-profile-item__name';
         name.textContent = tunnelDisplayName(profile);
         copy.append(name);
+        const remoteLabel = remoteTunnelProfileLabel(profile);
+        if (remoteLabel) {
+            const meta = document.createElement('span');
+            meta.className = 'tunnel-profile-item__meta';
+            meta.textContent = remoteLabel;
+            copy.append(meta);
+        }
 
         const protocol = document.createElement('span');
         protocol.className = 'tunnel-profile-item__protocol';
@@ -491,8 +510,9 @@
 
             if (summary) {
                 const name = item.querySelector('.tunnel-profile-item__name')?.textContent || '';
+                const remote = item.querySelector('.tunnel-profile-item__meta')?.textContent || '';
                 const fullStatus = protoText ? `${statusText} · ${protoText}` : statusText;
-                const titleParts = [name, fullStatus];
+                const titleParts = [name, remote, fullStatus];
                 if (st.status === 'error' && st.error) titleParts.push(st.error);
                 summary.title = titleParts.filter(Boolean).join(' · ');
                 summary.setAttribute('aria-label', summary.title);

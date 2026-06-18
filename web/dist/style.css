@@ -914,9 +914,22 @@ html[data-workspace="local"] #panel-oauth {
 }
 
 .tunnel-profile-item__name {
+    display: block;
     color: var(--text);
     font-weight: 600;
     line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tunnel-profile-item__meta {
+    display: block;
+    margin-top: 1px;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

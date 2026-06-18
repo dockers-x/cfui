@@ -61,6 +61,12 @@ other = "トンネルを削除"
 [tunnel_profile_name]
 other = "トンネル名"
 
+[tunnel_profile_cloudflare_linked]
+other = "Cloudflare に関連付け済み"
+
+[tunnel_profile_cloudflare_linked_id]
+other = "Cloudflare · {id}"
+
 [tunnel_token]
 other = "トンネル Token"
 
@@ -2139,6 +2145,15 @@ other = "ローカルプロファイルを保存しました"
 
 [oauth_tunnel_local_profile_activated]
 other = "ローカルプロファイルを有効にしました"
+
+[oauth_tunnel_linked_local_profile]
+other = "ローカルプロファイル {name} に関連付け済み"
+
+[oauth_tunnel_local_profile]
+other = "ローカルプロファイル"
+
+[oauth_tunnel_local_state]
+other = "ローカル状態"
 
 [oauth_tunnels_readonly]
 other = "現在の OAuth scope では Tunnel の読み取りのみ可能です。作成してローカルと関連付けるには cloudflare-tunnel.write を追加してください。"

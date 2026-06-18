@@ -61,6 +61,12 @@ other = "Delete tunnel"
 [tunnel_profile_name]
 other = "Tunnel name"
 
+[tunnel_profile_cloudflare_linked]
+other = "Cloudflare linked"
+
+[tunnel_profile_cloudflare_linked_id]
+other = "Cloudflare · {id}"
+
 [tunnel_token]
 other = "Tunnel Token"
 
@@ -2139,6 +2145,15 @@ other = "local profile saved"
 
 [oauth_tunnel_local_profile_activated]
 other = "local profile activated"
+
+[oauth_tunnel_linked_local_profile]
+other = "Linked to local profile {name}"
+
+[oauth_tunnel_local_profile]
+other = "Local profile"
+
+[oauth_tunnel_local_state]
+other = "Local state"
 
 [oauth_tunnels_readonly]
 other = "Current OAuth scopes can read tunnels only. Add cloudflare-tunnel.write to create and link tunnels."

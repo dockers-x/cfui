@@ -17,6 +17,7 @@ import (
 
 	"cfui/internal/cfaccount"
 	"cfui/internal/cfoauth"
+	"cfui/internal/config"
 	"cfui/internal/persist"
 )
 
@@ -349,6 +350,72 @@ func TestCFTunnelCreateCanSaveAndActivateLocalProfile(t *testing.T) {
 	}
 	if savedToken != "connector-token" {
 		t.Fatalf("saved connector token = %q, want connector-token", savedToken)
+	}
+}
+
+func TestCFTunnelsIncludesLocalProfileSummaryWithoutToken(t *testing.T) {
+	api := newFakeOAuthCloudflareServer(t)
+	defer api.Close()
+
+	s := newServerTestServer(t)
+	store := cfoauth.NewStore(s.cfgMgr.Dir())
+	if err := store.SaveSession(context.Background(), cfoauth.Session{
+		ID:          "session-1",
+		Label:       "me@example.com",
+		AccessToken: "access-token",
+		ExpiresAt:   time.Now().UTC().Add(time.Hour),
+		Scope:       "cloudflare-tunnel.read",
+		Current:     true,
+	}); err != nil {
+		t.Fatalf("SaveSession: %v", err)
+	}
+	oauthSvc := cfoauth.NewService(cfoauth.Config{Configured: true}, store)
+	s.oauthSvc = oauthSvc
+	s.cfSvc = cfaccount.NewServiceWithEndpoints(oauthSvc, cfaccount.EndpointOverrides{
+		REST: api.URL + "/client/v4",
+	})
+	if _, err := s.cfgMgr.SaveTunnelProfile("", config.TunnelProfileConfig{
+		Name:                    "edge local",
+		Token:                   "connector-token",
+		AccountID:               "account-1",
+		TunnelID:                "tunnel-1",
+		LocalEnabled:            true,
+		RemoteManagementEnabled: true,
+	}); err != nil {
+		t.Fatalf("SaveTunnelProfile: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/cf/tunnels?account_id=account-1", nil)
+	rec := httptest.NewRecorder()
+	s.handleCFTunnels(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("tunnels status %d: %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "connector-token") {
+		t.Fatalf("connector token leaked in response: %s", rec.Body.String())
+	}
+	var resp struct {
+		Data          []cfaccount.Tunnel `json:"data"`
+		LocalProfiles []struct {
+			Key       string `json:"key"`
+			Name      string `json:"name"`
+			AccountID string `json:"account_id"`
+			TunnelID  string `json:"tunnel_id"`
+			Active    bool   `json:"active"`
+		} `json:"local_profiles"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode tunnels response: %v", err)
+	}
+	if len(resp.Data) != 1 || resp.Data[0].ID != "tunnel-1" {
+		t.Fatalf("unexpected tunnels: %#v", resp.Data)
+	}
+	if len(resp.LocalProfiles) != 1 {
+		t.Fatalf("local_profiles length = %d, want 1: %#v", len(resp.LocalProfiles), resp.LocalProfiles)
+	}
+	profile := resp.LocalProfiles[0]
+	if profile.Key == "" || profile.Name != "edge local" || profile.AccountID != "account-1" || profile.TunnelID != "tunnel-1" {
+		t.Fatalf("unexpected local profile summary: %#v", profile)
 	}
 }
 

@@ -49,6 +49,7 @@
             zones: [],
             dnsRecords: [],
             tunnels: [],
+            localTunnelProfiles: [],
             workers: [],
             workerDetail: null,
             workerMetrics: null,

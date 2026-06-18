@@ -499,6 +499,7 @@
         try {
             const resp = await apiGet('/cf/tunnels?account_id=' + encodeURIComponent(state.oauth.selectedAccountId));
             state.oauth.tunnels = Array.isArray(resp.data) ? resp.data : [];
+            state.oauth.localTunnelProfiles = Array.isArray(resp.local_profiles) ? resp.local_profiles : [];
         } catch (err) {
             renderOAuthError(err.message);
         }
@@ -2551,15 +2552,17 @@
             return;
         }
         for (const tunnel of state.oauth.tunnels) {
+            const localProfile = localProfileForTunnel(tunnel);
             const connectionCount = tunnelConnectionCount(tunnel);
             const meta = [
                 tunnelStatusLabel(tunnel.status),
                 t('oauth_tunnel_connector_count', { n: connectionCount }),
+                localProfile ? t('oauth_tunnel_linked_local_profile', { name: localProfile.name || localProfile.key }) : '',
                 tunnel.type || '',
                 tunnel.id || '',
             ].filter(Boolean).join(' · ');
             const row = rowNode(tunnel.name || tunnel.id, meta);
-            const detail = tunnelDetailNode(tunnel);
+            const detail = tunnelDetailNode(tunnel, localProfile);
             if (detail) row.appendChild(detail);
             body.appendChild(row);
         }
@@ -2628,7 +2631,18 @@
         return Number(tunnel?.connections || 0) || 0;
     }
 
-    function tunnelDetailNode(tunnel) {
+    function localProfileForTunnel(tunnel) {
+        const tunnelID = String(tunnel?.id || '').trim();
+        if (!tunnelID) return null;
+        const accountID = String(state.oauth.selectedAccountId || '').trim();
+        return (state.oauth.localTunnelProfiles || []).find((profile) => {
+            if (String(profile?.tunnel_id || '').trim() !== tunnelID) return false;
+            const profileAccount = String(profile?.account_id || '').trim();
+            return !accountID || !profileAccount || profileAccount === accountID;
+        }) || null;
+    }
+
+    function tunnelDetailNode(tunnel, localProfile) {
         const rows = [];
         const add = (label, value) => {
             if (value == null || value === '') return;
@@ -2642,6 +2656,10 @@
         add(t('oauth_tunnel_deleted'), formatDate(tunnel.deleted_at));
         add(t('oauth_tunnel_connections_active_at'), formatDate(tunnel.connections_active_at));
         add(t('oauth_tunnel_connections_inactive_at'), formatDate(tunnel.connections_inactive_at));
+        if (localProfile) {
+            add(t('oauth_tunnel_local_profile'), localProfile.name || localProfile.key);
+            add(t('oauth_tunnel_local_state'), localProfile.active ? t('oauth_tunnel_local_profile_activated') : t('oauth_tunnel_local_profile_saved'));
+        }
         const connections = Array.isArray(tunnel.connections) ? tunnel.connections : [];
         add(t('oauth_tunnel_connections'), connections.length ? connections.map(tunnelConnectionSummary).join('\n') : t('oauth_tunnel_no_active_connections'));
         if (!rows.length) return null;
@@ -6141,6 +6159,7 @@
         resetOverview();
         state.oauth.dnsRecords = [];
         state.oauth.tunnels = [];
+        state.oauth.localTunnelProfiles = [];
         state.oauth.tunnelCreateOpen = false;
         state.oauth.workers = [];
         state.oauth.r2Buckets = [];
