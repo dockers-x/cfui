@@ -4365,13 +4365,13 @@ details.disclosure > .body {
 
 .oauth-relay-editor {
     display: grid;
-    gap: 6px;
+    gap: 8px;
     max-width: 960px;
 }
 
 .oauth-relay-field {
     display: grid;
-    gap: 7px;
+    gap: 6px;
     min-width: 0;
 }
 
@@ -4425,7 +4425,7 @@ details.disclosure > .body {
 .oauth-relay-feedback-line {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 8px;
+    gap: 4px 8px;
     align-items: center;
     min-height: 22px;
     color: var(--text-muted);
@@ -4434,13 +4434,21 @@ details.disclosure > .body {
 }
 
 .oauth-relay-source-line {
-    display: flex;
-    flex-wrap: wrap;
+    display: inline-flex;
     gap: 6px;
     align-items: center;
+    min-width: 0;
     color: var(--text-muted);
     font-size: var(--fs-xs);
     line-height: 1.45;
+}
+
+.oauth-relay-status-dot {
+    flex: 0 0 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--state-neutral);
 }
 
 .oauth-relay-feedback-separator {
@@ -4461,16 +4469,20 @@ details.disclosure > .body {
     background: transparent;
 }
 
-.oauth-relay-source-pill[data-source="default"] {
-    color: var(--state-ok);
+.oauth-relay-source-line[data-source="default"] .oauth-relay-status-dot {
+    background: var(--state-ok);
 }
 
-.oauth-relay-source-pill[data-source="custom"] {
-    color: var(--accent);
+.oauth-relay-source-line[data-source="custom"] .oauth-relay-status-dot {
+    background: var(--accent);
 }
 
-.oauth-relay-source-pill[data-source="unsaved"] {
+.oauth-relay-source-line[data-source="unsaved"] {
     color: var(--state-warn);
+}
+
+.oauth-relay-source-line[data-source="unsaved"] .oauth-relay-status-dot {
+    background: var(--state-warn);
 }
 
 .oauth-relay-source-detail {
@@ -4486,8 +4498,21 @@ details.disclosure > .body {
     min-width: 0;
 }
 
-.oauth-relay-check-pill {
-    max-width: min(100%, 420px);
+.oauth-relay-check-text {
+    font-weight: 650;
+}
+
+.oauth-relay-check-status[data-state="ok"] .oauth-relay-check-text {
+    color: var(--state-ok);
+}
+
+.oauth-relay-check-status[data-state="warn"] .oauth-relay-check-text,
+.oauth-relay-check-status[data-state="loading"] .oauth-relay-check-text {
+    color: var(--state-warn);
+}
+
+.oauth-relay-check-status[data-state="error"] .oauth-relay-check-text {
+    color: var(--state-error);
 }
 
 .oauth-relay-check-detail {
@@ -4499,7 +4524,7 @@ details.disclosure > .body {
 .oauth-relay-helper {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 12px;
+    gap: 4px 10px;
     align-items: center;
     justify-content: flex-start;
     color: var(--text-muted);
@@ -4517,10 +4542,10 @@ details.disclosure > .body {
 .oauth-relay-assist-actions {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
     align-items: center;
     justify-content: flex-start;
-    min-height: 28px;
+    min-height: 26px;
 }
 
 .oauth-relay-action-separator {
@@ -4530,7 +4555,7 @@ details.disclosure > .body {
 
 .oauth-relay-inline-action {
     min-height: 26px;
-    padding: 0 2px;
+    padding: 0 3px;
 }
 
 .oauth-relay-default-action,
@@ -4539,9 +4564,11 @@ details.disclosure > .body {
     color: var(--text-muted);
     font-size: var(--fs-xs);
     font-weight: 650;
-    text-decoration: underline;
-    text-decoration-color: color-mix(in srgb, currentColor 34%, transparent);
-    text-underline-offset: 3px;
+    text-decoration: none;
+}
+
+.oauth-relay-default-action {
+    color: var(--cf-orange-strong);
 }
 
 .oauth-relay-default-action:hover,

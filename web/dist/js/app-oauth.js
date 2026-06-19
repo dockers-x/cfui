@@ -265,6 +265,30 @@
         }
     }
 
+    async function loadOAuthValidationReport(button) {
+        if (!state.oauth.status?.logged_in) return;
+        const params = new URLSearchParams();
+        if (state.oauth.selectedAccountId) params.set('account_id', state.oauth.selectedAccountId);
+        state.oauth.validationLoading = true;
+        state.oauth.validationError = '';
+        setBusy(button, true);
+        renderOAuthResource();
+        try {
+            const report = await apiGet('/cf/validation' + (params.toString() ? `?${params.toString()}` : ''));
+            state.oauth.validationReport = report;
+            state.oauth.validationError = '';
+            copyOAuthText(validationReportText(report));
+        } catch (err) {
+            state.oauth.validationReport = null;
+            state.oauth.validationError = err.message || String(err);
+            toast.err(state.oauth.validationError);
+        } finally {
+            state.oauth.validationLoading = false;
+            setBusy(button, false);
+            renderOAuthResource();
+        }
+    }
+
     async function loadOAuthAccounts() {
         state.oauth.accountsError = '';
         try {
@@ -2943,10 +2967,17 @@
         const heading = document.createElement('h4');
         heading.className = 'oauth-section-title';
         heading.textContent = t('oauth_overview_context');
+        const actions = document.createElement('div');
+        actions.className = 'oauth-config-actions';
         const diagnostics = smallButton(t('oauth_overview_copy_diagnostics'), 'btn btn--sm btn--ghost', () => copyOAuthText(overviewDiagnosticsText(overview, metrics)));
         diagnostics.title = t('oauth_overview_copy_diagnostics_title');
         diagnostics.setAttribute('aria-label', t('oauth_overview_copy_diagnostics_title'));
-        contextHead.append(heading, diagnostics);
+        const validation = smallButton(t('oauth_validation_run'), 'btn btn--sm btn--ghost', (event) => loadOAuthValidationReport(event.currentTarget));
+        validation.title = t('oauth_validation_run_title');
+        validation.setAttribute('aria-label', t('oauth_validation_run_title'));
+        validation.disabled = !!state.oauth.validationLoading;
+        actions.append(diagnostics, validation);
+        contextHead.append(heading, actions);
         const account = overview.account || {};
         const zone = overview.zone || {};
         context.appendChild(contextHead);
@@ -2958,6 +2989,8 @@
             ].filter(Boolean).join(' · ') || t('oauth_overview_no_context'),
         ));
         body.appendChild(context);
+        const validationNode = overviewValidationNode();
+        if (validationNode) body.appendChild(validationNode);
 
         const quickActions = overviewQuickActionsNode(metrics);
         if (quickActions) body.appendChild(quickActions);
@@ -2999,6 +3032,66 @@
         }
         section.append(metricHeading, grid);
         body.appendChild(section);
+    }
+
+    function overviewValidationNode() {
+        if (!state.oauth.validationLoading && !state.oauth.validationError && !state.oauth.validationReport) return null;
+        const section = document.createElement('section');
+        section.className = 'oauth-section';
+        const head = document.createElement('div');
+        head.className = 'oauth-section-head';
+        const heading = document.createElement('h4');
+        heading.className = 'oauth-section-title';
+        heading.textContent = t('oauth_validation_title');
+        head.appendChild(heading);
+        if (state.oauth.validationReport) {
+            const copy = smallButton(t('oauth_validation_copy_report'), 'btn btn--sm btn--ghost', () => copyOAuthText(validationReportText(state.oauth.validationReport)));
+            copy.title = t('oauth_validation_copy_report_title');
+            copy.setAttribute('aria-label', t('oauth_validation_copy_report_title'));
+            head.appendChild(copy);
+        }
+        section.appendChild(head);
+        if (state.oauth.validationLoading) {
+            section.appendChild(empty(t('oauth_validation_running')));
+            return section;
+        }
+        if (state.oauth.validationError) {
+            section.appendChild(empty(state.oauth.validationError));
+            return section;
+        }
+        const summary = state.oauth.validationReport?.summary || {};
+        const grid = document.createElement('div');
+        grid.className = 'oauth-metric-grid';
+        grid.append(
+            metricNode(t('oauth_validation_scope_ready'), formatNumber(summary.scope_ready || 0)),
+            metricNode(t('oauth_validation_scope_missing'), formatNumber(summary.scope_missing || 0)),
+            metricNode(t('oauth_validation_api_available'), formatNumber(summary.api_available || 0)),
+            metricNode(t('oauth_validation_api_unavailable'), formatNumber(summary.api_unavailable || 0))
+        );
+        section.appendChild(grid);
+        section.appendChild(rowNode(
+            t('oauth_validation_scope_status'),
+            t('oauth_validation_scope_summary', {
+                ready: summary.scope_ready || 0,
+                missing: summary.scope_missing || 0,
+                total: summary.scope_checks || 0,
+            })
+        ));
+        section.appendChild(rowNode(
+            t('oauth_validation_api_status'),
+            t('oauth_validation_api_summary', {
+                ok: summary.api_available || 0,
+                limited: summary.api_limited || 0,
+                missing: summary.api_missing_scope || 0,
+                unavailable: summary.api_unavailable || 0,
+                total: summary.api_checks || 0,
+            })
+        ));
+        return section;
+    }
+
+    function validationReportText(report) {
+        return JSON.stringify(report || {}, null, 2);
     }
 
     function overviewQuickActionsNode(metrics) {

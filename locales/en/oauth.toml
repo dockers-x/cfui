@@ -115,6 +115,48 @@ other = "Copy diagnostics"
 [oauth_overview_copy_diagnostics_title]
 other = "Copy current OAuth overview diagnostics. OAuth tokens are not included."
 
+[oauth_validation_run]
+other = "Validate"
+
+[oauth_validation_run_title]
+other = "Generate and copy a no-token OAuth scope/API validation report"
+
+[oauth_validation_title]
+other = "OAuth validation report"
+
+[oauth_validation_copy_report]
+other = "Copy report"
+
+[oauth_validation_copy_report_title]
+other = "Copy the current OAuth validation report. OAuth tokens are not included."
+
+[oauth_validation_running]
+other = "Checking current OAuth scopes and Cloudflare API availability..."
+
+[oauth_validation_scope_ready]
+other = "Scopes ready"
+
+[oauth_validation_scope_missing]
+other = "Scopes missing"
+
+[oauth_validation_api_available]
+other = "APIs available"
+
+[oauth_validation_api_unavailable]
+other = "APIs unavailable"
+
+[oauth_validation_scope_status]
+other = "Scope status"
+
+[oauth_validation_scope_summary]
+other = "{{ .ready }}/{{ .total }} ready, {{ .missing }} missing. The Cloudflare OAuth app allowlist must include the scopes cfui requests."
+
+[oauth_validation_api_status]
+other = "API status"
+
+[oauth_validation_api_summary]
+other = "{{ .ok }}/{{ .total }} available, {{ .limited }} limited, {{ .missing }} missing scope, {{ .unavailable }} unavailable."
+
 [oauth_overview_no_context]
 other = "Select an account to load account-scoped resources."
 

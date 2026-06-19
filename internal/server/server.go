@@ -232,6 +232,7 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/oauth/start", s.handleOAuthStart)
 	mux.HandleFunc("/oauth/callback", s.handleOAuthCallback)
 	mux.HandleFunc("/api/cf/overview", s.handleCFOverview)
+	mux.HandleFunc("/api/cf/validation", s.handleCFValidation)
 	mux.HandleFunc("/api/cf/accounts", s.handleCFAccounts)
 	mux.HandleFunc("/api/cf/status", s.handleCFStatus)
 	mux.HandleFunc("/api/cf/usage/account", s.handleCFAccountUsage)

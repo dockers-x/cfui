@@ -295,6 +295,15 @@ func (s *Server) handleCFOverview(w http.ResponseWriter, r *http.Request) {
 	writeCFResponse(w, resp, err)
 }
 
+func (s *Server) handleCFValidation(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	resp, err := s.ensureCFService().ValidationReport(r.Context(), r.URL.Query().Get("account_id"))
+	writeCFResponse(w, resp, err)
+}
+
 func (s *Server) handleCFAccountUsage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

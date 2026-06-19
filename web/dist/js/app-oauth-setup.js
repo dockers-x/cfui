@@ -32,6 +32,7 @@
             const input = document.createElement('input');
             input.className = 'input oauth-relay-input mono';
             input.id = 'oauth-relay-callback-input';
+            input.name = 'oauth_relay_callback';
             input.type = 'url';
             input.required = true;
             input.spellcheck = false;
@@ -76,7 +77,7 @@
             });
             useDefault.title = t('oauth_relay_use_default_title');
             useDefault.setAttribute('aria-label', t('oauth_relay_use_default_title'));
-            const selfHost = smallButton(t('oauth_relay_self_host'), 'btn btn--text oauth-relay-inline-action oauth-relay-self-host-action', () => openWorkerScriptDialog());
+            const selfHost = smallButton(t('oauth_relay_self_host'), 'btn btn--text oauth-relay-inline-action oauth-relay-self-host-action', openWorkerScriptDialog);
             selfHost.title = t('oauth_relay_self_host_title');
             selfHost.setAttribute('aria-label', t('oauth_relay_self_host_title'));
             const actionSeparator = document.createElement('span');
@@ -123,18 +124,11 @@
             const dirty = value !== String(configuredRelay || '').trim();
             const isDefault = value === defaultOAuthRelayCallbackURL;
             line.innerHTML = '';
+            line.dataset.source = dirty ? 'unsaved' : (isDefault ? 'default' : 'custom');
 
-            const badge = document.createElement('span');
-            badge.className = 'pill oauth-relay-source-pill';
-            badge.dataset.source = dirty ? 'unsaved' : (isDefault ? 'default' : 'custom');
             const dot = document.createElement('span');
-            dot.className = 'dot';
-            const label = document.createElement('span');
-            label.className = 'text';
-            label.textContent = dirty
-                ? t('oauth_relay_badge_unsaved')
-                : (isDefault ? t('oauth_relay_badge_default') : t('oauth_relay_badge_custom'));
-            badge.append(dot, label);
+            dot.className = 'oauth-relay-status-dot';
+            dot.setAttribute('aria-hidden', 'true');
 
             const detail = document.createElement('span');
             detail.className = 'oauth-relay-source-detail';
@@ -142,7 +136,7 @@
                 ? t('oauth_relay_status_unsaved')
                 : (isDefault ? t('oauth_relay_status_default') : t('oauth_relay_status_custom'));
 
-            line.append(badge, detail);
+            line.append(dot, detail);
         }
 
         function relayFeedbackLine(sourceLine, onCheck) {
@@ -176,38 +170,32 @@
 
             const wrap = document.createElement('span');
             wrap.className = 'oauth-relay-check-status';
-
-            const pill = document.createElement('span');
-            pill.className = 'pill oauth-relay-check-pill';
-            const dot = document.createElement('span');
-            dot.className = 'dot';
             const text = document.createElement('span');
-            text.className = 'text';
+            text.className = 'oauth-relay-check-text';
 
             const detail = document.createElement('span');
             detail.className = 'oauth-relay-check-detail';
             if (loading) {
-                pill.dataset.state = 'loading';
+                wrap.dataset.state = 'loading';
                 text.textContent = t('oauth_relay_checking');
             } else if (error) {
-                pill.dataset.state = 'error';
+                wrap.dataset.state = 'error';
                 text.textContent = t('oauth_relay_check_failed');
                 detail.textContent = error;
             } else if (check?.reachable && check?.supports_state_callback) {
-                pill.dataset.state = 'ok';
+                wrap.dataset.state = 'ok';
                 text.textContent = t('oauth_relay_check_ok');
             } else if (check?.reachable) {
-                pill.dataset.state = 'warn';
+                wrap.dataset.state = 'warn';
                 text.textContent = t('oauth_relay_check_outdated');
                 detail.textContent = t('oauth_relay_check_outdated_hint');
             } else {
-                pill.dataset.state = 'error';
+                wrap.dataset.state = 'error';
                 text.textContent = t('oauth_relay_check_failed');
                 detail.textContent = check?.message || '';
             }
 
-            pill.append(dot, text);
-            wrap.appendChild(pill);
+            wrap.appendChild(text);
             if (detail.textContent) wrap.appendChild(detail);
             return wrap;
         }

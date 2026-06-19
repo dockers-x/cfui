@@ -115,6 +115,48 @@ other = "診断をコピー"
 [oauth_overview_copy_diagnostics_title]
 other = "現在の OAuth 概要診断情報をコピーします。OAuth token は含まれません。"
 
+[oauth_validation_run]
+other = "検証"
+
+[oauth_validation_run_title]
+other = "OAuth scope/API の検証レポートを生成してコピーします。Token は含めません。"
+
+[oauth_validation_title]
+other = "OAuth 検証レポート"
+
+[oauth_validation_copy_report]
+other = "レポートをコピー"
+
+[oauth_validation_copy_report_title]
+other = "現在の OAuth 検証レポートをコピーします。OAuth token は含めません。"
+
+[oauth_validation_running]
+other = "現在の OAuth scope と Cloudflare API の利用可否を確認中..."
+
+[oauth_validation_scope_ready]
+other = "Scope 利用可"
+
+[oauth_validation_scope_missing]
+other = "Scope 不足"
+
+[oauth_validation_api_available]
+other = "API 利用可"
+
+[oauth_validation_api_unavailable]
+other = "API 利用不可"
+
+[oauth_validation_scope_status]
+other = "Scope 状態"
+
+[oauth_validation_scope_summary]
+other = "{{ .ready }}/{{ .total }} が利用可能、{{ .missing }} 件が不足しています。Cloudflare OAuth アプリの許可リストには cfui が要求する scope が含まれている必要があります。"
+
+[oauth_validation_api_status]
+other = "API 状態"
+
+[oauth_validation_api_summary]
+other = "{{ .ok }}/{{ .total }} が利用可能、{{ .limited }} 件が制限付き、{{ .missing }} 件が scope 不足、{{ .unavailable }} 件が利用不可です。"
+
 [oauth_overview_no_context]
 other = "アカウントを選択するとアカウントスコープのリソースを読み込みます。"
 

@@ -115,6 +115,48 @@ other = "复制诊断"
 [oauth_overview_copy_diagnostics_title]
 other = "复制当前 OAuth 总览诊断信息，不包含 OAuth token。"
 
+[oauth_validation_run]
+other = "校验"
+
+[oauth_validation_run_title]
+other = "生成并复制无 token 的 OAuth scope/API 校验报告"
+
+[oauth_validation_title]
+other = "OAuth 校验报告"
+
+[oauth_validation_copy_report]
+other = "复制报告"
+
+[oauth_validation_copy_report_title]
+other = "复制当前 OAuth 校验报告，不包含 OAuth token。"
+
+[oauth_validation_running]
+other = "正在校验当前 OAuth scope 和 Cloudflare API 可用性..."
+
+[oauth_validation_scope_ready]
+other = "Scope 可用"
+
+[oauth_validation_scope_missing]
+other = "Scope 缺失"
+
+[oauth_validation_api_available]
+other = "API 可用"
+
+[oauth_validation_api_unavailable]
+other = "API 不可用"
+
+[oauth_validation_scope_status]
+other = "Scope 状态"
+
+[oauth_validation_scope_summary]
+other = "{{ .ready }}/{{ .total }} 已满足，{{ .missing }} 个缺失。Cloudflare OAuth 应用的权限白名单必须包含 cfui 实际请求的 scope。"
+
+[oauth_validation_api_status]
+other = "API 状态"
+
+[oauth_validation_api_summary]
+other = "{{ .ok }}/{{ .total }} 可用，{{ .limited }} 个受限，{{ .missing }} 个缺少 scope，{{ .unavailable }} 个不可用。"
+
 [oauth_overview_no_context]
 other = "选择账号后加载账号级资源。"
 

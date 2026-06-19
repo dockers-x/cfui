@@ -1323,6 +1323,89 @@ func TestOverviewAggregatesCloudflareAccountResources(t *testing.T) {
 	}
 }
 
+func TestValidationReportSeparatesScopeAndAPISmoke(t *testing.T) {
+	ctx := context.Background()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/client/v4/accounts", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		writeCFEnvelope(w, `[{"id":"account-1","name":"Example Account","type":"standard"}]`, nil)
+	})
+	mux.HandleFunc("/client/v4/zones", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		writeCFEnvelope(w, `[{"id":"zone-1","name":"example.com","status":"active","account_id":"account-1"}]`, nil)
+	})
+	mux.HandleFunc("/client/v4/zones/zone-1/dns_records", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		writeCFEnvelope(w, `[{"id":"record-1"}]`, map[string]int{"count": 1, "total_count": 7})
+	})
+	mux.HandleFunc("/status/summary.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"page":{"id":"page","name":"Cloudflare","url":"https://www.cloudflarestatus.com","time_zone":"Etc/UTC","updated_at":"2026-06-18T11:00:00Z"},
+			"status":{"indicator":"none","description":"All Systems Operational"},
+			"components":[],
+			"incidents":[],
+			"scheduled_maintenances":[]
+		}`))
+	})
+	mux.HandleFunc("/status/incidents.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"incidents":[]}`))
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	store := cfoauth.NewStore(t.TempDir())
+	if err := store.SaveSession(ctx, cfoauth.Session{
+		ID:           "session-1",
+		Label:        "test@example.com",
+		AccessToken:  "access-token",
+		RefreshToken: "refresh-token",
+		ExpiresAt:    time.Now().UTC().Add(time.Hour),
+		Scope:        "account-settings.read zone.read dns.read",
+		Current:      true,
+	}); err != nil {
+		t.Fatalf("SaveSession: %v", err)
+	}
+	auth := cfoauth.NewService(cfoauth.Config{Scopes: "account-settings.read zone.read dns.read workers-tail.read"}, store)
+	svc := NewServiceWithEndpoints(auth, EndpointOverrides{
+		REST:   server.URL + "/client/v4",
+		Status: server.URL + "/status",
+	})
+
+	report, err := svc.ValidationReport(ctx, "account-1")
+	if err != nil {
+		t.Fatalf("ValidationReport: %v", err)
+	}
+	if report.ContainsOAuthToken || report.ContainsRefreshToken {
+		t.Fatalf("report should not contain tokens: %#v", report)
+	}
+	body, err := json.Marshal(report)
+	if err != nil {
+		t.Fatalf("Marshal report: %v", err)
+	}
+	if strings.Contains(string(body), "access-token") || strings.Contains(string(body), "refresh-token") {
+		t.Fatalf("validation report leaked a token: %s", body)
+	}
+	scopeChecks := validationScopeCheckMap(report.ScopeChecks)
+	if scopeChecks["account"].Status != "ready" {
+		t.Fatalf("account scope status = %#v", scopeChecks["account"])
+	}
+	if scopeChecks["workers_tail"].Status != "missing_scope" {
+		t.Fatalf("workers_tail scope status = %#v", scopeChecks["workers_tail"])
+	}
+	apiChecks := validationAPICheckMap(report.APIChecks)
+	if apiChecks["dns_records"].Status != "ok" || apiChecks["dns_records"].Value != 7 {
+		t.Fatalf("dns_records api check = %#v", apiChecks["dns_records"])
+	}
+	if apiChecks["r2_buckets"].Status != "missing_scope" {
+		t.Fatalf("r2_buckets api check = %#v", apiChecks["r2_buckets"])
+	}
+	if report.Summary.ScopeMissing != 1 || report.Summary.APIAvailable == 0 || report.Summary.APIMissingScope == 0 {
+		t.Fatalf("unexpected validation summary: %#v", report.Summary)
+	}
+}
+
 func TestAccountsUsesEndpointOverrideAndPaginates(t *testing.T) {
 	ctx := context.Background()
 	requests := 0
@@ -3147,6 +3230,22 @@ func writeCFEnvelope(w http.ResponseWriter, result string, info map[string]int) 
 
 func overviewMetricMap(items []OverviewMetric) map[string]OverviewMetric {
 	out := make(map[string]OverviewMetric, len(items))
+	for _, item := range items {
+		out[item.ID] = item
+	}
+	return out
+}
+
+func validationScopeCheckMap(items []ValidationScopeCheck) map[string]ValidationScopeCheck {
+	out := make(map[string]ValidationScopeCheck, len(items))
+	for _, item := range items {
+		out[item.Feature] = item
+	}
+	return out
+}
+
+func validationAPICheckMap(items []ValidationAPICheck) map[string]ValidationAPICheck {
+	out := make(map[string]ValidationAPICheck, len(items))
 	for _, item := range items {
 		out[item.ID] = item
 	}

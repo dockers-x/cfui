@@ -191,6 +191,53 @@ type OverviewMetric struct {
 	Limit     int    `json:"limit,omitempty"`
 }
 
+type ValidationReport struct {
+	Version                 int                      `json:"version"`
+	GeneratedAt             time.Time                `json:"generated_at"`
+	ContainsOAuthToken      bool                     `json:"contains_oauth_token"`
+	ContainsRefreshToken    bool                     `json:"contains_refresh_token"`
+	SensitiveFieldsOmitted  []string                 `json:"sensitive_fields_omitted"`
+	RequestedTemplateScopes []string                 `json:"requested_template_scopes"`
+	Session                 cfoauth.SessionSummary   `json:"session"`
+	Account                 *Account                 `json:"account,omitempty"`
+	Zone                    *Zone                    `json:"zone,omitempty"`
+	Summary                 ValidationSummary        `json:"summary"`
+	ScopeChecks             []ValidationScopeCheck   `json:"scope_checks"`
+	APIChecks               []ValidationAPICheck     `json:"api_checks"`
+	Capabilities            cfoauth.CapabilityMatrix `json:"capabilities"`
+}
+
+type ValidationSummary struct {
+	ScopeChecks     int `json:"scope_checks"`
+	ScopeReady      int `json:"scope_ready"`
+	ScopeMissing    int `json:"scope_missing"`
+	APIChecks       int `json:"api_checks"`
+	APIAvailable    int `json:"api_available"`
+	APILimited      int `json:"api_limited"`
+	APIMissingScope int `json:"api_missing_scope"`
+	APIUnavailable  int `json:"api_unavailable"`
+}
+
+type ValidationScopeCheck struct {
+	Feature        string `json:"feature"`
+	RequestedRead  bool   `json:"requested_read"`
+	RequestedWrite bool   `json:"requested_write"`
+	GrantedRead    bool   `json:"granted_read"`
+	GrantedWrite   bool   `json:"granted_write"`
+	Status         string `json:"status"`
+}
+
+type ValidationAPICheck struct {
+	ID        string `json:"id"`
+	Feature   string `json:"feature,omitempty"`
+	Status    string `json:"status"`
+	Available bool   `json:"available"`
+	Value     int    `json:"value,omitempty"`
+	Error     string `json:"error,omitempty"`
+	Limited   bool   `json:"limited,omitempty"`
+	Limit     int    `json:"limit,omitempty"`
+}
+
 type DNSRecord struct {
 	ID         string     `json:"id"`
 	Type       string     `json:"type"`
@@ -1217,6 +1264,113 @@ func (s *Service) Overview(ctx context.Context, accountID string) (OverviewRespo
 		resp.Status = &status.Overall
 	}
 	return resp, nil
+}
+
+func (s *Service) ValidationReport(ctx context.Context, accountID string) (ValidationReport, error) {
+	overview, err := s.Overview(ctx, accountID)
+	if err != nil {
+		return ValidationReport{}, err
+	}
+	requestedCapabilities := cfoauth.Capabilities(s.auth.Config().Scopes)
+	report := ValidationReport{
+		Version:                 1,
+		GeneratedAt:             time.Now().UTC(),
+		ContainsOAuthToken:      false,
+		ContainsRefreshToken:    false,
+		SensitiveFieldsOmitted:  []string{"oauth_access_token", "oauth_refresh_token", "connector_token", "dns_record_content", "r2_object_body", "kv_value", "sql_rows", "waf_expression"},
+		RequestedTemplateScopes: scopeList(s.auth.Config().Scopes),
+		Session:                 overview.Session,
+		Account:                 overview.Account,
+		Zone:                    overview.Zone,
+		Capabilities:            overview.Capabilities,
+	}
+	for _, feature := range validationFeatureOrder {
+		requested := requestedCapabilities[feature]
+		granted := overview.Capabilities[feature]
+		check := ValidationScopeCheck{
+			Feature:        feature,
+			RequestedRead:  requested.Read,
+			RequestedWrite: requested.Write,
+			GrantedRead:    granted.Read,
+			GrantedWrite:   granted.Write,
+			Status:         validationScopeStatus(requested, granted),
+		}
+		report.ScopeChecks = append(report.ScopeChecks, check)
+		report.Summary.ScopeChecks++
+		if check.Status == "ready" {
+			report.Summary.ScopeReady++
+		} else if check.Status == "missing_scope" {
+			report.Summary.ScopeMissing++
+		}
+	}
+	for _, metric := range overview.Metrics {
+		check := ValidationAPICheck{
+			ID:        metric.ID,
+			Feature:   metric.Feature,
+			Status:    validationAPIStatus(metric),
+			Available: metric.Available,
+			Value:     metric.Value,
+			Error:     metric.Error,
+			Limited:   metric.Limited,
+			Limit:     metric.Limit,
+		}
+		report.APIChecks = append(report.APIChecks, check)
+		report.Summary.APIChecks++
+		switch check.Status {
+		case "ok":
+			report.Summary.APIAvailable++
+		case "limited":
+			report.Summary.APIAvailable++
+			report.Summary.APILimited++
+		case "missing_scope":
+			report.Summary.APIMissingScope++
+		default:
+			report.Summary.APIUnavailable++
+		}
+	}
+	return report, nil
+}
+
+var validationFeatureOrder = []string{
+	"account",
+	"zones",
+	"dns",
+	"tunnels",
+	"workers",
+	"workers_tail",
+	"r2",
+	"d1",
+	"kv",
+	"snippets",
+	"waf",
+	"zone_settings",
+	"cache_purge",
+	"analytics",
+}
+
+func validationScopeStatus(requested, granted cfoauth.Capability) string {
+	missingRead := requested.Read && !granted.Read
+	missingWrite := requested.Write && !granted.Write
+	if missingRead || missingWrite {
+		return "missing_scope"
+	}
+	if granted.Read || granted.Write {
+		return "ready"
+	}
+	return "not_requested"
+}
+
+func validationAPIStatus(metric OverviewMetric) string {
+	if metric.Available {
+		if metric.Limited {
+			return "limited"
+		}
+		return "ok"
+	}
+	if metric.Error == "missing_scope" {
+		return "missing_scope"
+	}
+	return "unavailable"
 }
 
 func (s *Service) overviewAccounts(ctx context.Context, token string) ([]Account, error) {
@@ -6736,6 +6890,18 @@ func stringValue(value *string) string {
 		return ""
 	}
 	return *value
+}
+
+func scopeList(scope string) []string {
+	normalized, err := cfoauth.NormalizeRequestedScopes(scope)
+	if err == nil {
+		return strings.Fields(normalized)
+	}
+	items := strings.Fields(scope)
+	sort.Slice(items, func(i, j int) bool {
+		return strings.ToLower(items[i]) < strings.ToLower(items[j])
+	})
+	return items
 }
 
 func isDisplayedZoneSetting(id string) bool {
