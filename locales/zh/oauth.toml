@@ -1297,6 +1297,45 @@ other = "动作"
 [oauth_waf_expression]
 other = "表达式"
 
+[oauth_expression_helper_title]
+other = "表达式 helper"
+
+[oauth_expression_helper_preset]
+other = "表达式片段"
+
+[oauth_expression_helper_value]
+other = "表达式值"
+
+[oauth_expression_helper_insert]
+other = "追加"
+
+[oauth_expression_helper_replace]
+other = "替换"
+
+[oauth_expression_helper_value_required]
+other = "请先填写表达式值。"
+
+[oauth_expression_helper_ip_invalid]
+other = "IP 或 CIDR 只能包含 IP 字符和斜杠。"
+
+[oauth_expression_preset_host_eq]
+other = "Host 等于"
+
+[oauth_expression_preset_path_starts_with]
+other = "路径前缀"
+
+[oauth_expression_preset_path_contains]
+other = "路径包含"
+
+[oauth_expression_preset_method_eq]
+other = "请求方法"
+
+[oauth_expression_preset_country_eq]
+other = "来源国家"
+
+[oauth_expression_preset_ip_src]
+other = "来源 IP/CIDR"
+
 [oauth_waf_description]
 other = "描述"
 

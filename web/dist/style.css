@@ -5447,6 +5447,28 @@ details.oauth-form-section > summary {
     font-weight: 700;
 }
 
+.oauth-expression-helper {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-control);
+    background: var(--surface-2);
+}
+
+.oauth-expression-helper-title {
+    color: var(--text);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+}
+
+.oauth-expression-helper-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.8fr) minmax(180px, 1fr) auto auto;
+    gap: 8px;
+    align-items: center;
+}
+
 .oauth-form-check-group {
     display: grid;
     gap: 8px;
@@ -5571,6 +5593,7 @@ details.oauth-form-section > summary {
     .oauth-analytics-row,
     .oauth-relay-choice-row,
     .oauth-setup-code-row,
+    .oauth-expression-helper-row,
     .oauth-form-grid {
         grid-template-columns: 1fr;
     }

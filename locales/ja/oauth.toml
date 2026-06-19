@@ -1297,6 +1297,45 @@ other = "Action"
 [oauth_waf_expression]
 other = "Expression"
 
+[oauth_expression_helper_title]
+other = "Expression helper"
+
+[oauth_expression_helper_preset]
+other = "Expression snippet"
+
+[oauth_expression_helper_value]
+other = "Expression value"
+
+[oauth_expression_helper_insert]
+other = "追加"
+
+[oauth_expression_helper_replace]
+other = "置換"
+
+[oauth_expression_helper_value_required]
+other = "先に expression value を入力してください。"
+
+[oauth_expression_helper_ip_invalid]
+other = "IP または CIDR は IP 文字とスラッシュだけを使用できます。"
+
+[oauth_expression_preset_host_eq]
+other = "Host equals"
+
+[oauth_expression_preset_path_starts_with]
+other = "Path prefix"
+
+[oauth_expression_preset_path_contains]
+other = "Path contains"
+
+[oauth_expression_preset_method_eq]
+other = "Request method"
+
+[oauth_expression_preset_country_eq]
+other = "Source country"
+
+[oauth_expression_preset_ip_src]
+other = "Source IP/CIDR"
+
 [oauth_waf_description]
 other = "Description"
 

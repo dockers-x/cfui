@@ -4929,12 +4929,14 @@
         expressionArea.className = 'oauth-code-editor oauth-code-editor--compact';
         expressionArea.value = 'http.request.uri.path contains "/"';
         expressionArea.spellcheck = false;
+        expressionArea.maxLength = 4096;
         const descriptionInput = textInput('', 'text');
         const enabledInput = document.createElement('input');
         enabledInput.type = 'checkbox';
         enabledInput.checked = true;
         form.append(
             formField(t('oauth_snippet_rule_expression'), expressionArea),
+            expressionHelperNode(expressionArea),
             formField(t('oauth_snippet_rule_description'), descriptionInput),
             formField(t('oauth_snippet_rule_enabled'), enabledInput),
         );
@@ -4958,6 +4960,113 @@
             }, saveButton);
         });
         return form;
+    }
+
+    function expressionHelperNode(textarea) {
+        const panel = document.createElement('div');
+        panel.className = 'oauth-expression-helper';
+
+        const title = document.createElement('div');
+        title.className = 'oauth-expression-helper-title';
+        title.textContent = t('oauth_expression_helper_title');
+        panel.appendChild(title);
+
+        const row = document.createElement('div');
+        row.className = 'oauth-expression-helper-row';
+
+        const preset = document.createElement('select');
+        preset.setAttribute('aria-label', t('oauth_expression_helper_preset'));
+        const presets = [
+            ['host_eq', 'oauth_expression_preset_host_eq', 'example.com'],
+            ['path_starts_with', 'oauth_expression_preset_path_starts_with', '/admin'],
+            ['path_contains', 'oauth_expression_preset_path_contains', '/api/'],
+            ['method_eq', 'oauth_expression_preset_method_eq', 'POST'],
+            ['country_eq', 'oauth_expression_preset_country_eq', 'US'],
+            ['ip_src', 'oauth_expression_preset_ip_src', '203.0.113.10'],
+        ];
+        for (const [value, labelKey] of presets) {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = t(labelKey);
+            preset.appendChild(option);
+        }
+
+        const valueInput = textInput('', 'text');
+        valueInput.autocomplete = 'off';
+        valueInput.spellcheck = false;
+        valueInput.setAttribute('aria-label', t('oauth_expression_helper_value'));
+        const updatePlaceholder = () => {
+            const found = presets.find((item) => item[0] === preset.value);
+            valueInput.placeholder = found?.[2] || '';
+        };
+        preset.addEventListener('change', updatePlaceholder);
+        updatePlaceholder();
+
+        const insert = smallButton(t('oauth_expression_helper_insert'), 'btn btn--sm btn--ghost', () => {
+            const expr = buildExpressionHelperSnippet(preset.value, valueInput.value);
+            if (!expr) return;
+            setExpressionTextareaValue(textarea, mergeExpression(textarea.value, expr));
+        });
+        const replace = smallButton(t('oauth_expression_helper_replace'), 'btn btn--sm btn--ghost', () => {
+            const expr = buildExpressionHelperSnippet(preset.value, valueInput.value);
+            if (!expr) return;
+            setExpressionTextareaValue(textarea, expr);
+        });
+
+        row.append(preset, valueInput, insert, replace);
+        panel.appendChild(row);
+        return panel;
+    }
+
+    function buildExpressionHelperSnippet(kind, rawValue) {
+        let value = String(rawValue || '').trim();
+        if (!value) {
+            toast.err(t('oauth_expression_helper_value_required'));
+            return '';
+        }
+        switch (kind) {
+        case 'host_eq':
+            return `http.host eq ${cfExpressionString(value)}`;
+        case 'path_starts_with':
+            if (!value.startsWith('/')) value = '/' + value;
+            return `http.request.uri.path starts_with ${cfExpressionString(value)}`;
+        case 'path_contains':
+            return `http.request.uri.path contains ${cfExpressionString(value)}`;
+        case 'method_eq':
+            return `http.request.method eq ${cfExpressionString(value.toUpperCase())}`;
+        case 'country_eq':
+            return `ip.geoip.country eq ${cfExpressionString(value.toUpperCase())}`;
+        case 'ip_src':
+            return buildIPSourceExpression(value);
+        default:
+            return '';
+        }
+    }
+
+    function cfExpressionString(value) {
+        return `"${String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+    }
+
+    function buildIPSourceExpression(value) {
+        const cleaned = String(value || '').trim();
+        if (!/^[0-9a-fA-F:.\/]+$/.test(cleaned)) {
+            toast.err(t('oauth_expression_helper_ip_invalid'));
+            return '';
+        }
+        if (cleaned.includes('/')) return `ip.src in {${cleaned}}`;
+        return `ip.src eq ${cleaned}`;
+    }
+
+    function mergeExpression(current, snippet) {
+        const existing = String(current || '').trim();
+        if (!existing || existing === 'true') return snippet;
+        return `(${existing}) and (${snippet})`;
+    }
+
+    function setExpressionTextareaValue(textarea, value) {
+        textarea.value = value;
+        textarea.focus();
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
 	function renderWAF(body) {
@@ -5208,6 +5317,7 @@
         expressionArea.placeholder = 'http.request.uri.path contains "/admin"';
         expressionArea.value = editing ? (rule.expression || '') : '';
         form.appendChild(formField(t('oauth_waf_expression'), expressionArea));
+        form.appendChild(expressionHelperNode(expressionArea));
 
         const enabledInput = document.createElement('input');
         enabledInput.type = 'checkbox';
@@ -5292,6 +5402,7 @@
 		expressionArea.placeholder = 'http.request.uri.path contains "/legacy"';
 		expressionArea.value = editing ? (rule.expression || '') : '';
 		form.appendChild(formField(t('oauth_waf_expression'), expressionArea));
+		form.appendChild(expressionHelperNode(expressionArea));
 
 		const targets = wafManagedExceptionTargetsNode(editing ? rule.action_parameters : null, editing ? rule.id : 'create');
 		form.appendChild(targets.node);
@@ -5362,6 +5473,7 @@
 		expressionArea.placeholder = 'true';
 		expressionArea.value = editing ? (rule.expression || '') : 'true';
 		form.appendChild(formField(t('oauth_waf_expression'), expressionArea));
+		form.appendChild(expressionHelperNode(expressionArea));
 
 		const overrides = wafManagedOverrideOverridesNode(wafManagedOverridesFromRule(rule), editing ? rule.id : 'create');
 		form.appendChild(overrides.node);

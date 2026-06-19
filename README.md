@@ -215,6 +215,8 @@ The OAuth console currently exposes an orange-cloud-style Overview dashboard, ac
 
 R2 object detail views also expose copy-key, copy-object, and move-object actions, including same-account cross-bucket copies/moves, plus metadata including size, content type, ETag, storage class, last modified time, and encoding status. Non-UTF-8 objects show a bounded hexdump sample in the detail panel. Inline media/PDF previews are capped at 50 MiB; larger objects stay download-only. The upload form uses direct upload for files up to 128 MiB and switches larger files to chunked browser-to-cfui upload up to 5 GiB.
 
+Snippet trigger rules, custom WAF rules, managed WAF exceptions, and managed WAF overrides include a common expression helper for host, path, request method, source IP/CIDR, and source country matches.
+
 To use OAuth mode:
 
 1. Create a Cloudflare OAuth app and set its redirect URI to the Worker relay URL.
