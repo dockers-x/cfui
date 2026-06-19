@@ -34,12 +34,13 @@ type Status struct {
 }
 
 type RelayCheck struct {
-	RelayCallbackURL string    `json:"relay_callback_url"`
-	HealthURL        string    `json:"health_url"`
-	Reachable        bool      `json:"reachable"`
-	StatusCode       int       `json:"status_code,omitempty"`
-	Message          string    `json:"message,omitempty"`
-	CheckedAt        time.Time `json:"checked_at"`
+	RelayCallbackURL      string    `json:"relay_callback_url"`
+	HealthURL             string    `json:"health_url"`
+	Reachable             bool      `json:"reachable"`
+	SupportsStateCallback bool      `json:"supports_state_callback"`
+	StatusCode            int       `json:"status_code,omitempty"`
+	Message               string    `json:"message,omitempty"`
+	CheckedAt             time.Time `json:"checked_at"`
 }
 
 type TokenResponse struct {
@@ -151,7 +152,17 @@ func (s *Service) CheckRelay(ctx context.Context) (RelayCheck, error) {
 	}
 	check.Message = message
 	check.Reachable = resp.StatusCode >= 200 && resp.StatusCode <= 299
+	check.SupportsStateCallback = relaySupportsStateCallback(resp.Header, message)
 	return check, nil
+}
+
+func relaySupportsStateCallback(header http.Header, message string) bool {
+	for _, value := range header.Values("X-CFUI-OAuth-Relay") {
+		if strings.EqualFold(strings.TrimSpace(value), "state-v1") {
+			return true
+		}
+	}
+	return strings.Contains(strings.ToLower(message), "state-v1")
 }
 
 func (s *Service) StartURL(ctx context.Context) (string, error) {

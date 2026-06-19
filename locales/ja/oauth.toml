@@ -845,7 +845,13 @@ other = "Relay を確認"
 other = "Relay を確認中..."
 
 [oauth_relay_check_ok]
-other = "Relay に到達できます"
+other = "Relay に到達でき、state callback に対応しています"
+
+[oauth_relay_check_outdated]
+other = "Relay には到達できますが、最新 Worker が必要です"
+
+[oauth_relay_check_outdated_hint]
+other = "OAuth state callback を使うには内蔵 Worker を再デプロイしてください"
 
 [oauth_relay_check_failed]
 other = "Relay の確認に失敗しました"

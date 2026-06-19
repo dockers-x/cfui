@@ -845,7 +845,13 @@ other = "Check relay"
 other = "Checking relay..."
 
 [oauth_relay_check_ok]
-other = "Relay is reachable"
+other = "Relay is reachable and supports state callbacks"
+
+[oauth_relay_check_outdated]
+other = "Relay is reachable but needs the latest Worker"
+
+[oauth_relay_check_outdated_hint]
+other = "Redeploy the built-in Worker so OAuth state callbacks work"
 
 [oauth_relay_check_failed]
 other = "Relay check failed"

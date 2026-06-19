@@ -734,7 +734,8 @@ func TestOAuthRelayCheckHandler(t *testing.T) {
 			t.Fatalf("relay path = %q, want /health", r.URL.Path)
 		}
 		sawHealth = true
-		_, _ = w.Write([]byte("ok"))
+		w.Header().Set("X-CFUI-OAuth-Relay", "state-v1")
+		_, _ = w.Write([]byte("ok state-v1"))
 	}))
 	t.Cleanup(relay.Close)
 
@@ -761,7 +762,7 @@ func TestOAuthRelayCheckHandler(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&check); err != nil {
 		t.Fatalf("decode relay check: %v", err)
 	}
-	if !check.Reachable || check.StatusCode != http.StatusOK || check.HealthURL != relay.URL+"/health" || check.Message != "ok" {
+	if !check.Reachable || !check.SupportsStateCallback || check.StatusCode != http.StatusOK || check.HealthURL != relay.URL+"/health" || check.Message != "ok state-v1" {
 		t.Fatalf("unexpected relay check: %#v", check)
 	}
 }

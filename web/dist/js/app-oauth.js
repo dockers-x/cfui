@@ -54,7 +54,8 @@
         try {
             state.oauth.relayCheck = await apiGet('/oauth/relay-check');
             renderOAuthSetupGuide(state.oauth.status);
-            if (state.oauth.relayCheck?.reachable) toast.ok(t('oauth_relay_check_ok'));
+            if (state.oauth.relayCheck?.reachable && state.oauth.relayCheck?.supports_state_callback) toast.ok(t('oauth_relay_check_ok'));
+            else if (state.oauth.relayCheck?.reachable) toast.warn(t('oauth_relay_check_outdated'));
             else toast.warn(t('oauth_relay_check_failed'));
         } catch (err) {
             state.oauth.relayCheckError = err.message;
@@ -1938,10 +1939,13 @@
             const status = document.createElement('div');
             status.className = 'oauth-relay-check-result';
             const reachable = !!result?.reachable;
-            status.dataset.state = state.oauth.relayCheckLoading ? 'loading' : (reachable ? 'ok' : 'error');
+            const stateAware = !!result?.supports_state_callback;
+            status.dataset.state = state.oauth.relayCheckLoading ? 'loading' : (reachable && stateAware ? 'ok' : 'error');
             const title = document.createElement('div');
             title.className = 'oauth-relay-check-title';
-            title.textContent = state.oauth.relayCheckLoading ? t('oauth_relay_checking') : (reachable ? t('oauth_relay_check_ok') : t('oauth_relay_check_failed'));
+            title.textContent = state.oauth.relayCheckLoading
+                ? t('oauth_relay_checking')
+                : (reachable ? (stateAware ? t('oauth_relay_check_ok') : t('oauth_relay_check_outdated')) : t('oauth_relay_check_failed'));
             const meta = document.createElement('div');
             meta.className = 'oauth-relay-check-meta';
             if (error) {
@@ -1950,6 +1954,7 @@
                 meta.textContent = [
                     result.health_url || '',
                     result.status_code ? `HTTP ${result.status_code}` : '',
+                    reachable && !stateAware ? t('oauth_relay_check_outdated_hint') : '',
                     result.message || '',
                 ].filter(Boolean).join(' · ');
             }

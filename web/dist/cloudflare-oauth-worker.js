@@ -2,6 +2,7 @@ const DEFAULT_CFUI_CALLBACK_URL = "http://127.0.0.1:14333/oauth/callback";
 const CALLBACK_PATH = "/oauth/callback";
 const CALLBACK_URL_PARAM = "cfui_callback_url";
 const STATE_PREFIX = "cfui1.";
+const RELAY_VERSION = "state-v1";
 const OAUTH_QUERY_PARAMS = ["code", "state", "error", "error_description", "error_uri"];
 
 // Optional Worker variables:
@@ -28,7 +29,9 @@ export default {
       });
     }
     if (url.pathname === "/health") {
-      return text("ok", 200);
+      return text(`ok ${RELAY_VERSION}`, 200, {
+        "X-CFUI-OAuth-Relay": RELAY_VERSION,
+      });
     }
     if (url.pathname === "/") {
       return text("cfui OAuth relay is running. Register /oauth/callback as the Cloudflare OAuth redirect URI.", 200);

@@ -845,7 +845,13 @@ other = "检查中继服务"
 other = "正在检查 relay..."
 
 [oauth_relay_check_ok]
-other = "中继服务可访问"
+other = "中继服务可访问，且支持 state 回调"
+
+[oauth_relay_check_outdated]
+other = "中继服务可访问，但需要更新 Worker"
+
+[oauth_relay_check_outdated_hint]
+other = "请重新部署内置 Worker，OAuth state 回调才会生效"
 
 [oauth_relay_check_failed]
 other = "中继服务检查失败"

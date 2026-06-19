@@ -376,7 +376,8 @@ func TestCheckRelayUsesHealthEndpoint(t *testing.T) {
 			t.Fatalf("relay health should strip query, got %q", r.URL.RawQuery)
 		}
 		sawHealth = true
-		_, _ = w.Write([]byte("ok"))
+		w.Header().Set("X-CFUI-OAuth-Relay", "state-v1")
+		_, _ = w.Write([]byte("ok state-v1"))
 	}))
 	t.Cleanup(relay.Close)
 
@@ -394,11 +395,37 @@ func TestCheckRelayUsesHealthEndpoint(t *testing.T) {
 	if !sawHealth {
 		t.Fatal("expected relay health endpoint to be requested")
 	}
-	if !check.Reachable || check.StatusCode != http.StatusOK || check.Message != "ok" {
+	if !check.Reachable || check.StatusCode != http.StatusOK || check.Message != "ok state-v1" || !check.SupportsStateCallback {
 		t.Fatalf("unexpected relay check: %#v", check)
 	}
 	if check.HealthURL != relay.URL+"/health" {
 		t.Fatalf("health URL = %q", check.HealthURL)
+	}
+}
+
+func TestCheckRelayDetectsLegacyWorkerWithoutStateCallback(t *testing.T) {
+	ctx := context.Background()
+	store := NewStore(t.TempDir())
+	t.Cleanup(func() { closeStore(t, store) })
+
+	relay := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	}))
+	t.Cleanup(relay.Close)
+
+	svc := NewService(Config{
+		ClientID:         "client-id",
+		RelayCallbackURL: relay.URL + "/oauth/callback",
+		Scopes:           "zone.read",
+		Configured:       true,
+	}, store)
+
+	check, err := svc.CheckRelay(ctx)
+	if err != nil {
+		t.Fatalf("CheckRelay: %v", err)
+	}
+	if !check.Reachable || check.SupportsStateCallback {
+		t.Fatalf("unexpected legacy relay check: %#v", check)
 	}
 }
 
