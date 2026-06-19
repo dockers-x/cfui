@@ -2515,6 +2515,12 @@ other = "状态"
 [oauth_cf_status_public]
 other = "Cloudflare 官方公开状态，无需 OAuth scope。"
 
+[oauth_cf_status_copy_diagnostics]
+other = "复制诊断"
+
+[oauth_cf_status_copy_diagnostics_title]
+other = "复制当前 Cloudflare 状态诊断信息，不包含 OAuth token 或事件更新正文。"
+
 [oauth_cf_status_loading]
 other = "正在加载 Cloudflare 状态..."
 

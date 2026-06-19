@@ -2515,6 +2515,12 @@ other = "Status"
 [oauth_cf_status_public]
 other = "Public Cloudflare status. No OAuth scope is required."
 
+[oauth_cf_status_copy_diagnostics]
+other = "診断をコピー"
+
+[oauth_cf_status_copy_diagnostics_title]
+other = "現在の Cloudflare Status 診断情報をコピーします。OAuth token と incident update 本文は含めません。"
+
 [oauth_cf_status_loading]
 other = "Cloudflare status を読み込み中..."
 

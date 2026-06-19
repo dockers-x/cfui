@@ -7625,7 +7625,11 @@
         copy.append(label, meta);
         const actions = document.createElement('div');
         actions.className = 'oauth-row-actions';
+        const diagnostics = smallButton(t('oauth_cf_status_copy_diagnostics'), 'btn btn--sm btn--ghost', () => copyOAuthText(cloudflareStatusDiagnosticsText()));
+        diagnostics.title = t('oauth_cf_status_copy_diagnostics_title');
+        diagnostics.setAttribute('aria-label', t('oauth_cf_status_copy_diagnostics_title'));
         actions.append(
+            diagnostics,
             smallButton(t('refresh'), 'btn btn--sm btn--ghost', async () => {
                 await loadCloudflareStatus();
                 renderOAuthResource();
@@ -7636,6 +7640,99 @@
         );
         bar.append(copy, actions);
         return bar;
+    }
+
+    function cloudflareStatusDiagnosticsText() {
+        const status = state.oauth.cloudflareStatus || null;
+        const overall = status?.overall || {};
+        const affected = Array.isArray(status?.affected_products) ? status.affected_products : [];
+        const active = Array.isArray(status?.active_incidents) ? status.active_incidents : [];
+        const maintenances = Array.isArray(status?.maintenances) ? status.maintenances : [];
+        const regions = Array.isArray(status?.regions) ? status.regions : [];
+        const recent = Array.isArray(status?.recent_incidents) ? status.recent_incidents : [];
+        return JSON.stringify({
+            type: 'cfui_oauth_cloudflare_status_diagnostics',
+            version: 1,
+            generated_at: new Date().toISOString(),
+            browser_origin: window.location.origin,
+            browser_path: window.location.pathname,
+            requires_oauth_scope: false,
+            contains_oauth_token: false,
+            contains_refresh_token: false,
+            contains_incident_update_body: false,
+            sensitive_fields_omitted: [
+                'oauth_access_token',
+                'oauth_refresh_token',
+                'incident_updates.body',
+            ],
+            state: {
+                loading: !!state.oauth.cloudflareStatusLoading,
+                error: state.oauth.cloudflareStatusError || '',
+                loaded: !!status,
+            },
+            page: status ? {
+                id: status.page?.id || '',
+                name: status.page?.name || '',
+                url: status.page?.url || '',
+                time_zone: status.page?.time_zone || '',
+                updated_at: status.page?.updated_at || '',
+                fetched_at: status.fetched_at || '',
+            } : null,
+            overall: status ? {
+                indicator: overall.indicator || '',
+                label: statusIndicatorLabel(overall.indicator, overall.description),
+            } : null,
+            counts: {
+                product_total: Number(status?.product_total || 0),
+                affected_products: affected.length,
+                active_incidents: active.length,
+                maintenances: maintenances.length,
+                regions: regions.length,
+                impacted_regions: regions.filter((region) => Number(region?.impacted || 0) > 0).length,
+                recent_incidents: recent.length,
+            },
+            affected_products: affected.map(statusComponentDiagnostics),
+            regions: regions.map(statusRegionDiagnostics),
+            active_incidents: active.map(statusIncidentDiagnostics),
+            maintenances: maintenances.map(statusIncidentDiagnostics),
+            recent_incidents: recent.map(statusIncidentDiagnostics),
+        }, null, 2);
+    }
+
+    function statusComponentDiagnostics(component) {
+        return {
+            id: component?.id || '',
+            name: component?.name || '',
+            status: component?.status || '',
+            status_label: componentStatusLabel(component?.status || ''),
+            group_id: component?.group_id || '',
+        };
+    }
+
+    function statusRegionDiagnostics(region) {
+        return {
+            id: region?.id || '',
+            name: region?.name || '',
+            label: regionNameLabel(region?.name || ''),
+            total: Number(region?.total || 0),
+            impacted: Number(region?.impacted || 0),
+        };
+    }
+
+    function statusIncidentDiagnostics(incident) {
+        return {
+            id: incident?.id || '',
+            name: incident?.name || '',
+            status: incident?.status || '',
+            status_label: incidentStatusLabel(incident?.status || ''),
+            impact: incident?.impact || '',
+            impact_label: impactLabel(incident?.impact || ''),
+            created_at: incident?.created_at || '',
+            updated_at: incident?.updated_at || '',
+            scheduled_for: incident?.scheduled_for || '',
+            shortlink_present: !!incident?.shortlink,
+            update_count: Array.isArray(incident?.incident_updates) ? incident.incident_updates.length : 0,
+        };
     }
 
     function renderStatusIncidentSection(body, title, incidents, emptyText) {
