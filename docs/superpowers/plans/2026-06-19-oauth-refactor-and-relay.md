@@ -31,11 +31,14 @@
 
 **Files:**
 - Create: `web/dist/js/app-oauth-data.js`
+- Create: `web/dist/js/app-oauth-setup.js`
 - Modify: `web/dist/js/app-oauth.js`
 - Modify: `web/dist/index.html`
 
 - [x] Move OAuth resource/scope/static option definitions into `app-oauth-data.js`.
 - [x] Load `app-oauth-data.js` before `app-oauth.js`.
+- [x] Move OAuth relay callback and setup-guide UI rendering into `app-oauth-setup.js`.
+- [x] Load `app-oauth-setup.js` before `app-oauth.js`.
 - [x] Keep all existing global function wiring intact.
 - [x] Verify every JS file with `node --check`.
 
