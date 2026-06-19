@@ -268,11 +268,12 @@
             if (configured) return;
 
             const relayURL = status?.config?.relay_callback_url || '';
+            const effectiveRelayURL = relayURL || defaultOAuthRelayCallbackURL;
             const minimumScopeList = minimumScopes.join(' ');
             const fullConsoleScopeList = fullConsoleScopes.join(' ');
             const envSnippet = [
                 `CFUI_OAUTH_CLIENT_ID=${t('oauth_setup_client_id_placeholder')}`,
-                `CFUI_OAUTH_RELAY_URL=${relayURL || t('oauth_setup_relay_url_placeholder')}`,
+                `CFUI_OAUTH_RELAY_URL=${effectiveRelayURL}`,
                 'CFUI_RUN_MODE=oauth',
             ].join('\n');
 
@@ -289,14 +290,6 @@
             steps.append(
                 setupGuideStep(
                     '1',
-                    t('oauth_setup_relay_title'),
-                    t('oauth_setup_relay_desc'),
-                    [
-                        setupGuideNote(t('oauth_setup_relay_input_note')),
-                    ]
-                ),
-                setupGuideStep(
-                    '2',
                     t('oauth_setup_oauth_app_title'),
                     t('oauth_setup_oauth_app_desc'),
                     [
@@ -305,7 +298,7 @@
                         setupGuideCodeRow(t('oauth_setup_response_type'), t('oauth_setup_response_type_value'), { copy: false }),
                         setupGuideCodeRow(t('oauth_setup_grant_type'), t('oauth_setup_grant_type_value'), { copy: false }),
                         setupGuideCodeRow(t('oauth_setup_token_auth_method'), t('oauth_setup_token_auth_method_value'), { copy: false }),
-                        setupGuideCodeRow(t('oauth_setup_redirect_uri'), relayURL || defaultOAuthRelayCallbackURL, {
+                        setupGuideCodeRow(t('oauth_setup_redirect_uri'), effectiveRelayURL, {
                             actions: [
                                 {
                                     label: t('oauth_relay_configure'),
@@ -319,7 +312,7 @@
                     ]
                 ),
                 setupGuideStep(
-                    '3',
+                    '2',
                     t('oauth_setup_permissions_title'),
                     t('oauth_setup_permissions_desc'),
                     [
@@ -331,7 +324,7 @@
                     ]
                 ),
                 setupGuideStep(
-                    '4',
+                    '3',
                     t('oauth_setup_env_title'),
                     t('oauth_setup_env_desc'),
                     [setupGuideCodeRow(t('oauth_setup_env_vars'), envSnippet)]

@@ -1316,7 +1316,7 @@
             <div class="modal-head">
                 <div>
                     <h2 id="oauth-worker-script-title" data-i18n="oauth_worker_script_dialog_title">Cloudflare OAuth Worker script</h2>
-                    <p class="subtitle" data-i18n="oauth_worker_script_dialog_subtitle">Deployment is optional. Use this script only when you want the relay address to use your own domain.</p>
+                    <p class="subtitle" data-i18n="oauth_worker_script_dialog_subtitle">Use the provided domain when you do not self-host; if you self-host, deploy this Worker and use the same /oauth/callback in Cloudflare and cfui.</p>
                 </div>
                 <button type="button" class="icon-btn" data-close-dialog aria-label="Close" title="Close" data-i18n-attr="aria-label|toast_close;title|toast_close">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -1324,7 +1324,7 @@
             </div>
             <div class="modal-body oauth-worker-script-body">
                 <div class="oauth-worker-guide">
-                    <p class="oauth-worker-summary" data-i18n="oauth_worker_self_host_summary">Use the provided domain unless you need your own relay domain.</p>
+                    <p class="oauth-worker-summary" data-i18n="oauth_worker_self_host_summary">Self-hosting only changes the relay domain; it does not change cfui's OAuth flow.</p>
                     <div class="oauth-worker-default-note">
                         <span data-i18n="oauth_worker_default_relay_label">Without self-hosting</span>
                         <code class="mono">https://oauth.omarchy.qzz.io/oauth/callback</code>
@@ -1343,7 +1343,7 @@
                         <div class="oauth-worker-steps-title" data-i18n="oauth_worker_self_host_steps_title">Self-host steps</div>
                         <ol>
                             <li data-i18n="oauth_worker_self_host_step_deploy">Create a Worker, paste the script, and deploy.</li>
-                            <li data-i18n="oauth_worker_self_host_step_callback">Register your Worker /oauth/callback URL in Cloudflare.</li>
+                            <li data-i18n="oauth_worker_self_host_step_callback">Register your Worker /oauth/callback URL in the Cloudflare OAuth client.</li>
                             <li data-i18n="oauth_worker_self_host_step_cfui">Save the same /oauth/callback URL in cfui.</li>
                             <li data-i18n="oauth_worker_self_host_step_allowlist">For public cfui domains, set CFUI_ALLOWED_CALLBACK_ORIGINS.</li>
                         </ol>

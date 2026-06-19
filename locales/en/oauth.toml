@@ -35,7 +35,7 @@ other = "Relay callback"
 other = "Edit relay callback"
 
 [oauth_relay_configure]
-other = "Set relay callback"
+other = "Edit"
 
 [oauth_relay_required]
 other = "Enter a relay callback URL."
@@ -50,16 +50,16 @@ other = "Copy relay callback URL"
 other = "This address must exactly match the Redirect callback URL in the Cloudflare OAuth client."
 
 [oauth_relay_assist_text]
-other = "Use the provided domain by default; self-host a Worker only when you want your own relay domain. Cloudflare uses exactly this URL."
+other = "Use this as the Cloudflare OAuth client's Redirect callback URL."
 
 [oauth_relay_use_default]
-other = "Use provided domain"
+other = "Use provided"
 
 [oauth_relay_use_default_title]
 other = "Use the provided default OAuth relay domain"
 
 [oauth_relay_self_host]
-other = "Self-host Worker"
+other = "Self-host"
 
 [oauth_relay_self_host_title]
 other = "Show the Worker script and deployment steps for a self-hosted Cloudflare OAuth relay"
@@ -989,7 +989,7 @@ other = "Set CFUI_OAUTH_CLIENT_ID before signing in."
 other = "OAuth setup"
 
 [oauth_setup_subtitle]
-other = "Confirm the relay callback, create the Cloudflare OAuth client, then restart cfui with the client ID."
+other = "Confirm the relay callback above, create the Cloudflare OAuth client with the choices below, then restart cfui with the client ID."
 
 [oauth_setup_relay_title]
 other = "Set the OAuth relay callback"
@@ -998,13 +998,13 @@ other = "Set the OAuth relay callback"
 other = "The input above is the only Redirect callback URL to register in the Cloudflare OAuth client."
 
 [oauth_setup_relay_input_note]
-other = "For private use, \"Use provided domain\" is enough. Open \"Self-host Worker\" only when you want the relay address to use your own domain."
+other = "For private use, \"Use provided\" is enough. Open \"Self-host\" only when you want the relay address to use your own domain."
 
 [oauth_setup_oauth_app_title]
 other = "Fill the Cloudflare OAuth client form"
 
 [oauth_setup_oauth_app_desc]
-other = "Use these exact choices in the Cloudflare OAuth client form. The Redirect callback URL is the relay callback shown in the input above; cfui uses Authorization Code with Refresh Token and PKCE, and does not use a client secret."
+other = "Use these choices in the Cloudflare OAuth client form. The Redirect callback URL is only the address shown in the input above; cfui uses Authorization Code, Refresh Token, and PKCE without a client secret."
 
 [oauth_setup_cloudflare_path]
 other = "Cloudflare dashboard path"
@@ -1070,10 +1070,10 @@ other = "View the full Worker script in this page"
 other = "Cloudflare OAuth Worker script"
 
 [oauth_worker_script_dialog_subtitle]
-other = "Use the provided domain by default; no deployment is required. Use this script only when you want the relay address to use your own domain."
+other = "Use the provided domain when you do not self-host; if you self-host, deploy this Worker and use the same /oauth/callback in Cloudflare and cfui."
 
 [oauth_worker_self_host_summary]
-other = "Use the provided domain by default. To self-host, Cloudflare and cfui use the same /oauth/callback URL."
+other = "Self-hosting only changes the relay domain; it does not change cfui's OAuth flow."
 
 [oauth_worker_self_host_target_label]
 other = "Self-host callback URL"
@@ -1103,7 +1103,7 @@ other = "Self-host steps"
 other = "Create a Worker, paste the script, and deploy."
 
 [oauth_worker_self_host_step_callback]
-other = "Register your Worker /oauth/callback URL in Cloudflare."
+other = "Register your Worker /oauth/callback URL in the Cloudflare OAuth client."
 
 [oauth_worker_self_host_step_cfui]
 other = "Save the same /oauth/callback URL in cfui."
@@ -1169,7 +1169,7 @@ other = "Relay check failed"
 other = "Set cfui environment"
 
 [oauth_setup_env_desc]
-other = "Set the OAuth client ID, then restart cfui. You can edit and save the relay callback above; the saved database value overrides CFUI_OAUTH_RELAY_URL and must match the Redirect callback URL registered in Cloudflare."
+other = "Set the OAuth client ID, then restart cfui. The relay callback saved above overrides CFUI_OAUTH_RELAY_URL and must match the Redirect callback URL registered in Cloudflare."
 
 [oauth_setup_env_vars]
 other = "Environment"
