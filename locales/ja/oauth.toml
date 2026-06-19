@@ -1783,6 +1783,12 @@ other = "R2 メトリクスを利用できません: {error}"
 [oauth_r2_metrics_empty]
 other = "R2 メトリクスが返されませんでした。"
 
+[oauth_r2_copy_diagnostics]
+other = "診断をコピー"
+
+[oauth_r2_copy_diagnostics_title]
+other = "現在の R2 bucket、オブジェクト一覧、オブジェクト詳細、メトリクスの診断情報をコピーします。OAuth token、オブジェクト内容、ダウンロード URL は含まれません。"
+
 [oauth_r2_metrics_standard]
 other = "Standard"
 

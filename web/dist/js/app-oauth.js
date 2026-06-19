@@ -673,7 +673,11 @@
         const account = encodeURIComponent(state.oauth.selectedAccountId);
         const loads = [];
         if (canRead('r2')) {
-            loads.push(apiGet('/cf/r2/buckets?account_id=' + account).then((resp) => { state.oauth.r2Buckets = Array.isArray(resp.data) ? resp.data : []; }));
+            loads.push(apiGet('/cf/r2/buckets?account_id=' + account).then((resp) => {
+                state.oauth.r2Buckets = Array.isArray(resp.data) ? resp.data : [];
+                state.oauth.r2Session = resp.session || state.oauth.r2Session;
+                state.oauth.r2Capabilities = resp.capabilities || state.oauth.r2Capabilities;
+            }));
             loads.push(loadR2Metrics());
         }
         if (canRead('d1')) loads.push(loadD1Databases());
@@ -790,6 +794,8 @@
         state.oauth.r2MetricsLoading = true;
         try {
             state.oauth.r2Metrics = await apiGet('/cf/r2/metrics?account_id=' + encodeURIComponent(state.oauth.selectedAccountId));
+            state.oauth.r2Session = state.oauth.r2Metrics?.session || state.oauth.r2Session;
+            state.oauth.r2Capabilities = state.oauth.r2Metrics?.capabilities || state.oauth.r2Capabilities;
         } catch (err) {
             state.oauth.r2MetricsError = err.message;
         } finally {
@@ -833,6 +839,7 @@
 
     async function loadR2Objects(bucketName = state.oauth.selectedR2BucketName, append = false) {
         if (!state.oauth.selectedAccountId || !bucketName) return;
+        if (!append) state.oauth.r2ObjectsError = '';
         const params = new URLSearchParams({
             account_id: state.oauth.selectedAccountId,
             bucket: bucketName,
@@ -844,13 +851,18 @@
             const objects = Array.isArray(resp.data) ? resp.data : [];
             state.oauth.r2Objects = append ? state.oauth.r2Objects.concat(objects) : objects;
             state.oauth.r2Cursor = resp.cursor || '';
+            state.oauth.r2ObjectsError = '';
+            state.oauth.r2Session = resp.session || state.oauth.r2Session;
+            state.oauth.r2Capabilities = resp.capabilities || state.oauth.r2Capabilities;
         } catch (err) {
+            state.oauth.r2ObjectsError = err.message;
             toast.err(err.message);
         }
     }
 
     async function loadR2ObjectValue(key) {
         if (!state.oauth.selectedAccountId || !state.oauth.selectedR2BucketName || !key) return;
+        state.oauth.r2ObjectValueError = '';
         const params = new URLSearchParams({
             account_id: state.oauth.selectedAccountId,
             bucket: state.oauth.selectedR2BucketName,
@@ -858,7 +870,9 @@
         });
         try {
             state.oauth.r2ObjectValue = await apiGet('/cf/r2/object?' + params.toString());
+            state.oauth.r2ObjectValueError = '';
         } catch (err) {
+            state.oauth.r2ObjectValueError = err.message;
             toast.err(err.message);
         }
     }
@@ -4315,8 +4329,9 @@
         let rendered = 0;
         if (canRead('r2')) {
             body.appendChild(r2MetricsSectionNode());
+            const r2Actions = [];
             if (canWrite('r2')) {
-                body.appendChild(resourceActionBar(t('oauth_r2_buckets'), {
+                r2Actions.push({
                     text: state.oauth.r2CreateOpen ? t('cancel') : t('oauth_r2_create_bucket'),
                     className: state.oauth.r2CreateOpen ? 'btn btn--sm btn--ghost' : 'btn btn--sm',
                     onClick: () => {
@@ -4328,9 +4343,16 @@
                         }
                         renderOAuthResource();
                     },
-                }));
-                if (state.oauth.r2CreateOpen) body.appendChild(r2BucketFormNode());
+                });
             }
+            r2Actions.push({
+                text: t('oauth_r2_copy_diagnostics'),
+                className: 'btn btn--sm btn--ghost',
+                title: t('oauth_r2_copy_diagnostics_title'),
+                onClick: () => copyOAuthText(r2DiagnosticsText()),
+            });
+            body.appendChild(resourceActionBar(t('oauth_r2_buckets'), r2Actions));
+            if (canWrite('r2') && state.oauth.r2CreateOpen) body.appendChild(r2BucketFormNode());
             rendered += renderSection(body, t('oauth_r2_buckets'), state.oauth.r2Buckets, (bucket) => {
                 const meta = [bucket.location, bucket.creation_date ? formatDate(bucket.creation_date) : ''].filter(Boolean).join(' · ');
                 const actions = canWrite('r2') ? [
@@ -4504,6 +4526,156 @@
         return wrap;
     }
 
+    function r2DiagnosticsText() {
+        const status = state.oauth.status || {};
+        const metrics = state.oauth.r2Metrics || null;
+        const session = state.oauth.r2Session || metrics?.session || status.current || {};
+        const selectedObject = state.oauth.r2ObjectValue || null;
+        const listObject = selectedR2ListObject(selectedObject);
+        const filtered = filteredR2Objects();
+        return JSON.stringify({
+            type: 'cfui_oauth_r2_diagnostics',
+            version: 1,
+            generated_at: new Date().toISOString(),
+            browser_origin: window.location.origin,
+            browser_path: window.location.pathname,
+            contains_oauth_token: false,
+            contains_refresh_token: false,
+            contains_object_value: false,
+            contains_binary_preview: false,
+            contains_download_url: false,
+            contains_local_file_path: false,
+            sensitive_fields_omitted: [
+                'oauth_access_token',
+                'oauth_refresh_token',
+                'r2_object_value',
+                'r2_binary_preview',
+                'r2_download_url',
+                'local_file_name',
+                'upload_session_id',
+            ],
+            selected: {
+                account_id: state.oauth.selectedAccountId || '',
+                account_name: selectedAccountName(),
+                bucket: state.oauth.selectedR2BucketName || '',
+                object_key: state.oauth.selectedR2ObjectKey || '',
+                storage_view: state.oauth.storageView || '',
+            },
+            identity: {
+                label: session.label || '',
+                expires_at: session.expires_at || '',
+                scopes: Array.isArray(session.scopes) ? session.scopes : [],
+            },
+            capability: {
+                r2_read: canRead('r2'),
+                r2_write: canWrite('r2'),
+            },
+            state: {
+                bucket_count: state.oauth.r2Buckets.length,
+                metrics_loaded: !!metrics,
+                metrics_loading: !!state.oauth.r2MetricsLoading,
+                metrics_error: state.oauth.r2MetricsError || '',
+                objects_loaded: state.oauth.r2Objects.length,
+                objects_filtered: filtered.length,
+                objects_has_more: !!state.oauth.r2Cursor,
+                objects_error: state.oauth.r2ObjectsError || '',
+                object_loaded: !!selectedObject,
+                object_error: state.oauth.r2ObjectValueError || '',
+                object_filter_active: !!String(state.oauth.r2ObjectFilter || '').trim(),
+                upload_active: !!state.oauth.r2UploadProgress,
+                scope_ready: canRead('r2'),
+            },
+            limits: {
+                direct_upload_bytes: maxR2ObjectUploadBytes,
+                chunked_upload_bytes: maxR2ChunkedUploadBytes,
+                chunk_size_bytes: r2ObjectUploadChunkBytes,
+                inline_preview_bytes: maxR2InlinePreviewBytes,
+            },
+            metrics: metrics ? r2MetricsDiagnostics(metrics) : null,
+            buckets: state.oauth.r2Buckets.map(r2BucketDiagnostics),
+            objects: {
+                loaded_count: state.oauth.r2Objects.length,
+                filtered_count: filtered.length,
+                has_more: !!state.oauth.r2Cursor,
+                cursor_present: !!state.oauth.r2Cursor,
+                items: filtered.map(r2ObjectListDiagnostics),
+            },
+            selected_object: selectedObject ? r2SelectedObjectDiagnostics(selectedObject, listObject) : null,
+            upload: r2UploadDiagnostics(state.oauth.r2UploadProgress),
+            capabilities: oauthCapabilityDiagnostics(state.oauth.r2Capabilities || metrics?.capabilities || status.capabilities || {}),
+        }, null, 2);
+    }
+
+    function r2BucketDiagnostics(bucket) {
+        return {
+            name: bucket?.name || '',
+            location: bucket?.location || '',
+            creation_date: bucket?.creation_date || '',
+        };
+    }
+
+    function r2ObjectListDiagnostics(object) {
+        return {
+            key: object?.key || '',
+            size: object?.size == null ? null : Number(object.size),
+            etag: object?.etag || '',
+            last_modified: object?.last_modified || '',
+            storage_class: object?.storage_class || '',
+            content_type: object?.http_metadata?.contentType || '',
+        };
+    }
+
+    function r2SelectedObjectDiagnostics(object, listObject) {
+        return {
+            key: object?.key || state.oauth.selectedR2ObjectKey || '',
+            encoding: object?.encoding || '',
+            bytes: object?.bytes == null ? null : Number(object.bytes),
+            content_type: object?.content_type || listObject?.http_metadata?.contentType || '',
+            truncated: !!object?.truncated,
+            value_included: false,
+            binary_preview_included: false,
+            list_metadata: r2ObjectListDiagnostics(listObject || {}),
+        };
+    }
+
+    function r2MetricsDiagnostics(metrics) {
+        return {
+            standard: r2ClassMetricsDiagnostics(metrics?.standard),
+            infrequent_access: r2ClassMetricsDiagnostics(metrics?.infrequent_access),
+        };
+    }
+
+    function r2ClassMetricsDiagnostics(metrics) {
+        if (!metrics) return null;
+        return {
+            published: r2SnapshotDiagnostics(metrics.published),
+            uploaded: r2SnapshotDiagnostics(metrics.uploaded),
+        };
+    }
+
+    function r2SnapshotDiagnostics(snapshot) {
+        if (!snapshot) return null;
+        return {
+            objects: Number(snapshot.objects || 0),
+            payload_size: Number(snapshot.payload_size || 0),
+            metadata_size: Number(snapshot.metadata_size || 0),
+            total_bytes: Number(snapshot.total_bytes || 0),
+        };
+    }
+
+    function r2UploadDiagnostics(progress) {
+        if (!progress) return { active: false };
+        return {
+            active: true,
+            file_name_included: false,
+            uploaded: Number(progress.uploaded || 0),
+            total: Number(progress.total || 0),
+            chunk_index: Number(progress.chunkIndex || 0),
+            total_chunks: Number(progress.totalChunks || 0),
+            mode: progress.mode || '',
+        };
+    }
+
     function renderR2Detail(body) {
         const bucket = selectedR2Bucket();
         if (!bucket) {
@@ -4511,7 +4683,12 @@
             body.appendChild(empty(t('oauth_select_account')));
             return;
         }
-        body.appendChild(storageBackHeader(bucket.name, bucket.location || 'R2'));
+        body.appendChild(storageBackHeader(bucket.name, bucket.location || 'R2', [{
+            text: t('oauth_r2_copy_diagnostics'),
+            className: 'btn btn--sm btn--ghost',
+            title: t('oauth_r2_copy_diagnostics_title'),
+            onClick: () => copyOAuthText(r2DiagnosticsText()),
+        }]));
         const canEdit = canWrite('r2');
         if (canEdit) {
             body.appendChild(resourceActionBar(t('oauth_r2_objects'), {
@@ -4522,6 +4699,7 @@
                     if (state.oauth.r2ObjectCreateOpen) {
                         state.oauth.selectedR2ObjectKey = '';
                         state.oauth.r2ObjectValue = null;
+                        state.oauth.r2ObjectValueError = '';
                     }
                     renderOAuthResource();
                 },
@@ -4540,7 +4718,9 @@
         section.appendChild(heading);
         section.appendChild(r2ObjectFilterNode());
         const filteredObjects = filteredR2Objects();
-        if (!state.oauth.r2Objects.length) {
+        if (state.oauth.r2ObjectsError) {
+            section.appendChild(empty(state.oauth.r2ObjectsError));
+        } else if (!state.oauth.r2Objects.length) {
             section.appendChild(empty(t('oauth_r2_no_objects')));
         } else if (!filteredObjects.length) {
             section.appendChild(empty(t('oauth_r2_no_object_matches')));
@@ -4568,6 +4748,7 @@
                     state.oauth.selectedR2ObjectKey = object.key;
                     state.oauth.r2ObjectCreateOpen = false;
                     state.oauth.r2ObjectValue = null;
+                    state.oauth.r2ObjectValueError = '';
                     await loadR2ObjectValue(object.key);
                     renderOAuthResource();
                 });
@@ -4584,6 +4765,10 @@
 
         if (!state.oauth.selectedR2ObjectKey) {
             body.appendChild(empty(t('oauth_r2_select_object')));
+            return;
+        }
+        if (state.oauth.r2ObjectValueError) {
+            body.appendChild(empty(state.oauth.r2ObjectValueError));
             return;
         }
         body.appendChild(r2ObjectPanelNode());
@@ -7032,7 +7217,7 @@
         body.appendChild(empty(message));
     }
 
-    function storageBackHeader(title, metaText) {
+    function storageBackHeader(title, metaText, extraActions = []) {
         const bar = document.createElement('div');
         bar.className = 'oauth-action-bar';
         const copy = document.createElement('div');
@@ -7047,7 +7232,13 @@
             resetStorageDetail();
             renderOAuthResource();
         });
-        bar.append(copy, back);
+        const actions = document.createElement('div');
+        actions.className = 'oauth-row-actions';
+        for (const action of Array.isArray(extraActions) ? extraActions : []) {
+            actions.appendChild(actionButton(action));
+        }
+        actions.appendChild(back);
+        bar.append(copy, actions);
         return bar;
     }
 
@@ -7063,10 +7254,23 @@
         meta.textContent = state.oauth.selectedZoneId || state.oauth.selectedAccountId || '';
         copy.append(label, meta);
         bar.appendChild(copy);
-        if (action) {
-            bar.appendChild(smallButton(action.text, action.className, action.onClick));
+        const actions = Array.isArray(action) ? action : (action ? [action] : []);
+        if (actions.length) {
+            const wrap = document.createElement('div');
+            wrap.className = 'oauth-row-actions';
+            for (const item of actions) wrap.appendChild(actionButton(item));
+            bar.appendChild(wrap);
         }
         return bar;
+    }
+
+    function actionButton(action) {
+        const button = smallButton(action?.text || '', action?.className || 'btn btn--sm btn--ghost', action?.onClick);
+        if (action?.title) {
+            button.title = action.title;
+            button.setAttribute('aria-label', action.title);
+        }
+        return button;
     }
 
     function kvValueFormNode(key, value, creating) {
@@ -8141,6 +8345,8 @@
         state.oauth.r2Metrics = null;
         state.oauth.r2MetricsError = '';
         state.oauth.r2MetricsLoading = false;
+        state.oauth.r2Session = null;
+        state.oauth.r2Capabilities = null;
         state.oauth.d1Databases = [];
         state.oauth.kvNamespaces = [];
         state.oauth.snippets = [];
@@ -8169,10 +8375,13 @@
         state.oauth.selectedR2BucketName = '';
         state.oauth.selectedR2ObjectKey = '';
         state.oauth.r2Objects = [];
+        state.oauth.r2ObjectsError = '';
         state.oauth.r2Cursor = '';
         state.oauth.r2ObjectValue = null;
+        state.oauth.r2ObjectValueError = '';
         state.oauth.r2ObjectFilter = '';
         state.oauth.r2MetricsError = '';
+        state.oauth.r2UploadProgress = null;
         state.oauth.kvNamespaceCreateOpen = false;
         state.oauth.kvNamespaceEditingId = '';
         state.oauth.selectedKVNamespaceId = '';

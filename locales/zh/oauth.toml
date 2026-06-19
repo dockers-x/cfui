@@ -1783,6 +1783,12 @@ other = "R2 指标不可用：{error}"
 [oauth_r2_metrics_empty]
 other = "没有返回 R2 指标。"
 
+[oauth_r2_copy_diagnostics]
+other = "复制诊断"
+
+[oauth_r2_copy_diagnostics_title]
+other = "复制当前 R2 bucket、对象列表、对象详情和指标诊断信息，不包含 OAuth token、对象内容或下载 URL。"
+
 [oauth_r2_metrics_standard]
 other = "Standard"
 

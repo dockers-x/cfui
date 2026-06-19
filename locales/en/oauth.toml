@@ -1783,6 +1783,12 @@ other = "R2 metrics unavailable: {error}"
 [oauth_r2_metrics_empty]
 other = "No R2 metrics returned."
 
+[oauth_r2_copy_diagnostics]
+other = "Copy diagnostics"
+
+[oauth_r2_copy_diagnostics_title]
+other = "Copy current R2 bucket, object list, object detail, and metrics diagnostics. OAuth tokens, object content, and download URLs are not included."
+
 [oauth_r2_metrics_standard]
 other = "Standard"
 
