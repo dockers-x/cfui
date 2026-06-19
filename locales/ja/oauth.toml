@@ -2089,6 +2089,24 @@ other = "KV keys"
 [oauth_kv_load_more]
 other = "さらに読み込む"
 
+[oauth_kv_selected_keys]
+other = "{count} 個の key を選択中。現在 {loaded} 個を読み込み済みです。"
+
+[oauth_kv_select_loaded]
+other = "読み込み済みを選択"
+
+[oauth_kv_delete_selected]
+other = "選択分を削除"
+
+[oauth_kv_bulk_delete_title]
+other = "KV key を一括削除"
+
+[oauth_kv_bulk_delete_message]
+other = "選択中の {count} 個の KV key を削除しますか？この操作は取り消せません。"
+
+[oauth_kv_bulk_deleted]
+other = "{count} 個の KV key を削除しました。"
+
 [oauth_kv_no_keys]
 other = "この namespace に key はありません。"
 

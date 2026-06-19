@@ -1269,6 +1269,7 @@
             const keys = Array.isArray(resp.data) ? resp.data : [];
             state.oauth.kvKeys = append ? state.oauth.kvKeys.concat(keys) : keys;
             state.oauth.kvCursor = resp.cursor || '';
+            pruneKVSelectedKeys();
         } catch (err) {
             toast.err(err.message);
         }
@@ -1327,11 +1328,45 @@
             await apiSend('/cf/kv/value?' + params.toString(), 'DELETE');
             state.oauth.selectedKVKey = '';
             state.oauth.kvValue = null;
+            state.oauth.kvSelectedKeys = kvSelectedKeys().filter((item) => item !== key);
             await loadKVKeys(state.oauth.selectedKVNamespaceId);
             renderOAuthResource();
             toast.ok(t('oauth_kv_deleted'));
         } catch (err) {
             toast.err(err.message);
+        }
+    }
+
+    async function deleteSelectedKVKeys(button) {
+        if (!state.oauth.selectedAccountId || !state.oauth.selectedKVNamespaceId || !canWrite('kv')) return;
+        const keys = kvSelectedKeys();
+        if (!keys.length) return;
+        const ok = await window.cfui.confirm({
+            title: t('oauth_kv_bulk_delete_title'),
+            message: t('oauth_kv_bulk_delete_message', { count: keys.length }),
+            okText: t('delete'),
+        });
+        if (!ok) return;
+        const params = new URLSearchParams({
+            account_id: state.oauth.selectedAccountId,
+            namespace_id: state.oauth.selectedKVNamespaceId,
+        });
+        try {
+            setBusy(button, true, t('delete'));
+            await apiSend('/cf/kv/keys/bulk-delete?' + params.toString(), 'POST', { keys });
+            const deleted = new Set(keys);
+            state.oauth.kvSelectedKeys = [];
+            if (deleted.has(state.oauth.selectedKVKey)) {
+                state.oauth.selectedKVKey = '';
+                state.oauth.kvValue = null;
+            }
+            await loadKVKeys(state.oauth.selectedKVNamespaceId);
+            renderOAuthResource();
+            toast.ok(t('oauth_kv_bulk_deleted', { count: keys.length }));
+        } catch (err) {
+            toast.err(err.message);
+        } finally {
+            setBusy(button, false);
         }
     }
 
@@ -1347,6 +1382,7 @@
                 state.oauth.storageView = 'kv';
                 state.oauth.selectedKVNamespaceId = resp.namespace.id;
                 state.oauth.selectedKVKey = '';
+                state.oauth.kvSelectedKeys = [];
                 state.oauth.kvKeys = [];
                 state.oauth.kvCursor = '';
                 state.oauth.kvValue = null;
@@ -3863,6 +3899,7 @@
                     state.oauth.storageView = 'kv';
                     state.oauth.selectedKVNamespaceId = namespace.id;
                     state.oauth.selectedKVKey = '';
+                    state.oauth.kvSelectedKeys = [];
                     state.oauth.kvValue = null;
                     state.oauth.kvCreateOpen = false;
                     await loadKVKeys(namespace.id);
@@ -4055,9 +4092,11 @@
         if (!state.oauth.kvKeys.length) {
             section.appendChild(empty(t('oauth_kv_no_keys')));
         } else {
+            if (canEdit) section.appendChild(kvBulkActionsNode());
             for (const key of state.oauth.kvKeys) {
                 const meta = key.expiration ? `${t('oauth_kv_expiration')} ${formatDate(key.expiration * 1000)}` : '';
-                const row = rowNode(key.name, meta);
+                const actions = canEdit ? [kvKeySelectCheckbox(key.name)] : [];
+                const row = rowNode(key.name, meta, actions);
                 row.setAttribute('data-selected', String(key.name === state.oauth.selectedKVKey));
                 row.addEventListener('click', async () => {
                     state.oauth.selectedKVKey = key.name;
@@ -4082,6 +4121,48 @@
             return;
         }
         body.appendChild(kvValuePanelNode());
+    }
+
+    function kvBulkActionsNode() {
+        const node = document.createElement('div');
+        node.className = 'oauth-bulk-actions';
+        const selected = kvSelectedKeys();
+        const meta = document.createElement('div');
+        meta.className = 'oauth-row-meta';
+        meta.textContent = t('oauth_kv_selected_keys', { count: selected.length, loaded: state.oauth.kvKeys.length });
+        const actions = document.createElement('div');
+        actions.className = 'oauth-row-actions';
+        actions.appendChild(smallButton(t('oauth_kv_select_loaded'), 'btn btn--sm btn--ghost', () => selectLoadedKVKeys()));
+        const clear = smallButton(t('clear'), 'btn btn--sm btn--ghost', () => {
+            state.oauth.kvSelectedKeys = [];
+            renderOAuthResource();
+        });
+        clear.disabled = selected.length === 0;
+        actions.appendChild(clear);
+        const deleteButton = smallButton(t('oauth_kv_delete_selected'), 'btn btn--sm btn--danger', (event) => deleteSelectedKVKeys(event.currentTarget));
+        deleteButton.disabled = selected.length === 0;
+        actions.appendChild(deleteButton);
+        node.append(meta, actions);
+        return node;
+    }
+
+    function kvKeySelectCheckbox(keyName) {
+        const label = document.createElement('label');
+        label.className = 'oauth-checkbox-action';
+        label.title = t('oauth_kv_select_key');
+        label.setAttribute('aria-label', t('oauth_kv_select_key'));
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = kvSelectedKeySet().has(keyName);
+        input.addEventListener('click', (event) => event.stopPropagation());
+        input.addEventListener('change', (event) => {
+            event.stopPropagation();
+            setKVKeySelected(keyName, input.checked);
+            renderOAuthResource();
+        });
+        label.addEventListener('click', (event) => event.stopPropagation());
+        label.appendChild(input);
+        return label;
     }
 
     function renderD1Detail(body) {
@@ -6943,6 +7024,37 @@
         return state.oauth.kvNamespaces.find((item) => item.id === state.oauth.selectedKVNamespaceId);
     }
 
+    function kvSelectedKeys() {
+        return Array.isArray(state.oauth.kvSelectedKeys) ? state.oauth.kvSelectedKeys.filter(Boolean) : [];
+    }
+
+    function kvSelectedKeySet() {
+        return new Set(kvSelectedKeys());
+    }
+
+    function setKVKeySelected(keyName, selected) {
+        keyName = String(keyName || '').trim();
+        if (!keyName) return;
+        const keys = kvSelectedKeySet();
+        if (selected) keys.add(keyName);
+        else keys.delete(keyName);
+        state.oauth.kvSelectedKeys = Array.from(keys);
+    }
+
+    function selectLoadedKVKeys() {
+        const keys = kvSelectedKeySet();
+        for (const item of state.oauth.kvKeys) {
+            if (item?.name) keys.add(item.name);
+        }
+        state.oauth.kvSelectedKeys = Array.from(keys);
+        renderOAuthResource();
+    }
+
+    function pruneKVSelectedKeys() {
+        const loaded = new Set(state.oauth.kvKeys.map((item) => item.name).filter(Boolean));
+        state.oauth.kvSelectedKeys = kvSelectedKeys().filter((key) => loaded.has(key));
+    }
+
     function selectedD1Database() {
         return state.oauth.d1Databases.find((item) => item.uuid === state.oauth.selectedD1DatabaseId);
     }
@@ -7101,6 +7213,7 @@
         state.oauth.kvNamespaceEditingId = '';
         state.oauth.selectedKVNamespaceId = '';
         state.oauth.selectedKVKey = '';
+        state.oauth.kvSelectedKeys = [];
         state.oauth.kvKeys = [];
         state.oauth.kvCursor = '';
         state.oauth.kvValue = null;
@@ -7121,6 +7234,7 @@
         state.oauth.storageView = '';
         state.oauth.selectedKVNamespaceId = '';
         state.oauth.selectedKVKey = '';
+        state.oauth.kvSelectedKeys = [];
         state.oauth.kvKeys = [];
         state.oauth.kvCursor = '';
         state.oauth.kvValue = null;

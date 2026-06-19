@@ -56,6 +56,7 @@ const (
 	maxD1CellValueBytes           = 64 * 1024
 	maxD1IdentifierLen            = 512
 	maxKVNamespaceTitleBytes      = 512
+	maxKVBulkDeleteKeys           = 1000
 	d1RowIDDefaultKey             = "_cfui_rowid_"
 	maxSnippetNameLen             = 128
 	maxSnippetCodeBytes           = 512 * 1024
@@ -624,6 +625,16 @@ type KVKeysResponse struct {
 
 type KVValueRequest struct {
 	Value string `json:"value"`
+}
+
+type KVKeysDeleteRequest struct {
+	Keys []string `json:"keys"`
+}
+
+type KVKeysDeleteResponse struct {
+	Deleted      int                      `json:"deleted"`
+	Session      cfoauth.SessionSummary   `json:"session"`
+	Capabilities cfoauth.CapabilityMatrix `json:"capabilities"`
 }
 
 type D1QueryRequest struct {
@@ -2610,6 +2621,32 @@ func (s *Service) DeleteKVValue(ctx context.Context, accountID, namespaceID, key
 	return err
 }
 
+func (s *Service) DeleteKVValues(ctx context.Context, accountID, namespaceID string, req KVKeysDeleteRequest) (KVKeysDeleteResponse, error) {
+	client, session, err := s.currentClient(ctx)
+	if err != nil {
+		return KVKeysDeleteResponse{}, err
+	}
+	accountID, namespaceID, err = normalizeKVNamespaceTarget(accountID, namespaceID)
+	if err != nil {
+		return KVKeysDeleteResponse{}, err
+	}
+	keys, err := normalizeKVKeys(req.Keys)
+	if err != nil {
+		return KVKeysDeleteResponse{}, err
+	}
+	if _, err := client.DeleteWorkersKVEntries(ctx, cloudflare.AccountIdentifier(accountID), cloudflare.DeleteWorkersKVEntriesParams{
+		NamespaceID: namespaceID,
+		Keys:        keys,
+	}); err != nil {
+		return KVKeysDeleteResponse{}, err
+	}
+	return KVKeysDeleteResponse{
+		Deleted:      len(keys),
+		Session:      session,
+		Capabilities: session.Capabilities,
+	}, nil
+}
+
 func (s *Service) QueryD1(ctx context.Context, accountID, databaseID string, req D1QueryRequest) (D1QueryResponse, error) {
 	client, session, err := s.currentClient(ctx)
 	if err != nil {
@@ -3681,6 +3718,32 @@ func normalizeKVNamespaceTitle(title string) (string, error) {
 		return "", validationError("kv namespace title is too long")
 	}
 	return title, nil
+}
+
+func normalizeKVKeys(keys []string) ([]string, error) {
+	if len(keys) == 0 {
+		return nil, validationError("kv keys are required")
+	}
+	normalized := make([]string, 0, len(keys))
+	seen := make(map[string]struct{}, len(keys))
+	for _, key := range keys {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		normalized = append(normalized, key)
+	}
+	if len(normalized) == 0 {
+		return nil, validationError("kv keys are required")
+	}
+	if len(normalized) > maxKVBulkDeleteKeys {
+		return nil, validationError("too many kv keys for one bulk delete")
+	}
+	return normalized, nil
 }
 
 func normalizeZoneID(zoneID string) (string, error) {

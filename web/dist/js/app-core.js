@@ -126,6 +126,7 @@
             selectedR2ObjectKey: '',
             selectedKVNamespaceId: '',
             selectedKVKey: '',
+            kvSelectedKeys: [],
             selectedD1DatabaseId: '',
             selectedD1TableName: '',
             selectedSnippetName: '',

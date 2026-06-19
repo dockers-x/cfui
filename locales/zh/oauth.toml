@@ -2089,6 +2089,24 @@ other = "KV keys"
 [oauth_kv_load_more]
 other = "加载更多 key"
 
+[oauth_kv_selected_keys]
+other = "已选择 {count} 个 key；当前已加载 {loaded} 个。"
+
+[oauth_kv_select_loaded]
+other = "选择已加载"
+
+[oauth_kv_delete_selected]
+other = "删除所选"
+
+[oauth_kv_bulk_delete_title]
+other = "批量删除 KV key"
+
+[oauth_kv_bulk_delete_message]
+other = "删除选中的 {count} 个 KV key？此操作不可撤销。"
+
+[oauth_kv_bulk_deleted]
+other = "已删除 {count} 个 KV key。"
+
 [oauth_kv_no_keys]
 other = "该 namespace 暂无 key。"
 

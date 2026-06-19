@@ -2089,6 +2089,24 @@ other = "KV keys"
 [oauth_kv_load_more]
 other = "Load more keys"
 
+[oauth_kv_selected_keys]
+other = "{count} keys selected; {loaded} currently loaded."
+
+[oauth_kv_select_loaded]
+other = "Select loaded"
+
+[oauth_kv_delete_selected]
+other = "Delete selected"
+
+[oauth_kv_bulk_delete_title]
+other = "Bulk delete KV keys"
+
+[oauth_kv_bulk_delete_message]
+other = "Delete the selected {count} KV keys? This cannot be undone."
+
+[oauth_kv_bulk_deleted]
+other = "{count} KV keys deleted."
+
 [oauth_kv_no_keys]
 other = "No keys in this namespace."
 

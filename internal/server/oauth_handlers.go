@@ -1389,6 +1389,25 @@ func (s *Server) handleCFKVKeys(w http.ResponseWriter, r *http.Request) {
 	writeCFResponse(w, resp, err)
 }
 
+func (s *Server) handleCFKVKeysBulkDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req cfaccount.KVKeysDeleteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	resp, err := s.ensureCFService().DeleteKVValues(
+		r.Context(),
+		r.URL.Query().Get("account_id"),
+		r.URL.Query().Get("namespace_id"),
+		req,
+	)
+	writeCFResponse(w, resp, err)
+}
+
 func (s *Server) handleCFKVValue(w http.ResponseWriter, r *http.Request) {
 	accountID := r.URL.Query().Get("account_id")
 	namespaceID := r.URL.Query().Get("namespace_id")

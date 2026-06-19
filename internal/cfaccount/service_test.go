@@ -401,6 +401,47 @@ func TestKVNamespaceLifecycleUsesCloudflareSDK(t *testing.T) {
 	}
 }
 
+func TestKVKeysBulkDeleteUsesCloudflareSDK(t *testing.T) {
+	ctx := context.Background()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/client/v4/accounts/account-1/storage/kv/namespaces/namespace-1/bulk", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		if r.Method != http.MethodDelete {
+			t.Fatalf("kv bulk delete method = %s, want DELETE", r.Method)
+		}
+		if got := r.Header.Get("Content-Type"); got != "application/json" {
+			t.Fatalf("content-type = %q, want application/json", got)
+		}
+		var keys []string
+		if err := json.NewDecoder(r.Body).Decode(&keys); err != nil {
+			t.Fatalf("decode bulk delete keys: %v", err)
+		}
+		want := []string{"alpha", "beta"}
+		if len(keys) != len(want) {
+			t.Fatalf("bulk delete keys = %#v, want %#v", keys, want)
+		}
+		for i := range want {
+			if keys[i] != want[i] {
+				t.Fatalf("bulk delete keys = %#v, want %#v", keys, want)
+			}
+		}
+		writeCFEnvelope(w, `{}`, nil)
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	svc := NewService(testOAuthServiceWithScopes(t, "workers-kv-storage.write"))
+	svc.restEndpoint = server.URL + "/client/v4"
+
+	deleted, err := svc.DeleteKVValues(ctx, "account-1", "namespace-1", KVKeysDeleteRequest{Keys: []string{" alpha ", "beta", "alpha", " "}})
+	if err != nil {
+		t.Fatalf("DeleteKVValues: %v", err)
+	}
+	if deleted.Deleted != 2 || deleted.Session.ID != "session-1" {
+		t.Fatalf("unexpected bulk delete response: %#v", deleted)
+	}
+}
+
 func TestSplitStatusComponents(t *testing.T) {
 	components := []StatusPageComponent{
 		{ID: "services", Name: "Cloudflare Sites and Services", Status: "degraded_performance", Group: true},

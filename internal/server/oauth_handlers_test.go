@@ -82,6 +82,7 @@ func TestOAuthCloudflareResourceHandlersRequireLogin(t *testing.T) {
 		{name: "kv namespace rename", method: http.MethodPut, target: "/api/cf/kv/namespaces/namespace-1?account_id=account-1", body: strings.NewReader(`{"title":"cache-renamed"}`), handler: s.handleCFKVNamespace},
 		{name: "kv namespace delete", method: http.MethodDelete, target: "/api/cf/kv/namespaces/namespace-1?account_id=account-1", handler: s.handleCFKVNamespace},
 		{name: "kv keys", method: http.MethodGet, target: "/api/cf/kv/keys?account_id=account-1&namespace_id=namespace-1", handler: s.handleCFKVKeys},
+		{name: "kv keys bulk delete", method: http.MethodPost, target: "/api/cf/kv/keys/bulk-delete?account_id=account-1&namespace_id=namespace-1", body: strings.NewReader(`{"keys":["a","b"]}`), handler: s.handleCFKVKeysBulkDelete},
 		{name: "kv value get", method: http.MethodGet, target: "/api/cf/kv/value?account_id=account-1&namespace_id=namespace-1&key=a%2Fb", handler: s.handleCFKVValue},
 		{name: "kv value put", method: http.MethodPut, target: "/api/cf/kv/value?account_id=account-1&namespace_id=namespace-1&key=a%2Fb", body: strings.NewReader(`{"value":"hello"}`), handler: s.handleCFKVValue},
 		{name: "kv value delete", method: http.MethodDelete, target: "/api/cf/kv/value?account_id=account-1&namespace_id=namespace-1&key=a%2Fb", handler: s.handleCFKVValue},
