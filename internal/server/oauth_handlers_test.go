@@ -428,6 +428,8 @@ func TestCFTunnelsIncludesLocalProfileSummaryWithoutToken(t *testing.T) {
 			AccountID string `json:"account_id"`
 			TunnelID  string `json:"tunnel_id"`
 			Active    bool   `json:"active"`
+			Running   bool   `json:"running"`
+			Status    string `json:"status"`
 		} `json:"local_profiles"`
 	}
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
@@ -442,6 +444,9 @@ func TestCFTunnelsIncludesLocalProfileSummaryWithoutToken(t *testing.T) {
 	profile := resp.LocalProfiles[0]
 	if profile.Key == "" || profile.Name != "edge local" || profile.AccountID != "account-1" || profile.TunnelID != "tunnel-1" {
 		t.Fatalf("unexpected local profile summary: %#v", profile)
+	}
+	if profile.Running || profile.Status != "unavailable" {
+		t.Fatalf("unexpected local runner status in summary: %#v", profile)
 	}
 }
 

@@ -1306,6 +1306,29 @@
         </div>
     </div>
 
+    <!-- OAuth Worker script dialog -->
+    <div id="oauth-worker-script-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="oauth-worker-script-title" hidden>
+        <div class="modal modal--wide">
+            <div class="modal-head">
+                <div>
+                    <h2 id="oauth-worker-script-title" data-i18n="oauth_worker_script_dialog_title">Cloudflare OAuth Worker script</h2>
+                    <p class="subtitle" data-i18n="oauth_worker_script_dialog_subtitle">Use this only when you want to self-host the OAuth relay. The provided relay address works without deploying it.</p>
+                </div>
+                <button type="button" class="icon-btn" data-close-dialog aria-label="Close" title="Close" data-i18n-attr="aria-label|toast_close;title|toast_close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="modal-body oauth-worker-script-body">
+                <pre id="oauth-worker-script-content" class="oauth-worker-script-code mono"></pre>
+            </div>
+            <div class="modal-foot">
+                <button type="button" class="btn btn--ghost" id="oauth-worker-script-open" data-i18n="open">Open</button>
+                <button type="button" class="btn btn--ghost" id="oauth-worker-script-copy" data-i18n="copy">Copy</button>
+                <button type="button" class="btn btn--primary" data-close-dialog data-i18n="close">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Manager entry dialog -->
     <div id="manager-entry-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="manager-entry-dialog-title" hidden>
         <div class="modal">

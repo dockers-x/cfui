@@ -4287,12 +4287,17 @@ details.disclosure > .body {
 
 .oauth-relay-choice {
     display: grid;
-    gap: 10px;
+    gap: 12px;
     margin-top: 12px;
-    padding: 12px;
+    padding: 14px;
     border: 1px solid var(--border);
     border-radius: var(--r-card);
-    background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+    background: var(--surface);
+}
+
+.oauth-relay-choice-head {
+    display: grid;
+    gap: 3px;
 }
 
 .oauth-relay-choice-title {
@@ -4308,25 +4313,23 @@ details.disclosure > .body {
 
 .oauth-relay-choice-list {
     display: grid;
-    gap: 0;
+    gap: 8px;
 }
 
 .oauth-relay-choice-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px;
-    padding: 10px 0;
-    border-top: 1px solid var(--border);
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    background: var(--surface-2);
     align-items: center;
 }
 
-.oauth-relay-choice-row:first-child {
-    padding-top: 0;
-    border-top: 0;
-}
-
-.oauth-relay-choice-row:last-child {
-    padding-bottom: 0;
+.oauth-relay-choice-row[data-kind="provided"] {
+    border-color: color-mix(in srgb, var(--state-ok) 34%, var(--border));
+    background: color-mix(in srgb, var(--state-ok) 6%, var(--surface));
 }
 
 .oauth-relay-choice-main {
@@ -4379,6 +4382,7 @@ details.disclosure > .body {
 
 .oauth-relay-choice-actions {
     display: inline-flex;
+    flex-wrap: wrap;
     gap: 6px;
     align-items: center;
     justify-content: flex-end;
@@ -4504,6 +4508,25 @@ details.disclosure > .body {
     color: var(--text-muted);
     font-size: var(--fs-xs);
     line-height: 1.5;
+}
+
+.oauth-worker-script-body {
+    padding: 0;
+    background: var(--surface-2);
+}
+
+.oauth-worker-script-code {
+    min-height: 360px;
+    max-height: min(64dvh, 620px);
+    margin: 0;
+    padding: var(--gap-4);
+    overflow: auto;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: 0.78rem;
+    line-height: 1.55;
+    white-space: pre;
 }
 
 .oauth-relay-check {

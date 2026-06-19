@@ -624,6 +624,9 @@ type cfLocalTunnelProfileSummary struct {
 	LocalEnabled            bool   `json:"local_enabled"`
 	RemoteManagementEnabled bool   `json:"remote_management_enabled"`
 	Active                  bool   `json:"active"`
+	Running                 bool   `json:"running"`
+	Status                  string `json:"status,omitempty"`
+	Protocol                string `json:"protocol,omitempty"`
 }
 
 func (s *Server) saveOAuthTunnelLocalProfile(tunnel cfaccount.Tunnel, token, accountID string, activate bool) (*cfLocalTunnelProfileSummary, error) {
@@ -654,7 +657,7 @@ func (s *Server) saveOAuthTunnelLocalProfile(tunnel cfaccount.Tunnel, token, acc
 		}
 		saved, _ = findTunnelProfileByTunnelID(cfg.Tunnels, profile.TunnelID)
 	}
-	summary := summarizeLocalTunnelProfile(saved, cfg.ActiveTunnelKey)
+	summary := s.summarizeLocalTunnelProfile(saved, cfg.ActiveTunnelKey)
 	return &summary, nil
 }
 
@@ -669,7 +672,7 @@ func (s *Server) localTunnelProfileSummaries(accountID string) []cfLocalTunnelPr
 		if accountID != "" && strings.TrimSpace(profile.AccountID) != "" && profile.AccountID != accountID {
 			continue
 		}
-		out = append(out, summarizeLocalTunnelProfile(profile, cfg.ActiveTunnelKey))
+		out = append(out, s.summarizeLocalTunnelProfile(profile, cfg.ActiveTunnelKey))
 	}
 	return out
 }
@@ -690,7 +693,7 @@ func (s *Server) cleanupOAuthTunnelLocalProfile(tunnelID string) (*cfLocalTunnel
 			return nil, false, err
 		}
 		s.removeRunnerProfile(profile.Key)
-		summary := summarizeLocalTunnelProfile(profile, nextCfg.ActiveTunnelKey)
+		summary := s.summarizeLocalTunnelProfile(profile, nextCfg.ActiveTunnelKey)
 		return &summary, true, nil
 	}
 	profile.Token = ""
@@ -703,7 +706,7 @@ func (s *Server) cleanupOAuthTunnelLocalProfile(tunnelID string) (*cfLocalTunnel
 	}
 	s.removeRunnerProfile(profile.Key)
 	saved, _ := nextCfg.TunnelProfile(profile.Key)
-	summary := summarizeLocalTunnelProfile(saved, nextCfg.ActiveTunnelKey)
+	summary := s.summarizeLocalTunnelProfile(saved, nextCfg.ActiveTunnelKey)
 	return &summary, false, nil
 }
 
@@ -726,8 +729,8 @@ func findTunnelProfileByTunnelID(profiles []config.TunnelProfileConfig, tunnelID
 	return config.TunnelProfileConfig{}, false
 }
 
-func summarizeLocalTunnelProfile(profile config.TunnelProfileConfig, activeKey string) cfLocalTunnelProfileSummary {
-	return cfLocalTunnelProfileSummary{
+func (s *Server) summarizeLocalTunnelProfile(profile config.TunnelProfileConfig, activeKey string) cfLocalTunnelProfileSummary {
+	summary := cfLocalTunnelProfileSummary{
 		Key:                     profile.Key,
 		Name:                    profile.Name,
 		AccountID:               profile.AccountID,
@@ -736,6 +739,16 @@ func summarizeLocalTunnelProfile(profile config.TunnelProfileConfig, activeKey s
 		RemoteManagementEnabled: profile.RemoteManagementEnabled,
 		Active:                  profile.Key != "" && profile.Key == activeKey,
 	}
+	if s.runner == nil {
+		summary.Status = "unavailable"
+		return summary
+	}
+	st, _ := s.runner.ProfileStatus(profile.Key)
+	status := statusResponseFrom(st)
+	summary.Running = status.Running
+	summary.Status = status.Status
+	summary.Protocol = status.Protocol
+	return summary
 }
 
 func (s *Server) handleCFWorkers(w http.ResponseWriter, r *http.Request) {

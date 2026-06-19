@@ -487,7 +487,7 @@
             state.oauth.tunnelIngressCreateTunnelId = '';
             state.oauth.tunnelIngressEditing = null;
             renderOAuthResource();
-            toast.ok(t('oauth_tunnel_ingress_saved'));
+            toast.ok(tunnelIngressMutationMessage(tunnelID, 'oauth_tunnel_ingress_saved'));
         } catch (err) {
             toast.err(t('oauth_tunnel_ingress_save_failed') + ': ' + err.message);
         } finally {
@@ -516,7 +516,7 @@
                 state.oauth.tunnelIngressEditing = null;
             }
             renderOAuthResource();
-            toast.ok(t('oauth_tunnel_ingress_deleted'));
+            toast.ok(tunnelIngressMutationMessage(tunnelID, 'oauth_tunnel_ingress_deleted'));
         } catch (err) {
             toast.err(t('oauth_tunnel_ingress_delete_failed') + ': ' + err.message);
         } finally {
@@ -534,7 +534,7 @@
             state.oauth.tunnelConfigs[tunnelID] = config;
             state.oauth.tunnelConfigErrors[tunnelID] = '';
             renderOAuthResource();
-            toast.ok(t('oauth_tunnel_ingress_reordered'));
+            toast.ok(tunnelIngressMutationMessage(tunnelID, 'oauth_tunnel_ingress_reordered'));
         } catch (err) {
             toast.err(t('oauth_tunnel_ingress_reorder_failed') + ': ' + err.message);
             renderOAuthResource();
@@ -2224,6 +2224,7 @@
         const actions = document.createElement('div');
         actions.className = 'oauth-config-actions';
         actions.append(
+            smallButton(t('oauth_worker_script_view'), 'btn btn--sm btn--ghost', () => openOAuthWorkerScriptDialog()),
             smallButton(t('open'), 'btn btn--sm btn--ghost', () => openOAuthWorkerScript()),
             smallButton(t('copy'), 'btn btn--sm btn--ghost', () => copyOAuthText(scriptURL)),
         );
@@ -2250,12 +2251,18 @@
         list.className = 'oauth-relay-choice-list';
         list.append(
             oauthRelayChoiceRow({
+                kind: 'provided',
                 title: t('oauth_relay_choice_provided_title'),
                 badge: t('oauth_relay_choice_recommended'),
                 desc: t('oauth_relay_choice_provided_desc'),
-                label: t('oauth_setup_redirect_uri'),
+                label: t('oauth_relay_choice_cloudflare_value'),
                 value: relayURL || t('oauth_setup_relay_url_placeholder'),
                 actions: [
+                    {
+                        label: t('oauth_relay_check'),
+                        title: t('oauth_relay_check'),
+                        action: (event) => checkOAuthRelay(event.currentTarget),
+                    },
                     {
                         label: t('oauth_relay_configure'),
                         title: t('oauth_relay_edit'),
@@ -2270,20 +2277,26 @@
                 ],
             }),
             oauthRelayChoiceRow({
+                kind: 'self-host',
                 title: t('oauth_relay_choice_self_host_title'),
                 desc: t('oauth_relay_choice_self_host_desc'),
                 label: t('oauth_setup_worker_script'),
                 value: scriptURL,
                 actions: [
                     {
+                        label: t('oauth_worker_script_view'),
+                        title: t('oauth_worker_script_view_title'),
+                        action: openOAuthWorkerScriptDialog,
+                    },
+                    {
                         label: t('oauth_setup_worker_open'),
                         title: t('oauth_setup_worker_open'),
                         action: openOAuthWorkerScript,
                     },
                     {
-                        label: t('copy'),
-                        title: t('copy'),
-                        action: () => copyOAuthText(scriptURL),
+                        label: t('oauth_relay_configure'),
+                        title: t('oauth_relay_edit'),
+                        action: () => openOAuthRelayEditor(status),
                     },
                 ],
             }),
@@ -2292,9 +2305,10 @@
         node.append(head, list);
     }
 
-    function oauthRelayChoiceRow({ title, badge, desc, label, value, actions = [] }) {
+    function oauthRelayChoiceRow({ kind, title, badge, desc, label, value, actions = [] }) {
         const row = document.createElement('div');
         row.className = 'oauth-relay-choice-row';
+        if (kind) row.dataset.kind = kind;
 
         const body = document.createElement('div');
         body.className = 'oauth-relay-choice-main';
@@ -2338,6 +2352,50 @@
 
     function openOAuthWorkerScript() {
         window.open('/cloudflare-oauth-worker.js', '_blank', 'noopener');
+    }
+
+    async function openOAuthWorkerScriptDialog() {
+        const dialog = $('oauth-worker-script-dialog');
+        if (!dialog) {
+            openOAuthWorkerScript();
+            return;
+        }
+        window.cfui.openDialog?.(dialog);
+        await loadOAuthWorkerScript();
+    }
+
+    async function loadOAuthWorkerScript(force = false) {
+        if (state.oauth.workerScriptContent && !force) {
+            renderOAuthWorkerScriptDialog();
+            return;
+        }
+        state.oauth.workerScriptLoading = true;
+        state.oauth.workerScriptError = '';
+        renderOAuthWorkerScriptDialog();
+        try {
+            const resp = await fetch('/cloudflare-oauth-worker.js', { cache: 'no-store' });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            state.oauth.workerScriptContent = await resp.text();
+        } catch (err) {
+            state.oauth.workerScriptError = err.message || String(err);
+        } finally {
+            state.oauth.workerScriptLoading = false;
+            renderOAuthWorkerScriptDialog();
+        }
+    }
+
+    function renderOAuthWorkerScriptDialog() {
+        const code = $('oauth-worker-script-content');
+        if (!code) return;
+        if (state.oauth.workerScriptLoading) {
+            code.textContent = t('oauth_worker_script_loading');
+        } else if (state.oauth.workerScriptError) {
+            code.textContent = t('oauth_worker_script_load_failed', { error: state.oauth.workerScriptError });
+        } else {
+            code.textContent = state.oauth.workerScriptContent || '';
+        }
+        const copy = $('oauth-worker-script-copy');
+        if (copy) copy.disabled = !state.oauth.workerScriptContent;
     }
 
     function openOAuthRelayEditor(status) {
@@ -2423,6 +2481,7 @@
                 [
                     setupGuideCodeRow(t('oauth_setup_worker_script'), workerScriptURL, {
                         actions: [
+                            { label: t('oauth_worker_script_view'), title: t('oauth_worker_script_view_title'), action: openOAuthWorkerScriptDialog },
                             { label: t('open'), title: t('oauth_setup_worker_open'), action: openOAuthWorkerScript },
                         ],
                     }),
@@ -3218,6 +3277,7 @@
                 tunnelStatusLabel(tunnel.status),
                 t('oauth_tunnel_connector_count', { n: connectionCount }),
                 localProfile ? t('oauth_tunnel_linked_local_profile', { name: localProfile.name || localProfile.key }) : '',
+                localProfile ? localTunnelRunnerLabel(localProfile) : '',
                 tunnel.type || '',
                 tunnel.id || '',
             ].filter(Boolean).join(' · ');
@@ -3303,6 +3363,26 @@
         }) || null;
     }
 
+    function localTunnelRunnerLabel(profile) {
+        if (!profile?.local_enabled) return t('oauth_tunnel_local_runner_disabled');
+        if (profile.running) {
+            return [t('oauth_tunnel_local_runner_running'), profile.protocol || ''].filter(Boolean).join(' · ');
+        }
+        const status = String(profile.status || '').trim();
+        if (status === 'unavailable') return t('oauth_tunnel_local_runner_unavailable');
+        if (status === 'error') return t('oauth_tunnel_local_runner_error');
+        return t('oauth_tunnel_local_runner_stopped');
+    }
+
+    function tunnelIngressMutationMessage(tunnelID, key) {
+        const base = t(key);
+        const localProfile = localProfileForTunnel({ id: tunnelID });
+        if (!localProfile) return base;
+        if (localProfile.running) return `${base} ${t('oauth_tunnel_ingress_local_running_hint')}`;
+        if (String(localProfile.status || '').trim() === 'unavailable') return `${base} ${t('oauth_tunnel_ingress_local_unknown_hint')}`;
+        return `${base} ${t('oauth_tunnel_ingress_local_stopped_hint')}`;
+    }
+
     function tunnelDetailNode(tunnel, localProfile) {
         const rows = [];
         const add = (label, value) => {
@@ -3320,6 +3400,7 @@
         if (localProfile) {
             add(t('oauth_tunnel_local_profile'), localProfile.name || localProfile.key);
             add(t('oauth_tunnel_local_state'), localProfile.active ? t('oauth_tunnel_local_profile_activated') : t('oauth_tunnel_local_profile_saved'));
+            add(t('oauth_tunnel_local_runner'), localTunnelRunnerLabel(localProfile));
         }
         const connections = Array.isArray(tunnel.connections) ? tunnel.connections : [];
         add(t('oauth_tunnel_connections'), connections.length ? connections.map(tunnelConnectionSummary).join('\n') : t('oauth_tunnel_no_active_connections'));
@@ -8033,6 +8114,11 @@
     function wireOAuth() {
         $('oauth-login')?.addEventListener('click', startOAuthLogin);
         $('oauth-logout')?.addEventListener('click', logoutOAuth);
+        $('oauth-worker-script-copy')?.addEventListener('click', async () => {
+            if (!state.oauth.workerScriptContent && !state.oauth.workerScriptLoading) await loadOAuthWorkerScript();
+            copyOAuthText(state.oauth.workerScriptContent || '');
+        });
+        $('oauth-worker-script-open')?.addEventListener('click', openOAuthWorkerScript);
         $('oauth-refresh')?.addEventListener('click', async () => {
             await fetchOAuthStatus();
             if (state.oauth.resource === 'status') {

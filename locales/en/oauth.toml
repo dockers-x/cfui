@@ -253,6 +253,24 @@ other = "Local profile"
 [oauth_tunnel_local_state]
 other = "Local state"
 
+[oauth_tunnel_local_runner]
+other = "Local runner"
+
+[oauth_tunnel_local_runner_running]
+other = "Running locally"
+
+[oauth_tunnel_local_runner_stopped]
+other = "Stopped locally"
+
+[oauth_tunnel_local_runner_unavailable]
+other = "Local runner unavailable"
+
+[oauth_tunnel_local_runner_disabled]
+other = "Local running disabled"
+
+[oauth_tunnel_local_runner_error]
+other = "Local state error"
+
 [oauth_tunnels_readonly]
 other = "Current OAuth scopes can read tunnels only. Add cloudflare-tunnel.write to create and link tunnels."
 
@@ -399,6 +417,15 @@ other = "Tunnel ingress rule deleted."
 
 [oauth_tunnel_ingress_reordered]
 other = "Tunnel ingress rules reordered."
+
+[oauth_tunnel_ingress_local_running_hint]
+other = "The linked local connector is running; cloudflared will pull the remote config. Restart it from the local workspace if the change does not appear."
+
+[oauth_tunnel_ingress_local_stopped_hint]
+other = "The linked local connector is stopped. Start it from the local workspace when local access is needed."
+
+[oauth_tunnel_ingress_local_unknown_hint]
+other = "Local runner status could not be read. Check the local workspace when local access is needed."
 
 [oauth_tunnel_ingress_load_failed]
 other = "Failed to load tunnel ingress rules"
@@ -800,7 +827,7 @@ other = "Set CFUI_OAUTH_CLIENT_ID before signing in."
 other = "OAuth setup"
 
 [oauth_setup_subtitle]
-other = "Create a Cloudflare OAuth client, use the current relay callback as its redirect URI, then restart cfui with the client ID. Deploy a Worker relay only when you want to self-host it."
+other = "Choose the OAuth relay first: use the provided relay address directly, or self-host a Cloudflare Worker relay with the built-in worker.js. Then create the Cloudflare OAuth client and restart cfui with the client ID."
 
 [oauth_setup_oauth_app_title]
 other = "Fill the Cloudflare OAuth client form"
@@ -851,7 +878,7 @@ other = "Optional for private use; use your project or documentation URL for a p
 other = "Optional: self-host the relay Worker"
 
 [oauth_setup_worker_desc]
-other = "Skip this step when using the current relay callback. Only open the built-in worker.js and deploy it to your own Cloudflare Workers account when you want to self-host the relay."
+other = "Skip this step when using the provided relay address. Only open the built-in worker.js and deploy it to your own Cloudflare Workers account when you want to self-host the relay."
 
 [oauth_setup_worker_script]
 other = "Built-in Worker file"
@@ -863,16 +890,19 @@ other = "Self-host Worker script"
 other = "Choose an OAuth relay callback"
 
 [oauth_relay_choice_note]
-other = "Use the current relay callback by default; it is the provided relay address and does not require deploying worker.js. Deploy the built-in Worker script only when you want to self-host the Cloudflare OAuth relay."
+other = "Use the provided relay address first; it does not require deploying worker.js. Open and deploy the built-in Worker script only when you want to self-host the Cloudflare OAuth relay."
 
 [oauth_relay_choice_provided_title]
-other = "Use the current relay callback"
+other = "Use the provided relay address"
 
 [oauth_relay_choice_recommended]
 other = "Recommended"
 
 [oauth_relay_choice_provided_desc]
-other = "Register this URL as the Cloudflare OAuth client's redirect callback URL. cfui carries the current instance's local callback through OAuth state."
+other = "Register the URL below as the Cloudflare OAuth client's redirect callback URL. cfui carries the current instance's local callback through OAuth state."
+
+[oauth_relay_choice_cloudflare_value]
+other = "Enter this redirect URL in Cloudflare"
 
 [oauth_relay_choice_self_host_title]
 other = "Self-host a Cloudflare Worker relay"
@@ -882,6 +912,24 @@ other = "If you do not want to use the default relay, open the built-in worker.j
 
 [oauth_setup_worker_open]
 other = "Open full Worker script"
+
+[oauth_worker_script_view]
+other = "View script"
+
+[oauth_worker_script_view_title]
+other = "View the full Worker script in this page"
+
+[oauth_worker_script_dialog_title]
+other = "Cloudflare OAuth Worker script"
+
+[oauth_worker_script_dialog_subtitle]
+other = "Deploy this script only when you want to self-host the OAuth relay. It is not needed when using the provided relay address."
+
+[oauth_worker_script_loading]
+other = "Loading Worker script..."
+
+[oauth_worker_script_load_failed]
+other = "Failed to load Worker script: {error}"
 
 [oauth_setup_worker_deploy_path]
 other = "Cloudflare Worker deploy path"

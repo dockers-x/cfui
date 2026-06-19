@@ -253,6 +253,24 @@ other = "本地配置"
 [oauth_tunnel_local_state]
 other = "本地状态"
 
+[oauth_tunnel_local_runner]
+other = "本地 runner"
+
+[oauth_tunnel_local_runner_running]
+other = "本地运行中"
+
+[oauth_tunnel_local_runner_stopped]
+other = "本地已停止"
+
+[oauth_tunnel_local_runner_unavailable]
+other = "本地 runner 不可用"
+
+[oauth_tunnel_local_runner_disabled]
+other = "本地运行未启用"
+
+[oauth_tunnel_local_runner_error]
+other = "本地状态异常"
+
 [oauth_tunnels_readonly]
 other = "当前 OAuth scope 只能读取 Tunnel。添加 cloudflare-tunnel.write 后才能创建并关联本地隧道。"
 
@@ -399,6 +417,15 @@ other = "Tunnel ingress 规则已删除。"
 
 [oauth_tunnel_ingress_reordered]
 other = "Tunnel ingress 规则顺序已更新。"
+
+[oauth_tunnel_ingress_local_running_hint]
+other = "关联的本地 connector 正在运行；cloudflared 会拉取远程配置，如未生效请到本地工作台重启。"
+
+[oauth_tunnel_ingress_local_stopped_hint]
+other = "关联的本地 connector 未运行；需要本地访问时请到本地工作台启动。"
+
+[oauth_tunnel_ingress_local_unknown_hint]
+other = "未能读取本地 runner 状态；需要本地访问时请到本地工作台确认。"
 
 [oauth_tunnel_ingress_load_failed]
 other = "加载 Tunnel ingress 规则失败"
@@ -800,7 +827,7 @@ other = "请先设置 CFUI_OAUTH_CLIENT_ID。"
 other = "OAuth 配置引导"
 
 [oauth_setup_subtitle]
-other = "先创建 Cloudflare OAuth 客户端，把当前中转回调作为重定向 URI，然后用 client ID 重启 cfui。需要完全自建时再部署 Worker relay。"
+other = "先选择 OAuth 中转方式：可以直接使用提供的中转地址，也可以用内置 worker.js 自建 Cloudflare Worker relay。然后创建 Cloudflare OAuth 客户端并用 client ID 重启 cfui。"
 
 [oauth_setup_oauth_app_title]
 other = "填写 Cloudflare OAuth 客户端表单"
@@ -851,7 +878,7 @@ other = "私用可以留空；公开应用填写项目主页或文档 URL。"
 other = "可选：自部署 relay Worker"
 
 [oauth_setup_worker_desc]
-other = "如果使用当前中转回调，这一步不需要操作。只有想自建 relay 时，才打开下面的内置 worker.js 并部署到自己的 Cloudflare Workers。"
+other = "如果使用提供的中转地址，这一步不需要操作。只有想自建 relay 时，才打开下面的内置 worker.js 并部署到自己的 Cloudflare Workers。"
 
 [oauth_setup_worker_script]
 other = "内置 Worker 文件"
@@ -863,16 +890,19 @@ other = "自建 Worker 脚本"
 other = "OAuth 中转地址怎么选"
 
 [oauth_relay_choice_note]
-other = "默认可以直接使用当前中转回调，也就是项目提供的 relay 地址，不需要部署 worker.js。只有想完全自建 Cloudflare OAuth relay 时，才需要部署内置 Worker 脚本。"
+other = "推荐先直接使用提供的中转地址，它不需要部署 worker.js。只有想完全自建 Cloudflare OAuth relay 时，才需要打开内置 Worker 脚本并部署到自己的 Cloudflare 账号。"
 
 [oauth_relay_choice_provided_title]
-other = "使用当前中转回调"
+other = "使用提供的中转地址"
 
 [oauth_relay_choice_recommended]
 other = "推荐"
 
 [oauth_relay_choice_provided_desc]
-other = "把这个地址填到 Cloudflare OAuth 客户端的重定向回调 URL。cfui 会通过 OAuth state 带上当前实例的本地回调地址。"
+other = "把下面这个地址填到 Cloudflare OAuth 客户端的重定向回调 URL。cfui 会通过 OAuth state 带上当前实例的本地回调地址。"
+
+[oauth_relay_choice_cloudflare_value]
+other = "Cloudflare 里填写这个重定向 URL"
 
 [oauth_relay_choice_self_host_title]
 other = "自建 Cloudflare Worker relay"
@@ -882,6 +912,24 @@ other = "如果不想使用默认中转，可以打开内置 worker.js 部署到
 
 [oauth_setup_worker_open]
 other = "打开完整 Worker 脚本"
+
+[oauth_worker_script_view]
+other = "查看脚本"
+
+[oauth_worker_script_view_title]
+other = "在页面里查看完整 Worker 脚本"
+
+[oauth_worker_script_dialog_title]
+other = "Cloudflare OAuth Worker 脚本"
+
+[oauth_worker_script_dialog_subtitle]
+other = "只有自建 OAuth 中转服务时才需要部署这个脚本。使用提供的中转地址时不需要部署。"
+
+[oauth_worker_script_loading]
+other = "正在加载 Worker 脚本..."
+
+[oauth_worker_script_load_failed]
+other = "Worker 脚本加载失败：{error}"
 
 [oauth_setup_worker_deploy_path]
 other = "Cloudflare Worker 部署路径"
