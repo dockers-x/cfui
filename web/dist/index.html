@@ -1320,9 +1320,17 @@
             <div class="modal-body oauth-worker-script-body">
                 <div class="oauth-worker-guide">
                     <p data-i18n="oauth_worker_self_host_summary">Deploy this Worker only if you want to self-host the OAuth relay.</p>
-                    <div class="oauth-worker-callback-example">
-                        <span data-i18n="oauth_worker_callback_format">Callback URL format</span>
-                        <code class="mono">https://&lt;your-worker-domain&gt;/oauth/callback</code>
+                    <div class="oauth-worker-choice-grid">
+                        <div class="oauth-worker-choice">
+                            <span class="oauth-worker-choice-label" data-i18n="oauth_worker_default_relay_label">Provided relay</span>
+                            <code class="mono">https://oauth.omarchy.qzz.io/oauth/callback</code>
+                            <p data-i18n="oauth_worker_default_relay_desc">Use this address directly if you do not want to deploy a Worker.</p>
+                        </div>
+                        <div class="oauth-worker-choice">
+                            <span class="oauth-worker-choice-label" data-i18n="oauth_worker_self_host_relay_label">Self-hosted relay</span>
+                            <code class="mono">https://&lt;your-worker-domain&gt;/oauth/callback</code>
+                            <p data-i18n="oauth_worker_self_host_relay_desc">Deploy the script, then use your Worker callback URL in Cloudflare and cfui.</p>
+                        </div>
                     </div>
                     <ol>
                         <li data-i18n="oauth_worker_self_host_step_deploy">Create a Cloudflare Worker and paste the script below.</li>

@@ -50,27 +50,6 @@
         }
     }
 
-    async function checkOAuthRelay(button) {
-        state.oauth.relayCheckLoading = true;
-        state.oauth.relayCheckError = '';
-        renderOAuthStatus(state.oauth.status);
-        try {
-            state.oauth.relayCheck = await apiGet('/oauth/relay-check');
-            renderOAuthStatus(state.oauth.status);
-            if (state.oauth.relayCheck?.reachable && state.oauth.relayCheck?.supports_state_callback) toast.ok(t('oauth_relay_check_ok'));
-            else if (state.oauth.relayCheck?.reachable) toast.warn(t('oauth_relay_check_outdated'));
-            else toast.warn(t('oauth_relay_check_failed'));
-        } catch (err) {
-            state.oauth.relayCheckError = err.message;
-            renderOAuthStatus(state.oauth.status);
-            toast.err(err.message);
-        } finally {
-            state.oauth.relayCheckLoading = false;
-            setBusy(button, false);
-            renderOAuthStatus(state.oauth.status);
-        }
-    }
-
     async function saveOAuthRelayCallback(relayURL, button) {
         relayURL = String(relayURL || '').trim();
         if (!relayURL) {
@@ -2256,30 +2235,21 @@
         input.setAttribute('aria-label', t('oauth_relay_callback'));
         input.setAttribute('aria-describedby', 'oauth-relay-callback-help');
         input.value = configuredRelay;
-        const hint = document.createElement('div');
-        hint.className = 'oauth-config-hint';
-        hint.id = 'oauth-relay-callback-help';
-        hint.textContent = t('oauth_relay_config_hint');
         const save = smallButton(t('save'), 'btn btn--sm btn--primary oauth-relay-save');
         save.type = 'submit';
         inputRow.append(input, save);
 
         const helper = document.createElement('div');
         helper.className = 'oauth-relay-helper';
-        const stateLine = document.createElement('div');
-        stateLine.className = 'oauth-relay-state';
-        const badge = document.createElement('span');
-        badge.className = 'oauth-relay-badge';
-        badge.dataset.mode = isDefaultRelay ? 'default' : 'custom';
-        badge.textContent = isDefaultRelay ? t('oauth_relay_badge_default') : t('oauth_relay_badge_custom');
-        const stateText = document.createElement('span');
-        stateText.textContent = isDefaultRelay ? t('oauth_relay_status_default') : t('oauth_relay_status_custom');
-        stateLine.append(badge, stateText);
+        const helperText = document.createElement('span');
+        helperText.className = 'oauth-relay-helper-text';
+        helperText.id = 'oauth-relay-callback-help';
+        helperText.textContent = t('oauth_relay_config_hint');
         const assistActions = document.createElement('span');
         assistActions.className = 'oauth-relay-assist-actions';
         const useDefault = smallButton(t('oauth_relay_use_default'), 'btn btn--xs btn--text oauth-relay-inline-action', (event) => {
             input.value = defaultOAuthRelayCallbackURL;
-            if (savedRelay === defaultOAuthRelayCallbackURL) {
+            if (configuredRelay === defaultOAuthRelayCallbackURL) {
                 input.focus();
                 input.select();
                 return;
@@ -2288,22 +2258,13 @@
         });
         useDefault.title = t('oauth_relay_use_default_title');
         useDefault.setAttribute('aria-label', t('oauth_relay_use_default_title'));
-        if (isDefaultRelay) useDefault.classList.add('is-active');
         const selfHost = smallButton(t('oauth_relay_self_host'), 'btn btn--xs btn--text oauth-relay-inline-action', () => openOAuthWorkerScriptDialog());
         selfHost.title = t('oauth_relay_self_host_title');
         selfHost.setAttribute('aria-label', t('oauth_relay_self_host_title'));
-        const check = smallButton(
-            state.oauth.relayCheckLoading ? t('oauth_relay_checking') : t('oauth_relay_check'),
-            'btn btn--xs btn--text oauth-relay-inline-action',
-            (event) => checkOAuthRelay(event.currentTarget),
-        );
-        check.disabled = state.oauth.relayCheckLoading;
-        assistActions.append(useDefault, selfHost, check);
-        helper.append(stateLine, assistActions);
+        assistActions.append(useDefault, selfHost);
+        helper.append(helperText, assistActions);
 
-        const relayCheck = relayCheckStatusNode();
-        field.append(inputRow, helper, hint);
-        if (relayCheck) field.appendChild(relayCheck);
+        field.append(inputRow, helper);
         form.appendChild(field);
         form.addEventListener('submit', (event) => {
             event.preventDefault();
@@ -2517,38 +2478,6 @@
         note.className = 'oauth-setup-note';
         note.textContent = text;
         return note;
-    }
-
-    function relayCheckStatusNode() {
-        const result = state.oauth.relayCheck;
-        const error = state.oauth.relayCheckError;
-        if (state.oauth.relayCheckLoading || result || error) {
-            const status = document.createElement('div');
-            status.className = 'oauth-relay-check-result';
-            const reachable = !!result?.reachable;
-            const stateAware = !!result?.supports_state_callback;
-            status.dataset.state = state.oauth.relayCheckLoading ? 'loading' : (reachable && stateAware ? 'ok' : 'error');
-            const title = document.createElement('div');
-            title.className = 'oauth-relay-check-title';
-            title.textContent = state.oauth.relayCheckLoading
-                ? t('oauth_relay_checking')
-                : (reachable ? (stateAware ? t('oauth_relay_check_ok') : t('oauth_relay_check_outdated')) : t('oauth_relay_check_failed'));
-            const meta = document.createElement('div');
-            meta.className = 'oauth-relay-check-meta';
-            if (error) {
-                meta.textContent = error;
-            } else if (result) {
-                meta.textContent = [
-                    result.health_url || '',
-                    result.status_code ? `HTTP ${result.status_code}` : '',
-                    reachable && !stateAware ? t('oauth_relay_check_outdated_hint') : '',
-                    result.message || '',
-                ].filter(Boolean).join(' · ');
-            }
-            status.append(title, meta);
-            return status;
-        }
-        return null;
     }
 
     function copyOAuthText(value) {

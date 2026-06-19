@@ -44,22 +44,22 @@ other = "请输入中转回调 URL。"
 other = "中转回调已保存。"
 
 [oauth_relay_config_hint]
-other = "Cloudflare OAuth 客户端的 Redirect callback URL 只填上方这个值，不要追加参数。"
+other = "Cloudflare OAuth 客户端只登记这个 relay callback URL，不要追加 cfui_callback_url 参数。"
 
 [oauth_relay_assist_text]
 other = "个人使用可直接走提供的中转；需要完全自控时再自建 Worker。"
 
 [oauth_relay_use_default]
-other = "使用默认域名"
+other = "使用默认"
 
 [oauth_relay_use_default_title]
-other = "使用提供的默认中转域名"
+other = "填入提供的默认中转回调地址"
 
 [oauth_relay_self_host]
-other = "自建 Worker"
+other = "自建"
 
 [oauth_relay_self_host_title]
-other = "查看自建 Cloudflare OAuth relay 的步骤"
+other = "查看自建 Cloudflare OAuth relay 的 Worker 脚本和部署步骤"
 
 [oauth_relay_badge_default]
 other = "默认"
@@ -887,7 +887,7 @@ other = "设置 OAuth 中转回调"
 other = "上方输入框就是 Cloudflare OAuth 客户端要填写的 Redirect callback URL。"
 
 [oauth_setup_relay_input_note]
-other = "这里就是唯一要登记到 Cloudflare OAuth 客户端的回调地址。默认中转可以直接用；要自建时点“自建 Worker”查看脚本和部署步骤。"
+other = "这里只处理一件事：把输入框里的 URL 作为 Cloudflare OAuth 客户端的 Redirect callback URL。点“使用默认”会填入提供的中转域名；点“自建”会打开 Worker 脚本和部署步骤。"
 
 [oauth_setup_oauth_app_title]
 other = "填写 Cloudflare OAuth 客户端表单"
@@ -959,10 +959,22 @@ other = "在页面里查看完整 Worker 脚本"
 other = "Cloudflare OAuth Worker 脚本"
 
 [oauth_worker_script_dialog_subtitle]
-other = "只有自建 OAuth 中转服务时才需要部署这个脚本。使用默认中转地址时不需要部署。"
+other = "默认中转地址可以直接使用；只有想完全自己掌控域名和 Worker 时才需要部署这个脚本。"
 
 [oauth_worker_self_host_summary]
-other = "只在你想自建 Cloudflare OAuth relay 时部署这个 Worker。"
+other = "Cloudflare OAuth 客户端里始终只填一个 relay callback URL：可以用提供的地址，也可以部署下面的 Worker 后改用自己的地址。"
+
+[oauth_worker_default_relay_label]
+other = "提供的中转"
+
+[oauth_worker_default_relay_desc]
+other = "不想部署 Worker 时直接用这个地址。"
+
+[oauth_worker_self_host_relay_label]
+other = "自建中转"
+
+[oauth_worker_self_host_relay_desc]
+other = "部署下面脚本后，把你的 Worker 回调地址同时填到 Cloudflare 和 cfui。"
 
 [oauth_worker_callback_format]
 other = "回调 URL 格式"
@@ -1788,6 +1800,9 @@ other = "创建 bucket"
 
 [oauth_r2_bucket_name]
 other = "Bucket 名称"
+
+[oauth_r2_bucket_required]
+other = "请输入 Bucket 名称。"
 
 [oauth_r2_location_hint]
 other = "Location hint"
