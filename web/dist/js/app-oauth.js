@@ -27,6 +27,8 @@
         zoneSettingToggles,
         cacheLevels,
         sslModes,
+        tls13Modes,
+        minimumTLSVersions,
         browserCacheTTLs,
         writableZoneSettings,
     } = window.cfui.oauthData;
@@ -9365,6 +9367,8 @@
                 if (node) section.appendChild(node);
             }
             appendZoneSettingSelect(section, 'ssl', 'oauth_ssl_mode', sslModes, 'full');
+            appendZoneSettingSelect(section, 'tls_1_3', 'oauth_tls_1_3', tls13Modes, 'on');
+            appendZoneSettingSelect(section, 'min_tls_version', 'oauth_min_tls_version', minimumTLSVersions, '1.0');
             appendZoneSettingSelect(section, 'security_level', 'oauth_security_level', securityLevels, 'medium');
             appendZoneSettingSelect(section, 'cache_level', 'oauth_cache_level', cacheLevels, 'aggressive');
             appendZoneSettingSelect(

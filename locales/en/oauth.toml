@@ -2344,6 +2344,45 @@ other = "Brotli"
 [oauth_rocket_loader]
 other = "Rocket Loader"
 
+[oauth_ipv6_compatibility]
+other = "IPv6 Compatibility"
+
+[oauth_websockets]
+other = "WebSockets"
+
+[oauth_http2]
+other = "HTTP/2"
+
+[oauth_http3]
+other = "HTTP/3"
+
+[oauth_early_hints]
+other = "Early Hints"
+
+[oauth_email_obfuscation]
+other = "Email Obfuscation"
+
+[oauth_hotlink_protection]
+other = "Hotlink Protection"
+
+[oauth_server_side_exclude]
+other = "Server Side Excludes"
+
+[oauth_always_online]
+other = "Always Online"
+
+[oauth_browser_check]
+other = "Browser Integrity Check"
+
+[oauth_ip_geolocation]
+other = "IP Geolocation header"
+
+[oauth_opportunistic_encryption]
+other = "Opportunistic Encryption"
+
+[oauth_0rtt]
+other = "0-RTT Connection Resumption"
+
 [oauth_ssl_mode]
 other = "SSL/TLS mode"
 
@@ -2361,6 +2400,33 @@ other = "Full (strict)"
 
 [oauth_ssl_origin_pull]
 other = "Origin Pull"
+
+[oauth_tls_1_3]
+other = "TLS 1.3"
+
+[oauth_tls_1_3_off]
+other = "Off"
+
+[oauth_tls_1_3_on]
+other = "On"
+
+[oauth_tls_1_3_zrt]
+other = "On with 0-RTT"
+
+[oauth_min_tls_version]
+other = "Minimum TLS version"
+
+[oauth_min_tls_1_0]
+other = "TLS 1.0"
+
+[oauth_min_tls_1_1]
+other = "TLS 1.1"
+
+[oauth_min_tls_1_2]
+other = "TLS 1.2"
+
+[oauth_min_tls_1_3]
+other = "TLS 1.3"
 
 [oauth_cache_level]
 other = "Cache level"

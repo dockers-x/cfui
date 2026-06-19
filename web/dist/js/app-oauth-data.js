@@ -206,6 +206,19 @@
         ['automatic_https_rewrites', 'oauth_automatic_https_rewrites'],
         ['brotli', 'oauth_brotli'],
         ['rocket_loader', 'oauth_rocket_loader'],
+        ['ipv6', 'oauth_ipv6_compatibility'],
+        ['websockets', 'oauth_websockets'],
+        ['http2', 'oauth_http2'],
+        ['http3', 'oauth_http3'],
+        ['early_hints', 'oauth_early_hints'],
+        ['email_obfuscation', 'oauth_email_obfuscation'],
+        ['hotlink_protection', 'oauth_hotlink_protection'],
+        ['server_side_exclude', 'oauth_server_side_exclude'],
+        ['always_online', 'oauth_always_online'],
+        ['browser_check', 'oauth_browser_check'],
+        ['ip_geolocation', 'oauth_ip_geolocation'],
+        ['opportunistic_encryption', 'oauth_opportunistic_encryption'],
+        ['0rtt', 'oauth_0rtt'],
     ];
     const cacheLevels = [
         ['aggressive', 'oauth_cache_level_aggressive'],
@@ -218,6 +231,17 @@
         ['full', 'oauth_ssl_full'],
         ['strict', 'oauth_ssl_strict'],
         ['origin_pull', 'oauth_ssl_origin_pull'],
+    ];
+    const tls13Modes = [
+        ['off', 'oauth_tls_1_3_off'],
+        ['on', 'oauth_tls_1_3_on'],
+        ['zrt', 'oauth_tls_1_3_zrt'],
+    ];
+    const minimumTLSVersions = [
+        ['1.0', 'oauth_min_tls_1_0'],
+        ['1.1', 'oauth_min_tls_1_1'],
+        ['1.2', 'oauth_min_tls_1_2'],
+        ['1.3', 'oauth_min_tls_1_3'],
     ];
     const browserCacheTTLs = [
         [0, 'oauth_browser_cache_ttl_origin'],
@@ -241,6 +265,21 @@
         'automatic_https_rewrites',
         'brotli',
         'rocket_loader',
+        'ipv6',
+        'websockets',
+        'http2',
+        'http3',
+        'early_hints',
+        'email_obfuscation',
+        'hotlink_protection',
+        'server_side_exclude',
+        'always_online',
+        'browser_check',
+        'ip_geolocation',
+        'opportunistic_encryption',
+        '0rtt',
+        'tls_1_3',
+        'min_tls_version',
     ]);
 
     window.cfui.oauthData = {
@@ -265,6 +304,8 @@
         zoneSettingToggles,
         cacheLevels,
         sslModes,
+        tls13Modes,
+        minimumTLSVersions,
         browserCacheTTLs,
         writableZoneSettings,
     };

@@ -6394,11 +6394,38 @@ func normalizeR2BucketName(name string) (string, error) {
 func normalizeZoneSettingValue(settingID string, value any) (any, error) {
 	stringValue, ok := value.(string)
 	switch settingID {
-	case "development_mode", "always_use_https", "automatic_https_rewrites", "brotli", "rocket_loader":
+	case "development_mode",
+		"always_use_https",
+		"automatic_https_rewrites",
+		"brotli",
+		"rocket_loader",
+		"ipv6",
+		"websockets",
+		"http2",
+		"http3",
+		"early_hints",
+		"email_obfuscation",
+		"hotlink_protection",
+		"server_side_exclude",
+		"always_online",
+		"browser_check",
+		"ip_geolocation",
+		"opportunistic_encryption",
+		"0rtt":
 		if !ok {
 			return nil, validationError("%s value must be a string", settingID)
 		}
 		return normalizeEnumZoneSetting(settingID, stringValue, "on", "off")
+	case "tls_1_3":
+		if !ok {
+			return nil, validationError("%s value must be a string", settingID)
+		}
+		return normalizeEnumZoneSetting(settingID, stringValue, "on", "off", "zrt")
+	case "min_tls_version":
+		if !ok {
+			return nil, validationError("%s value must be a string", settingID)
+		}
+		return normalizeEnumZoneSetting(settingID, stringValue, "1.0", "1.1", "1.2", "1.3")
 	case "security_level":
 		if !ok {
 			return nil, validationError("%s value must be a string", settingID)
@@ -6713,7 +6740,30 @@ func stringValue(value *string) string {
 
 func isDisplayedZoneSetting(id string) bool {
 	switch id {
-	case "ssl", "security_level", "development_mode", "cache_level", "browser_cache_ttl", "always_use_https", "automatic_https_rewrites", "brotli", "rocket_loader":
+	case "ssl",
+		"security_level",
+		"development_mode",
+		"cache_level",
+		"browser_cache_ttl",
+		"always_use_https",
+		"automatic_https_rewrites",
+		"brotli",
+		"rocket_loader",
+		"ipv6",
+		"websockets",
+		"http2",
+		"http3",
+		"early_hints",
+		"email_obfuscation",
+		"hotlink_protection",
+		"server_side_exclude",
+		"always_online",
+		"browser_check",
+		"ip_geolocation",
+		"opportunistic_encryption",
+		"0rtt",
+		"tls_1_3",
+		"min_tls_version":
 		return true
 	default:
 		return false

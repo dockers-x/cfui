@@ -162,6 +162,22 @@ func TestNormalizeZoneSettingValue(t *testing.T) {
 		{name: "automatic https rewrites off", settingID: "automatic_https_rewrites", value: "off", want: "off"},
 		{name: "brotli on", settingID: "brotli", value: "on", want: "on"},
 		{name: "rocket loader off", settingID: "rocket_loader", value: "off", want: "off"},
+		{name: "ipv6 on", settingID: "ipv6", value: "on", want: "on"},
+		{name: "websockets off", settingID: "websockets", value: "off", want: "off"},
+		{name: "http2 on", settingID: "http2", value: "on", want: "on"},
+		{name: "http3 off", settingID: "http3", value: "off", want: "off"},
+		{name: "early hints on", settingID: "early_hints", value: "on", want: "on"},
+		{name: "email obfuscation off", settingID: "email_obfuscation", value: "off", want: "off"},
+		{name: "hotlink protection on", settingID: "hotlink_protection", value: "on", want: "on"},
+		{name: "server side exclude off", settingID: "server_side_exclude", value: "off", want: "off"},
+		{name: "always online on", settingID: "always_online", value: "on", want: "on"},
+		{name: "browser check off", settingID: "browser_check", value: "off", want: "off"},
+		{name: "ip geolocation on", settingID: "ip_geolocation", value: "on", want: "on"},
+		{name: "opportunistic encryption on", settingID: "opportunistic_encryption", value: "on", want: "on"},
+		{name: "0rtt off", settingID: "0rtt", value: "off", want: "off"},
+		{name: "tls 1.3 on", settingID: "tls_1_3", value: "on", want: "on"},
+		{name: "tls 1.3 zero rtt", settingID: "tls_1_3", value: "zrt", want: "zrt"},
+		{name: "minimum tls 1.2", settingID: "min_tls_version", value: "1.2", want: "1.2"},
 		{name: "cache level aggressive", settingID: "cache_level", value: "aggressive", want: "aggressive"},
 		{name: "cache level simplified", settingID: "cache_level", value: "simplified", want: "simplified"},
 		{name: "ssl full", settingID: "ssl", value: "full", want: "full"},
@@ -171,6 +187,8 @@ func TestNormalizeZoneSettingValue(t *testing.T) {
 		{name: "browser cache ttl zero", settingID: "browser_cache_ttl", value: 0, want: 0},
 		{name: "reject non string", settingID: "development_mode", value: true, wantErr: true},
 		{name: "reject bad development mode", settingID: "development_mode", value: "enabled", wantErr: true},
+		{name: "reject bad tls 1.3", settingID: "tls_1_3", value: "auto", wantErr: true},
+		{name: "reject bad minimum tls", settingID: "min_tls_version", value: "1.4", wantErr: true},
 		{name: "reject bad security level", settingID: "security_level", value: "max", wantErr: true},
 		{name: "reject bad cache level", settingID: "cache_level", value: "cache_everything", wantErr: true},
 		{name: "reject bad ssl mode", settingID: "ssl", value: "partial", wantErr: true},
@@ -200,6 +218,45 @@ func TestNormalizeZoneSettingValue(t *testing.T) {
 				t.Fatalf("got %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestIsDisplayedZoneSetting(t *testing.T) {
+	displayed := []string{
+		"ssl",
+		"security_level",
+		"development_mode",
+		"cache_level",
+		"browser_cache_ttl",
+		"always_use_https",
+		"automatic_https_rewrites",
+		"brotli",
+		"rocket_loader",
+		"ipv6",
+		"websockets",
+		"http2",
+		"http3",
+		"early_hints",
+		"email_obfuscation",
+		"hotlink_protection",
+		"server_side_exclude",
+		"always_online",
+		"browser_check",
+		"ip_geolocation",
+		"opportunistic_encryption",
+		"0rtt",
+		"tls_1_3",
+		"min_tls_version",
+	}
+	for _, id := range displayed {
+		if !isDisplayedZoneSetting(id) {
+			t.Fatalf("%s should be displayed", id)
+		}
+	}
+	for _, id := range []string{"mirage", "hsts", "nel", ""} {
+		if isDisplayedZoneSetting(id) {
+			t.Fatalf("%s should not be displayed", id)
+		}
 	}
 }
 

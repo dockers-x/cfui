@@ -2344,6 +2344,45 @@ other = "Brotli 压缩"
 [oauth_rocket_loader]
 other = "Rocket Loader"
 
+[oauth_ipv6_compatibility]
+other = "IPv6 兼容"
+
+[oauth_websockets]
+other = "WebSockets"
+
+[oauth_http2]
+other = "HTTP/2"
+
+[oauth_http3]
+other = "HTTP/3"
+
+[oauth_early_hints]
+other = "Early Hints"
+
+[oauth_email_obfuscation]
+other = "电子邮件地址混淆"
+
+[oauth_hotlink_protection]
+other = "防盗链保护"
+
+[oauth_server_side_exclude]
+other = "服务器端排除"
+
+[oauth_always_online]
+other = "Always Online"
+
+[oauth_browser_check]
+other = "浏览器完整性检查"
+
+[oauth_ip_geolocation]
+other = "IP 地理位置请求头"
+
+[oauth_opportunistic_encryption]
+other = "机会性加密"
+
+[oauth_0rtt]
+other = "0-RTT 连接恢复"
+
 [oauth_ssl_mode]
 other = "SSL/TLS 模式"
 
@@ -2361,6 +2400,33 @@ other = "完全（严格）"
 
 [oauth_ssl_origin_pull]
 other = "Origin Pull"
+
+[oauth_tls_1_3]
+other = "TLS 1.3"
+
+[oauth_tls_1_3_off]
+other = "关闭"
+
+[oauth_tls_1_3_on]
+other = "开启"
+
+[oauth_tls_1_3_zrt]
+other = "开启并允许 0-RTT"
+
+[oauth_min_tls_version]
+other = "最低 TLS 版本"
+
+[oauth_min_tls_1_0]
+other = "TLS 1.0"
+
+[oauth_min_tls_1_1]
+other = "TLS 1.1"
+
+[oauth_min_tls_1_2]
+other = "TLS 1.2"
+
+[oauth_min_tls_1_3]
+other = "TLS 1.3"
 
 [oauth_cache_level]
 other = "缓存等级"
