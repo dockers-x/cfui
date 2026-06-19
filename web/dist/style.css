@@ -4997,6 +4997,53 @@ details.disclosure > .body {
     text-transform: uppercase;
 }
 
+.oauth-analytics-series {
+    display: grid;
+    gap: 8px;
+}
+
+.oauth-analytics-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 24%);
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    background: var(--surface);
+}
+
+.oauth-analytics-row-copy {
+    min-width: 0;
+}
+
+.oauth-analytics-trend {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.oauth-analytics-bar {
+    height: 8px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--cf-orange) 18%, var(--border));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--cf-orange) 6%, var(--surface-2));
+}
+
+.oauth-analytics-bar-fill {
+    height: 100%;
+    min-width: 0;
+    border-radius: inherit;
+    background: color-mix(in srgb, var(--cf-orange) 74%, var(--state-ok));
+}
+
+.oauth-analytics-trend-meta {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    text-align: right;
+}
+
 .oauth-bulk-actions {
     display: flex;
     flex-wrap: wrap;
@@ -5447,6 +5494,7 @@ details.oauth-form-section > summary {
     .oauth-config-grid,
     .oauth-config-value,
     .oauth-layout,
+    .oauth-analytics-row,
     .oauth-relay-choice-row,
     .oauth-setup-code-row,
     .oauth-form-grid {
@@ -5471,6 +5519,10 @@ details.oauth-form-section > summary {
     .oauth-relay-editor-actions,
     .oauth-form-actions {
         justify-content: flex-start;
+    }
+
+    .oauth-analytics-trend-meta {
+        text-align: left;
     }
 
     .oauth-permission-level {

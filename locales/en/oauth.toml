@@ -739,6 +739,15 @@ other = "No analytics time series returned for this range."
 [oauth_analytics_summary]
 other = "Summary"
 
+[oauth_analytics_copy_summary]
+other = "Copy summary"
+
+[oauth_analytics_zone]
+other = "Zone"
+
+[oauth_analytics_period]
+other = "Period"
+
 [oauth_analytics_timeseries]
 other = "Time series"
 

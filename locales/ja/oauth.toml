@@ -739,6 +739,15 @@ other = "この範囲の Analytics 時系列は返されませんでした。"
 [oauth_analytics_summary]
 other = "Summary"
 
+[oauth_analytics_copy_summary]
+other = "概要をコピー"
+
+[oauth_analytics_zone]
+other = "ゾーン"
+
+[oauth_analytics_period]
+other = "期間"
+
 [oauth_analytics_timeseries]
 other = "Time series"
 

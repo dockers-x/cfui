@@ -739,6 +739,15 @@ other = "当前时间范围没有返回 Analytics 时间序列。"
 [oauth_analytics_summary]
 other = "汇总"
 
+[oauth_analytics_copy_summary]
+other = "复制摘要"
+
+[oauth_analytics_zone]
+other = "域名"
+
+[oauth_analytics_period]
+other = "统计周期"
+
 [oauth_analytics_timeseries]
 other = "时间序列"
 

@@ -5852,21 +5852,58 @@
             body.appendChild(empty(t('oauth_no_analytics_timeseries')));
             return;
         }
+        const maxRequests = points.reduce((max, point) => Math.max(max, Number(point.requests || 0)), 0);
         const rows = document.createElement('section');
         rows.className = 'oauth-section';
         const rowsHeading = document.createElement('h4');
         rowsHeading.className = 'oauth-section-title';
         rowsHeading.textContent = t('oauth_analytics_timeseries');
         rows.appendChild(rowsHeading);
+        const list = document.createElement('div');
+        list.className = 'oauth-analytics-series';
         for (const point of points) {
-            const meta = [
-                `${t('oauth_analytics_requests')} ${formatNumber(point.requests)}`,
-                `${t('oauth_analytics_bandwidth')} ${formatBytes(point.bytes || 0)}`,
-                `${t('oauth_analytics_threats')} ${formatNumber(point.threats)}`,
-            ].join(' · ');
-            rows.appendChild(rowNode(formatDateRange(point.since, point.until), meta));
+            list.appendChild(analyticsTimeSeriesRow(point, maxRequests));
         }
+        rows.appendChild(list);
         body.appendChild(rows);
+    }
+
+    function analyticsTimeSeriesRow(point, maxRequests) {
+        const requests = Number(point?.requests || 0);
+        const percent = maxRequests > 0 ? Math.round((requests / maxRequests) * 1000) / 10 : 0;
+        const row = document.createElement('div');
+        row.className = 'oauth-analytics-row';
+
+        const copy = document.createElement('div');
+        copy.className = 'oauth-analytics-row-copy';
+        const title = document.createElement('div');
+        title.className = 'oauth-row-title';
+        title.textContent = formatDateRange(point?.since, point?.until);
+        const meta = document.createElement('div');
+        meta.className = 'oauth-row-meta';
+        meta.textContent = [
+            `${t('oauth_analytics_requests')} ${formatNumber(requests)}`,
+            `${t('oauth_analytics_bandwidth')} ${formatBytes(point?.bytes || 0)}`,
+            `${t('oauth_analytics_threats')} ${formatNumber(point?.threats)}`,
+        ].join(' · ');
+        copy.append(title, meta);
+
+        const trend = document.createElement('div');
+        trend.className = 'oauth-analytics-trend';
+        trend.setAttribute('aria-label', `${t('oauth_analytics_requests')} ${formatNumber(requests)}`);
+        const bar = document.createElement('div');
+        bar.className = 'oauth-analytics-bar';
+        const fill = document.createElement('div');
+        fill.className = 'oauth-analytics-bar-fill';
+        fill.style.width = `${percent}%`;
+        bar.appendChild(fill);
+        const trendMeta = document.createElement('div');
+        trendMeta.className = 'oauth-analytics-trend-meta mono';
+        trendMeta.textContent = formatNumber(requests);
+        trend.append(bar, trendMeta);
+
+        row.append(copy, trend);
+        return row;
     }
 
     function renderCloudflareStatus(body) {
@@ -6166,8 +6203,32 @@
             renderOAuthResource();
         });
 
-        bar.append(copy, select);
+        const actions = document.createElement('div');
+        actions.className = 'oauth-config-actions';
+        const copySummary = smallButton(t('oauth_analytics_copy_summary'), 'btn btn--sm btn--ghost', () => copyOAuthText(analyticsSummaryText()));
+        copySummary.disabled = !state.oauth.zoneAnalytics;
+        actions.append(select, copySummary);
+
+        bar.append(copy, actions);
         return bar;
+    }
+
+    function analyticsSummaryText() {
+        const analytics = state.oauth.zoneAnalytics;
+        if (!analytics) return '';
+        const totals = analytics.totals || {};
+        return [
+            t('oauth_analytics'),
+            `${t('oauth_analytics_zone')}: ${selectedZoneName()}`,
+            `${t('oauth_analytics_range')}: ${analyticsRangeLabel(analytics.range || state.oauth.analyticsRange)}`,
+            formatDateRange(analytics.since, analytics.until) ? `${t('oauth_analytics_period')}: ${formatDateRange(analytics.since, analytics.until)}` : '',
+            `${t('oauth_analytics_requests')}: ${formatNumber(totals.requests)}`,
+            `${t('oauth_analytics_bandwidth')}: ${formatBytes(totals.bytes || 0)}`,
+            `${t('oauth_analytics_threats')}: ${formatNumber(totals.threats)}`,
+            `${t('oauth_analytics_pageviews')}: ${formatNumber(totals.pageviews)}`,
+            `${t('oauth_analytics_uniques')}: ${formatNumber(totals.uniques)}`,
+            `${t('oauth_analytics_cache_hit')}: ${formatPercent(cacheHitRate(totals))}`,
+        ].filter(Boolean).join('\n');
     }
 
     function metricNode(label, value) {
