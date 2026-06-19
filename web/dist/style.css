@@ -4415,6 +4415,33 @@ details.disclosure > .body {
     line-height: 1.45;
 }
 
+.oauth-relay-source-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    line-height: 1.45;
+}
+
+.oauth-relay-source-pill[data-source="default"] {
+    color: var(--state-ok);
+}
+
+.oauth-relay-source-pill[data-source="custom"] {
+    color: var(--accent);
+}
+
+.oauth-relay-source-pill[data-source="unsaved"] {
+    color: var(--state-warn);
+}
+
+.oauth-relay-source-detail {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .oauth-relay-check-status {
     display: inline-flex;
     flex-wrap: wrap;
@@ -4599,13 +4626,6 @@ details.disclosure > .body {
     font-weight: 550;
 }
 
-.oauth-worker-relay-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    grid-column: 1 / -1;
-}
-
 .oauth-worker-guide ol {
     margin: 0;
     padding-left: 20px;
@@ -4615,11 +4635,11 @@ details.disclosure > .body {
     margin-top: 2px;
 }
 
-.oauth-worker-relay-card {
+.oauth-worker-target {
     display: grid;
-    gap: 3px 10px;
-    align-items: baseline;
-    padding: 9px 10px;
+    gap: 4px;
+    grid-column: 1 / -1;
+    padding: 10px 12px;
     border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
     border-radius: var(--r-card);
     background: color-mix(in srgb, var(--accent) 4%, var(--surface-2));
@@ -4627,25 +4647,19 @@ details.disclosure > .body {
     line-height: 1.5;
 }
 
-.oauth-worker-relay-card--default {
-    border: 1px solid color-mix(in srgb, var(--state-ok) 24%, var(--border));
-    border-radius: var(--r-card);
-    background: color-mix(in srgb, var(--state-ok) 4%, var(--surface-2));
-}
-
-.oauth-worker-relay-card span:first-child {
+.oauth-worker-target span:first-child {
     color: var(--text);
     font-weight: 700;
 }
 
-.oauth-worker-relay-card code {
-    color: var(--text);
+.oauth-worker-target code {
     min-width: 0;
+    color: var(--text);
     overflow-wrap: anywhere;
     white-space: normal;
 }
 
-.oauth-worker-relay-card span:last-child {
+.oauth-worker-target span:last-child {
     color: var(--text-muted);
 }
 
@@ -5810,11 +5824,6 @@ details.oauth-form-section > summary {
 
     .oauth-relay-assist-actions {
         justify-content: flex-start;
-    }
-
-    .oauth-worker-relay-grid,
-    .oauth-worker-relay-card {
-        grid-template-columns: 1fr;
     }
 
     .oauth-worker-guide {

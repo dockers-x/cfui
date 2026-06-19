@@ -50,7 +50,7 @@ other = "Copy relay callback URL"
 other = "This address must exactly match the Redirect callback URL in the Cloudflare OAuth client."
 
 [oauth_relay_assist_text]
-other = "For personal use, choose the provided domain. Self-host only when you need your own relay domain."
+other = "For personal use, use the provided domain. Open the self-host guide only when you need your own relay domain."
 
 [oauth_relay_use_default]
 other = "Use provided domain"
@@ -59,7 +59,7 @@ other = "Use provided domain"
 other = "Use the provided default OAuth relay domain"
 
 [oauth_relay_self_host]
-other = "Self-host Worker"
+other = "Self-host guide"
 
 [oauth_relay_self_host_title]
 other = "Show the Worker script and deployment steps for a self-hosted Cloudflare OAuth relay"
@@ -70,11 +70,17 @@ other = "Default"
 [oauth_relay_badge_custom]
 other = "Custom"
 
+[oauth_relay_badge_unsaved]
+other = "Unsaved"
+
 [oauth_relay_status_default]
 other = "Using the provided OAuth relay domain."
 
 [oauth_relay_status_custom]
 other = "Using your saved relay address."
+
+[oauth_relay_status_unsaved]
+other = "This input is not saved yet. Save it before OAuth sign-in or relay checks use it."
 
 [oauth_local_callback]
 other = "Local callback"
@@ -911,7 +917,7 @@ other = "Set the OAuth relay callback"
 other = "The input above is the Redirect callback URL to register in the Cloudflare OAuth client."
 
 [oauth_setup_relay_input_note]
-other = "This section does one thing: use the URL in the input as the Cloudflare OAuth client's Redirect callback URL. \"Use default\" fills and saves the provided relay address; \"Self-host Worker\" opens the script and deployment steps."
+other = "This section does one thing: use the URL in the input as the Cloudflare OAuth client's Redirect callback URL. \"Use provided domain\" fills and saves the provided relay address; \"Self-host guide\" opens the script and deployment steps."
 
 [oauth_setup_oauth_app_title]
 other = "Fill the Cloudflare OAuth client form"
@@ -987,6 +993,12 @@ other = "You can use the provided relay address as-is; deploy this script only w
 
 [oauth_worker_self_host_summary]
 other = "Use the provided relay address when you do not want to self-host; replace the example with your Worker domain when you do."
+
+[oauth_worker_self_host_target_label]
+other = "Self-host callback URL"
+
+[oauth_worker_self_host_target_hint]
+other = "Replace the example host with your Worker HTTPS domain. The Cloudflare OAuth client and cfui input must use this same URL."
 
 [oauth_worker_default_relay_label]
 other = "Provided relay"

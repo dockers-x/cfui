@@ -38,8 +38,10 @@
             input.autocomplete = 'off';
             input.placeholder = defaultOAuthRelayCallbackURL;
             input.setAttribute('aria-label', t('oauth_relay_callback'));
-            input.setAttribute('aria-describedby', 'oauth-relay-callback-help oauth-relay-callback-status');
+            input.setAttribute('aria-describedby', 'oauth-relay-callback-help oauth-relay-source-line oauth-relay-callback-status');
             input.value = configuredRelay;
+            const sourceLine = relaySourceLine(input.value, configuredRelay);
+            input.addEventListener('input', () => updateRelaySourceLine(sourceLine, input.value, configuredRelay));
             const primaryActions = document.createElement('span');
             primaryActions.className = 'oauth-relay-primary-actions';
             const copy = iconButton(t('oauth_relay_copy_title'), iconCopySVG(), () => copyOAuthText(input.value.trim()));
@@ -69,6 +71,7 @@
             assistActions.className = 'oauth-relay-assist-actions';
             const useDefault = smallButton(t('oauth_relay_use_default'), 'btn btn--text oauth-relay-inline-action oauth-relay-default-action', (event) => {
                 input.value = defaultOAuthRelayCallbackURL;
+                updateRelaySourceLine(sourceLine, input.value, configuredRelay);
                 if (savedRelay === defaultOAuthRelayCallbackURL) {
                     input.focus();
                     input.select();
@@ -85,7 +88,7 @@
             helper.append(helperText, assistActions);
 
             const statusLine = relayStatusLine();
-            field.append(inputRow, helper);
+            field.append(inputRow, helper, sourceLine);
             if (statusLine) field.appendChild(statusLine);
             form.appendChild(field);
             form.addEventListener('submit', (event) => {
@@ -93,6 +96,43 @@
                 saveOAuthRelayCallback(input.value, save);
             });
             return form;
+        }
+
+        function relaySourceLine(relayURL, configuredRelay) {
+            const line = document.createElement('div');
+            line.className = 'oauth-relay-source-line';
+            line.id = 'oauth-relay-source-line';
+            line.setAttribute('role', 'status');
+            line.setAttribute('aria-live', 'polite');
+            updateRelaySourceLine(line, relayURL, configuredRelay);
+            return line;
+        }
+
+        function updateRelaySourceLine(line, relayURL, configuredRelay) {
+            const value = String(relayURL || '').trim();
+            const dirty = value !== String(configuredRelay || '').trim();
+            const isDefault = value === defaultOAuthRelayCallbackURL;
+            line.innerHTML = '';
+
+            const badge = document.createElement('span');
+            badge.className = 'pill oauth-relay-source-pill';
+            badge.dataset.source = dirty ? 'unsaved' : (isDefault ? 'default' : 'custom');
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+            const label = document.createElement('span');
+            label.className = 'text';
+            label.textContent = dirty
+                ? t('oauth_relay_badge_unsaved')
+                : (isDefault ? t('oauth_relay_badge_default') : t('oauth_relay_badge_custom'));
+            badge.append(dot, label);
+
+            const detail = document.createElement('span');
+            detail.className = 'oauth-relay-source-detail';
+            detail.textContent = dirty
+                ? t('oauth_relay_status_unsaved')
+                : (isDefault ? t('oauth_relay_status_default') : t('oauth_relay_status_custom'));
+
+            line.append(badge, detail);
         }
 
         function relayStatusLine() {
@@ -192,8 +232,6 @@
         function renderWorkerScriptDialog() {
             const code = $('oauth-worker-script-content');
             if (!code) return;
-            const defaultRelay = $('oauth-worker-default-relay');
-            if (defaultRelay) defaultRelay.textContent = defaultOAuthRelayCallbackURL;
             if (state.oauth.workerScriptLoading) {
                 code.textContent = t('oauth_worker_script_loading');
             } else if (state.oauth.workerScriptError) {
