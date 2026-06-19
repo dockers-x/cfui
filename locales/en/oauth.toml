@@ -50,16 +50,16 @@ other = "Copy relay callback URL"
 other = "This address must exactly match the Redirect callback URL in the Cloudflare OAuth client."
 
 [oauth_relay_assist_text]
-other = "Enter only this URL in the Cloudflare OAuth client. Do not append cfui_callback_url."
+other = "This is the Cloudflare OAuth app Redirect callback URL. Do not use the local callback or append cfui_callback_url."
 
 [oauth_relay_use_default]
-other = "Use provided"
+other = "Use provided relay"
 
 [oauth_relay_use_default_title]
-other = "Fill and save the provided default OAuth relay domain"
+other = "Fill and save the provided OAuth relay domain"
 
 [oauth_relay_self_host]
-other = "Self-host Worker"
+other = "Self-host Worker..."
 
 [oauth_relay_self_host_title]
 other = "Show the Worker script and deployment steps for a self-hosted Cloudflare OAuth relay"
@@ -1106,25 +1106,25 @@ other = "View script"
 other = "View the full Worker script in this page"
 
 [oauth_worker_script_dialog_title]
-other = "Cloudflare OAuth Worker script"
+other = "Self-host OAuth relay Worker"
 
 [oauth_worker_script_dialog_subtitle]
-other = "Use the provided domain when you do not self-host; deploy this Worker when you do. Both paths use one relay callback URL."
+other = "Use the provided relay for the fastest setup. Deploy this Worker only when you want the relay under your own Cloudflare account."
 
 [oauth_worker_self_host_summary]
-other = "Choose a relay path first: the provided domain is fastest, while self-hosting keeps the relay under your own Cloudflare account."
+other = "The OAuth app uses one Redirect callback URL: either the provided relay URL or your Worker /oauth/callback URL."
 
 [oauth_worker_self_host_target_label]
-other = "Self-host callback URL"
+other = "Self-host relay URL"
 
 [oauth_worker_self_host_target_hint]
-other = "Replace the host with your Worker HTTPS domain and use the same URL in the Cloudflare OAuth client and cfui input."
+other = "Replace the sample host with your Worker HTTPS domain; use this URL in both the Cloudflare OAuth app and the cfui input."
 
 [oauth_worker_default_relay_label]
-other = "Without self-hosting"
+other = "Provided relay"
 
 [oauth_worker_default_relay_desc]
-other = "Use this URL in both the Cloudflare OAuth client and the cfui input."
+other = "Use this address as the Cloudflare OAuth app Redirect callback URL and in the cfui input."
 
 [oauth_worker_self_host_relay_label]
 other = "Self-hosted relay"

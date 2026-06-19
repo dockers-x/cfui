@@ -1312,11 +1312,11 @@
 
     <!-- OAuth Worker script dialog -->
     <div id="oauth-worker-script-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="oauth-worker-script-title" hidden>
-        <div class="modal modal--wide">
+        <div class="modal modal--wide modal--oauth-worker">
             <div class="modal-head">
                 <div>
-                    <h2 id="oauth-worker-script-title" data-i18n="oauth_worker_script_dialog_title">Cloudflare OAuth Worker script</h2>
-                    <p class="subtitle" data-i18n="oauth_worker_script_dialog_subtitle">Use the provided domain when you do not self-host; if you self-host, deploy this Worker and use the same /oauth/callback in Cloudflare and cfui.</p>
+                    <h2 id="oauth-worker-script-title" data-i18n="oauth_worker_script_dialog_title">Self-host OAuth relay Worker</h2>
+                    <p class="subtitle" data-i18n="oauth_worker_script_dialog_subtitle">Use the provided relay for the fastest setup. Deploy this Worker only when you want the relay under your own Cloudflare account.</p>
                 </div>
                 <button type="button" class="icon-btn" data-close-dialog aria-label="Close" title="Close" data-i18n-attr="aria-label|toast_close;title|toast_close">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -1324,17 +1324,17 @@
             </div>
             <div class="modal-body oauth-worker-script-body">
                 <div class="oauth-worker-guide">
-                    <p class="oauth-worker-summary" data-i18n="oauth_worker_self_host_summary">Self-hosting only changes the relay domain; it does not change cfui's OAuth flow.</p>
+                    <p class="oauth-worker-summary" data-i18n="oauth_worker_self_host_summary">The OAuth app uses one Redirect callback URL: either the provided relay URL or your Worker /oauth/callback URL.</p>
                     <div class="oauth-worker-choice-list">
                         <div class="oauth-worker-choice oauth-worker-choice--provided">
-                            <span data-i18n="oauth_worker_default_relay_label">Without self-hosting</span>
+                            <span data-i18n="oauth_worker_default_relay_label">Provided relay</span>
                             <code class="mono">https://oauth.omarchy.qzz.io/oauth/callback</code>
-                            <small data-i18n="oauth_worker_default_relay_desc">Use this URL in Cloudflare and cfui.</small>
+                            <small data-i18n="oauth_worker_default_relay_desc">Use this address as the Cloudflare OAuth app Redirect callback URL and in the cfui input.</small>
                         </div>
                         <div class="oauth-worker-choice oauth-worker-choice--self-host">
-                            <span data-i18n="oauth_worker_self_host_target_label">Self-host callback URL</span>
+                            <span data-i18n="oauth_worker_self_host_target_label">Self-host relay URL</span>
                             <code class="mono">https://oauth.example.com/oauth/callback</code>
-                            <small data-i18n="oauth_worker_self_host_target_hint">Replace the host with your Worker HTTPS domain and use the same URL in Cloudflare and cfui.</small>
+                            <small data-i18n="oauth_worker_self_host_target_hint">Replace the sample host with your Worker HTTPS domain; use this URL in both the Cloudflare OAuth app and the cfui input.</small>
                         </div>
                     </div>
                     <div class="oauth-worker-callback-format">

@@ -50,16 +50,16 @@ other = "中継 callback URL をコピー"
 other = "このアドレスは Cloudflare OAuth クライアントの Redirect callback URL と完全に一致している必要があります。"
 
 [oauth_relay_assist_text]
-other = "Cloudflare OAuth クライアントにはこの URL だけを入力し、cfui_callback_url は追加しません。"
+other = "これは Cloudflare OAuth アプリの Redirect callback URL です。ローカル callback は使わず、cfui_callback_url も追加しません。"
 
 [oauth_relay_use_default]
-other = "提供済みを使用"
+other = "提供 relay を使用"
 
 [oauth_relay_use_default_title]
-other = "提供済みの既定 OAuth relay ドメインを入力して保存"
+other = "提供済み OAuth relay ドメインを入力して保存"
 
 [oauth_relay_self_host]
-other = "Worker を自前運用"
+other = "Worker を自前運用..."
 
 [oauth_relay_self_host_title]
 other = "Cloudflare OAuth relay を自前運用するための Worker スクリプトと手順を表示"
@@ -1106,25 +1106,25 @@ other = "スクリプトを表示"
 other = "このページで完全な Worker スクリプトを表示"
 
 [oauth_worker_script_dialog_title]
-other = "Cloudflare OAuth Worker スクリプト"
+other = "OAuth relay Worker を自前運用"
 
 [oauth_worker_script_dialog_subtitle]
-other = "自前運用しない場合は提供済みドメインを使います。自前運用する場合はこの Worker をデプロイします。どちらも relay callback URL は 1 つだけです。"
+other = "最短セットアップでは提供済み relay を使います。relay を自分の Cloudflare アカウント配下に置きたい場合だけ、この Worker をデプロイします。"
 
 [oauth_worker_self_host_summary]
-other = "まず中継方式を選びます。提供済みドメインが最短で、自前運用は relay を自分の Cloudflare アカウント配下に置きたい場合に使います。"
+other = "OAuth アプリに設定する Redirect callback URL は 1 つだけです。提供済み relay URL か、自分の Worker /oauth/callback URL のどちらかを使います。"
 
 [oauth_worker_self_host_target_label]
-other = "自前運用後の callback URL"
+other = "自前 relay URL"
 
 [oauth_worker_self_host_target_hint]
-other = "例のホストを自分の Worker HTTPS ドメインに置き換え、Cloudflare OAuth クライアントと cfui 入力欄で同じ URL を使います。"
+other = "例のホストを自分の Worker HTTPS ドメインに置き換えます。Cloudflare OAuth アプリと cfui 入力欄の両方でこの URL を使います。"
 
 [oauth_worker_default_relay_label]
-other = "自前運用しない場合"
+other = "提供済み relay"
 
 [oauth_worker_default_relay_desc]
-other = "Cloudflare OAuth クライアントと cfui 入力欄の両方にこの URL を使います。"
+other = "このアドレスを Cloudflare OAuth アプリの Redirect callback URL と cfui 入力欄の両方に設定します。"
 
 [oauth_worker_self_host_relay_label]
 other = "自前中継"

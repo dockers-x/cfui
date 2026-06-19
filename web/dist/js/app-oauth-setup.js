@@ -68,7 +68,7 @@
                 input.value = defaultOAuthRelayCallbackURL;
                 updateRelaySourceLine(sourceLine, input.value, configuredRelay);
                 updateSaveState(save, input.value, configuredRelay);
-                if (configuredRelay === defaultOAuthRelayCallbackURL) {
+                if (savedRelay === defaultOAuthRelayCallbackURL) {
                     input.focus();
                     input.select();
                     return;
@@ -77,14 +77,10 @@
             });
             useDefault.title = t('oauth_relay_use_default_title');
             useDefault.setAttribute('aria-label', t('oauth_relay_use_default_title'));
-            const separator = document.createElement('span');
-            separator.className = 'oauth-relay-action-separator';
-            separator.setAttribute('aria-hidden', 'true');
-            separator.textContent = '/';
             const selfHost = smallButton(t('oauth_relay_self_host'), 'btn btn--text oauth-relay-inline-action oauth-relay-self-host-action', openWorkerScriptDialog);
             selfHost.title = t('oauth_relay_self_host_title');
             selfHost.setAttribute('aria-label', t('oauth_relay_self_host_title'));
-            assistActions.append(useDefault, separator, selfHost);
+            assistActions.append(useDefault, selfHost);
             helper.append(helperText, assistActions);
 
             const checkRelay = async (event) => {
