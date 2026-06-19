@@ -2632,6 +2632,18 @@ other = "Back to storage"
 [oauth_kv_keys]
 other = "KV keys"
 
+[oauth_kv_prefix_root]
+other = "Root"
+
+[oauth_kv_prefix_root_meta]
+other = "Showing root prefix"
+
+[oauth_kv_prefix_current]
+other = "Current prefix: {prefix}"
+
+[oauth_kv_prefix_meta]
+other = "Folder"
+
 [oauth_kv_load_more]
 other = "Load more keys"
 

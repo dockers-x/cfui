@@ -2632,6 +2632,18 @@ other = "ストレージに戻る"
 [oauth_kv_keys]
 other = "KV key"
 
+[oauth_kv_prefix_root]
+other = "ルート"
+
+[oauth_kv_prefix_root_meta]
+other = "ルート prefix を表示中"
+
+[oauth_kv_prefix_current]
+other = "現在の prefix: {prefix}"
+
+[oauth_kv_prefix_meta]
+other = "フォルダー"
+
 [oauth_kv_load_more]
 other = "さらに読み込む"
 

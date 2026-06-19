@@ -679,6 +679,52 @@ func TestKVKeysBulkDeleteUsesCloudflareSDK(t *testing.T) {
 	}
 }
 
+func TestKVKeysSupportsPrefixAndCursor(t *testing.T) {
+	ctx := context.Background()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/client/v4/accounts/account-1/storage/kv/namespaces/namespace-1/keys", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		if r.Method != http.MethodGet {
+			t.Fatalf("kv keys method = %s, want GET", r.Method)
+		}
+		query := r.URL.Query()
+		if got := query.Get("prefix"); got != "folder/" {
+			t.Fatalf("prefix = %q, want folder/", got)
+		}
+		if got := query.Get("cursor"); got != "cursor-1" {
+			t.Fatalf("cursor = %q, want cursor-1", got)
+		}
+		if got := query.Get("limit"); got != "25" {
+			t.Fatalf("limit = %q, want 25", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"success": true,
+			"result": [
+				{"name":"folder/a.txt","expiration":1893456000},
+				{"name":"folder/sub/b.txt"}
+			],
+			"result_info": {"cursor":"cursor-2"}
+		}`))
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	svc := NewService(testOAuthServiceWithScopes(t, "workers-kv-storage.read"))
+	svc.restEndpoint = server.URL + "/client/v4"
+
+	keys, err := svc.KVKeys(ctx, "account-1", "namespace-1", " folder/ ", " cursor-1 ", 25)
+	if err != nil {
+		t.Fatalf("KVKeys: %v", err)
+	}
+	if keys.Cursor != "cursor-2" || keys.Session.ID != "session-1" {
+		t.Fatalf("unexpected kv keys response metadata: %#v", keys)
+	}
+	if len(keys.Data) != 2 || keys.Data[0].Name != "folder/a.txt" || keys.Data[0].Expiration != 1893456000 || keys.Data[1].Name != "folder/sub/b.txt" {
+		t.Fatalf("unexpected kv keys data: %#v", keys.Data)
+	}
+}
+
 func TestKVValueIncludesBinaryPreview(t *testing.T) {
 	ctx := context.Background()
 	payload := []byte{0x00, 0x01, 0x02, 'K', 'V', 0xff}

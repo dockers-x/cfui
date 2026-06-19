@@ -2632,6 +2632,18 @@ other = "返回存储"
 [oauth_kv_keys]
 other = "KV keys"
 
+[oauth_kv_prefix_root]
+other = "根目录"
+
+[oauth_kv_prefix_root_meta]
+other = "当前显示根目录"
+
+[oauth_kv_prefix_current]
+other = "当前前缀：{prefix}"
+
+[oauth_kv_prefix_meta]
+other = "目录"
+
 [oauth_kv_load_more]
 other = "加载更多 key"
 

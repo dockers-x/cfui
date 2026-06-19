@@ -1517,6 +1517,8 @@
             namespace_id: namespaceId,
             limit: '100',
         });
+        const prefix = String(state.oauth.kvPrefix || '').trim();
+        if (prefix) params.set('prefix', prefix);
         if (append && state.oauth.kvCursor) params.set('cursor', state.oauth.kvCursor);
         try {
             const resp = await apiGet('/cf/kv/keys?' + params.toString());
@@ -1560,6 +1562,7 @@
         try {
             state.oauth.kvValue = await apiSend('/cf/kv/value?' + params.toString(), 'PUT', { value });
             state.oauth.selectedKVKey = key;
+            state.oauth.kvPrefix = kvParentPrefixFromKey(key);
             state.oauth.kvValueError = '';
             state.oauth.kvCreateOpen = false;
             await loadKVKeys(state.oauth.selectedKVNamespaceId);
@@ -1579,6 +1582,7 @@
             return;
         }
         key = (key || file.name || '').trim();
+        if (key.endsWith('/') && file.name) key += file.name;
         if (!key) {
             toast.err(t('oauth_kv_key_required'));
             return;
@@ -1605,6 +1609,7 @@
             if (!res.ok) throw new Error(await rawAPIError(res));
             state.oauth.kvValue = await res.json();
             state.oauth.selectedKVKey = key;
+            state.oauth.kvPrefix = kvParentPrefixFromKey(key);
             state.oauth.kvValueError = '';
             state.oauth.kvCreateOpen = false;
             await loadKVKeys(state.oauth.selectedKVNamespaceId);
@@ -1636,6 +1641,7 @@
             state.oauth.kvValue = null;
             state.oauth.kvValueError = '';
             state.oauth.kvSelectedKeys = kvSelectedKeys().filter((item) => item !== key);
+            state.oauth.kvPrefix = kvParentPrefixFromKey(key);
             await loadKVKeys(state.oauth.selectedKVNamespaceId);
             renderOAuthResource();
             toast.ok(t('oauth_kv_deleted'));
@@ -1693,6 +1699,7 @@
                 state.oauth.kvSelectedKeys = [];
                 state.oauth.kvKeys = [];
                 state.oauth.kvCursor = '';
+                state.oauth.kvPrefix = '';
                 state.oauth.kvValue = null;
                 state.oauth.kvKeysError = '';
                 state.oauth.kvValueError = '';
@@ -5323,6 +5330,7 @@
                     state.oauth.selectedKVNamespaceId = namespace.id;
                     state.oauth.selectedKVKey = '';
                     state.oauth.kvSelectedKeys = [];
+                    state.oauth.kvPrefix = '';
                     state.oauth.kvValue = null;
                     state.oauth.kvKeysError = '';
                     state.oauth.kvValueError = '';
@@ -5709,6 +5717,7 @@
         const namespace = selectedKVNamespace();
         const selectedValue = state.oauth.kvValue || null;
         const selectedListKey = selectedKVListKey(selectedValue?.key || state.oauth.selectedKVKey);
+        const entries = kvKeyEntries();
         return JSON.stringify({
             type: 'cfui_oauth_kv_diagnostics',
             version: 1,
@@ -5735,6 +5744,7 @@
                 namespace_id: state.oauth.selectedKVNamespaceId || '',
                 namespace_title: namespace?.title || '',
                 key: state.oauth.selectedKVKey || '',
+                key_prefix: state.oauth.kvPrefix || '',
                 storage_view: state.oauth.storageView || '',
             },
             identity: {
@@ -5749,6 +5759,9 @@
             state: {
                 namespace_count: state.oauth.kvNamespaces.length,
                 keys_loaded: state.oauth.kvKeys.length,
+                key_prefix: state.oauth.kvPrefix || '',
+                key_prefixes_loaded: entries.folders.length,
+                direct_keys_loaded: entries.keys.length,
                 keys_has_more: !!state.oauth.kvCursor,
                 keys_error: state.oauth.kvKeysError || '',
                 value_loaded: !!selectedValue,
@@ -5763,10 +5776,13 @@
             },
             namespaces: state.oauth.kvNamespaces.map(kvNamespaceDiagnostics),
             keys: {
+                prefix: state.oauth.kvPrefix || '',
                 loaded_count: state.oauth.kvKeys.length,
+                direct_count: entries.keys.length,
+                prefixes: entries.folders.map(kvPrefixDiagnostics),
                 has_more: !!state.oauth.kvCursor,
                 cursor_present: !!state.oauth.kvCursor,
-                items: state.oauth.kvKeys.map(kvKeyDiagnostics),
+                items: entries.keys.map(kvKeyDiagnostics),
             },
             selected_value: selectedValue ? kvSelectedValueDiagnostics(selectedValue, selectedListKey) : null,
             bulk_selection: kvBulkSelectionDiagnostics(),
@@ -5778,6 +5794,14 @@
         return {
             id: namespace?.id || '',
             title: namespace?.title || '',
+        };
+    }
+
+    function kvPrefixDiagnostics(folder) {
+        const prefix = folder?.prefix || '';
+        return {
+            prefix,
+            name: kvPrefixLabel(prefix),
         };
     }
 
@@ -5943,7 +5967,7 @@
                     renderOAuthResource();
                 },
             }));
-            if (state.oauth.kvCreateOpen) body.appendChild(kvValueFormNode('', '', true));
+            if (state.oauth.kvCreateOpen) body.appendChild(kvValueFormNode(state.oauth.kvPrefix || '', '', true));
         } else {
             body.appendChild(empty(t('oauth_kv_readonly')));
         }
@@ -5954,13 +5978,23 @@
         heading.className = 'oauth-section-title';
         heading.textContent = t('oauth_kv_keys');
         section.appendChild(heading);
+        section.appendChild(kvPrefixNavigationNode());
+        const entries = kvKeyEntries();
         if (state.oauth.kvKeysError) {
             section.appendChild(empty(state.oauth.kvKeysError));
         } else if (!state.oauth.kvKeys.length) {
             section.appendChild(empty(t('oauth_kv_no_keys')));
         } else {
-            if (canEdit) section.appendChild(kvBulkActionsNode());
-            for (const key of state.oauth.kvKeys) {
+            if (canEdit) section.appendChild(kvBulkActionsNode(entries.keys));
+            for (const folder of entries.folders) {
+                const row = rowNode(kvPrefixLabel(folder.prefix), t('oauth_kv_prefix_meta'), []);
+                row.classList.add('oauth-row--folder');
+                row.addEventListener('click', async () => {
+                    await openKVPrefix(folder.prefix);
+                });
+                section.appendChild(row);
+            }
+            for (const key of entries.keys) {
                 const meta = key.expiration ? `${t('oauth_kv_expiration')} ${formatDate(key.expiration * 1000)}` : '';
                 const actions = canEdit ? [kvKeySelectCheckbox(key.name)] : [];
                 const row = rowNode(key.name, meta, actions);
@@ -5991,16 +6025,16 @@
         body.appendChild(kvValuePanelNode());
     }
 
-    function kvBulkActionsNode() {
+    function kvBulkActionsNode(visibleKeys = kvDirectKeys()) {
         const node = document.createElement('div');
         node.className = 'oauth-bulk-actions';
         const selected = kvSelectedKeys();
         const meta = document.createElement('div');
         meta.className = 'oauth-row-meta';
-        meta.textContent = t('oauth_kv_selected_keys', { count: selected.length, loaded: state.oauth.kvKeys.length });
+        meta.textContent = t('oauth_kv_selected_keys', { count: selected.length, loaded: visibleKeys.length });
         const actions = document.createElement('div');
         actions.className = 'oauth-row-actions';
-        actions.appendChild(smallButton(t('oauth_kv_select_loaded'), 'btn btn--sm btn--ghost', () => selectLoadedKVKeys()));
+        actions.appendChild(smallButton(t('oauth_kv_select_loaded'), 'btn btn--sm btn--ghost', () => selectLoadedKVKeys(visibleKeys)));
         const clear = smallButton(t('clear'), 'btn btn--sm btn--ghost', () => {
             state.oauth.kvSelectedKeys = [];
             renderOAuthResource();
@@ -10142,6 +10176,91 @@
         return Array.from(new Set((prefixes || []).map((prefix) => String(prefix || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
     }
 
+    function kvPrefixNavigationNode() {
+        const wrap = document.createElement('div');
+        wrap.className = 'oauth-r2-prefix-nav';
+        const currentPrefix = String(state.oauth.kvPrefix || '');
+        const crumbs = r2PrefixCrumbs(currentPrefix);
+        const root = smallButton(t('oauth_kv_prefix_root'), 'btn btn--sm btn--ghost oauth-r2-prefix-crumb', async () => {
+            await openKVPrefix('');
+        });
+        root.disabled = !currentPrefix;
+        wrap.appendChild(root);
+        for (const crumb of crumbs) {
+            const sep = document.createElement('span');
+            sep.className = 'oauth-r2-prefix-separator';
+            sep.textContent = '/';
+            wrap.appendChild(sep);
+            const button = smallButton(crumb.name, 'btn btn--sm btn--ghost oauth-r2-prefix-crumb', async () => {
+                await openKVPrefix(crumb.prefix);
+            });
+            button.disabled = crumb.prefix === currentPrefix;
+            wrap.appendChild(button);
+        }
+        const meta = document.createElement('span');
+        meta.className = 'oauth-r2-prefix-meta';
+        meta.textContent = currentPrefix
+            ? t('oauth_kv_prefix_current', { prefix: currentPrefix })
+            : t('oauth_kv_prefix_root_meta');
+        wrap.appendChild(meta);
+        return wrap;
+    }
+
+    async function openKVPrefix(prefix) {
+        state.oauth.kvPrefix = String(prefix || '').replace(/^\/+/, '');
+        state.oauth.selectedKVKey = '';
+        state.oauth.kvValue = null;
+        state.oauth.kvValueError = '';
+        state.oauth.kvCreateOpen = false;
+        state.oauth.kvSelectedKeys = [];
+        state.oauth.kvKeys = [];
+        state.oauth.kvCursor = '';
+        await loadKVKeys(state.oauth.selectedKVNamespaceId);
+        renderOAuthResource();
+    }
+
+    function kvPrefixLabel(prefix) {
+        const current = String(state.oauth.kvPrefix || '');
+        let value = String(prefix || '');
+        if (current && value.startsWith(current)) value = value.slice(current.length);
+        value = value.replace(/\/+$/, '');
+        const parts = value.split('/').filter(Boolean);
+        return parts[parts.length - 1] || prefix || t('oauth_kv_prefix_root');
+    }
+
+    function kvParentPrefixFromKey(key) {
+        const value = String(key || '').replace(/^\/+/, '');
+        const index = value.lastIndexOf('/');
+        return index >= 0 ? value.slice(0, index + 1) : '';
+    }
+
+    function kvKeyEntries() {
+        const currentPrefix = String(state.oauth.kvPrefix || '').replace(/^\/+/, '');
+        const folders = new Map();
+        const keys = [];
+        for (const key of state.oauth.kvKeys) {
+            const name = String(key?.name || '').replace(/^\/+/, '');
+            if (!name) continue;
+            if (currentPrefix && !name.startsWith(currentPrefix)) continue;
+            const rest = currentPrefix ? name.slice(currentPrefix.length) : name;
+            const slash = rest.indexOf('/');
+            if (slash >= 0) {
+                const prefix = currentPrefix + rest.slice(0, slash + 1);
+                if (prefix) folders.set(prefix, { prefix });
+            } else {
+                keys.push(key);
+            }
+        }
+        return {
+            folders: Array.from(folders.values()).sort((a, b) => a.prefix.localeCompare(b.prefix)),
+            keys: keys.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))),
+        };
+    }
+
+    function kvDirectKeys() {
+        return kvKeyEntries().keys;
+    }
+
     function selectedZoneName() {
         const zone = state.oauth.zones.find((item) => item.id === state.oauth.selectedZoneId);
         return zone?.name || state.oauth.selectedZoneId || '';
@@ -10241,9 +10360,9 @@
         state.oauth.kvSelectedKeys = Array.from(keys);
     }
 
-    function selectLoadedKVKeys() {
+    function selectLoadedKVKeys(visibleKeys = kvDirectKeys()) {
         const keys = kvSelectedKeySet();
-        for (const item of state.oauth.kvKeys) {
+        for (const item of visibleKeys) {
             if (item?.name) keys.add(item.name);
         }
         state.oauth.kvSelectedKeys = Array.from(keys);
@@ -10251,7 +10370,7 @@
     }
 
     function pruneKVSelectedKeys() {
-        const loaded = new Set(state.oauth.kvKeys.map((item) => item.name).filter(Boolean));
+        const loaded = new Set(kvDirectKeys().map((item) => item.name).filter(Boolean));
         state.oauth.kvSelectedKeys = kvSelectedKeys().filter((key) => loaded.has(key));
     }
 
@@ -10443,6 +10562,7 @@
         state.oauth.kvKeys = [];
         state.oauth.kvKeysError = '';
         state.oauth.kvCursor = '';
+        state.oauth.kvPrefix = '';
         state.oauth.kvValue = null;
         state.oauth.kvValueError = '';
         state.oauth.kvCreateOpen = false;
@@ -10469,6 +10589,7 @@
         state.oauth.kvKeys = [];
         state.oauth.kvKeysError = '';
         state.oauth.kvCursor = '';
+        state.oauth.kvPrefix = '';
         state.oauth.kvValue = null;
         state.oauth.kvValueError = '';
         state.oauth.kvCreateOpen = false;
