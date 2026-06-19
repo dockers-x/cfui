@@ -2124,10 +2124,9 @@
             const callbackPath = status?.config?.local_callback_path || '/oauth/callback';
             localCallback.textContent = window.location.origin + callbackPath;
         }
-        const workerScript = $('oauth-worker-script-url');
-        if (workerScript) {
-            workerScript.innerHTML = '';
-            workerScript.appendChild(oauthWorkerScriptNode());
+        const relayChoice = $('oauth-relay-choice');
+        if (relayChoice) {
+            renderOAuthRelayChoice(relayChoice, status);
         }
         const login = $('oauth-login');
         const logout = $('oauth-logout');
@@ -2230,6 +2229,111 @@
         );
         wrapper.append(text, actions);
         return wrapper;
+    }
+
+    function renderOAuthRelayChoice(node, status) {
+        const relayURL = status?.config?.relay_callback_url || '';
+        const scriptURL = oauthWorkerScriptURL();
+        node.innerHTML = '';
+
+        const head = document.createElement('div');
+        head.className = 'oauth-relay-choice-head';
+        const title = document.createElement('div');
+        title.className = 'oauth-relay-choice-title';
+        title.textContent = t('oauth_relay_choice_title');
+        const note = document.createElement('p');
+        note.className = 'oauth-relay-choice-note';
+        note.textContent = t('oauth_relay_choice_note');
+        head.append(title, note);
+
+        const list = document.createElement('div');
+        list.className = 'oauth-relay-choice-list';
+        list.append(
+            oauthRelayChoiceRow({
+                title: t('oauth_relay_choice_provided_title'),
+                badge: t('oauth_relay_choice_recommended'),
+                desc: t('oauth_relay_choice_provided_desc'),
+                label: t('oauth_setup_redirect_uri'),
+                value: relayURL || t('oauth_setup_relay_url_placeholder'),
+                actions: [
+                    {
+                        label: t('oauth_relay_configure'),
+                        title: t('oauth_relay_edit'),
+                        action: () => openOAuthRelayEditor(status),
+                    },
+                    {
+                        label: t('copy'),
+                        title: t('copy'),
+                        action: () => copyOAuthText(relayURL || ''),
+                        disabled: !relayURL,
+                    },
+                ],
+            }),
+            oauthRelayChoiceRow({
+                title: t('oauth_relay_choice_self_host_title'),
+                desc: t('oauth_relay_choice_self_host_desc'),
+                label: t('oauth_setup_worker_script'),
+                value: scriptURL,
+                actions: [
+                    {
+                        label: t('oauth_setup_worker_open'),
+                        title: t('oauth_setup_worker_open'),
+                        action: openOAuthWorkerScript,
+                    },
+                    {
+                        label: t('copy'),
+                        title: t('copy'),
+                        action: () => copyOAuthText(scriptURL),
+                    },
+                ],
+            }),
+        );
+
+        node.append(head, list);
+    }
+
+    function oauthRelayChoiceRow({ title, badge, desc, label, value, actions = [] }) {
+        const row = document.createElement('div');
+        row.className = 'oauth-relay-choice-row';
+
+        const body = document.createElement('div');
+        body.className = 'oauth-relay-choice-main';
+        const heading = document.createElement('div');
+        heading.className = 'oauth-relay-choice-heading';
+        const titleNode = document.createElement('span');
+        titleNode.textContent = title;
+        heading.appendChild(titleNode);
+        if (badge) {
+            const badgeNode = document.createElement('span');
+            badgeNode.className = 'oauth-relay-choice-badge';
+            badgeNode.textContent = badge;
+            heading.appendChild(badgeNode);
+        }
+        const descNode = document.createElement('p');
+        descNode.className = 'oauth-relay-choice-desc';
+        descNode.textContent = desc;
+        const labelNode = document.createElement('div');
+        labelNode.className = 'oauth-relay-choice-label';
+        labelNode.textContent = label;
+        const code = document.createElement('code');
+        code.className = 'oauth-relay-choice-code mono';
+        code.textContent = value || '';
+        body.append(heading, descNode, labelNode, code);
+
+        const actionNode = document.createElement('div');
+        actionNode.className = 'oauth-relay-choice-actions';
+        for (const item of actions) {
+            const action = smallButton(item.label, 'btn btn--sm btn--ghost', item.action);
+            action.disabled = !!item.disabled;
+            if (item.title) {
+                action.title = item.title;
+                action.setAttribute('aria-label', item.title);
+            }
+            actionNode.appendChild(action);
+        }
+
+        row.append(body, actionNode);
+        return row;
     }
 
     function openOAuthWorkerScript() {

@@ -782,7 +782,7 @@ other = "请先设置 CFUI_OAUTH_CLIENT_ID。"
 other = "OAuth 配置引导"
 
 [oauth_setup_subtitle]
-other = "先创建 Cloudflare OAuth 客户端，把 relay 回调作为重定向 URI，然后用 client ID 重启 cfui。"
+other = "先创建 Cloudflare OAuth 客户端，把当前中转回调作为重定向 URI，然后用 client ID 重启 cfui。需要完全自建时再部署 Worker relay。"
 
 [oauth_setup_oauth_app_title]
 other = "填写 Cloudflare OAuth 客户端表单"
@@ -830,10 +830,10 @@ other = "客户端 URL"
 other = "私用可以留空；公开应用填写项目主页或文档 URL。"
 
 [oauth_setup_worker_title]
-other = "使用或自部署 relay Worker"
+other = "可选：自部署 relay Worker"
 
 [oauth_setup_worker_desc]
-other = "Worker 会从 OAuth state 里解析 cfui 回调地址，并把 Cloudflare 返回的授权码和 state 转发回当前 cfui 实例。打开或下载下面的内置文件，然后部署到 Cloudflare Workers。"
+other = "如果使用当前中转回调，这一步不需要操作。只有想自建 relay 时，才打开下面的内置 worker.js 并部署到自己的 Cloudflare Workers。"
 
 [oauth_setup_worker_script]
 other = "内置 Worker 文件"
@@ -841,8 +841,26 @@ other = "内置 Worker 文件"
 [oauth_worker_script_entry]
 other = "自建 Worker 脚本"
 
+[oauth_relay_choice_title]
+other = "OAuth 中转地址怎么选"
+
 [oauth_relay_choice_note]
-other = "如果使用我提供的 relay，就把当前中转回调直接填到 Cloudflare OAuth 客户端的重定向回调 URL。只有想自建 relay 时，才需要打开下面的 Worker 脚本并部署，然后把你的 Worker /oauth/callback 地址保存为中转回调。"
+other = "默认可以直接使用当前中转回调，也就是项目提供的 relay 地址，不需要部署 worker.js。只有想完全自建 Cloudflare OAuth relay 时，才需要部署内置 Worker 脚本。"
+
+[oauth_relay_choice_provided_title]
+other = "使用当前中转回调"
+
+[oauth_relay_choice_recommended]
+other = "推荐"
+
+[oauth_relay_choice_provided_desc]
+other = "把这个地址填到 Cloudflare OAuth 客户端的重定向回调 URL。cfui 会通过 OAuth state 带上当前实例的本地回调地址。"
+
+[oauth_relay_choice_self_host_title]
+other = "自建 Cloudflare Worker relay"
+
+[oauth_relay_choice_self_host_desc]
+other = "如果不想使用默认中转，可以打开内置 worker.js 部署到自己的 Cloudflare Workers，再把你的 /oauth/callback 地址保存为中转回调。"
 
 [oauth_setup_worker_open]
 other = "打开完整 Worker 脚本"

@@ -782,7 +782,7 @@ other = "CFUI_OAUTH_CLIENT_ID を設定してください。"
 other = "OAuth 設定ガイド"
 
 [oauth_setup_subtitle]
-other = "Cloudflare OAuth クライアントを作成し、relay callback をリダイレクト URI として登録してから client ID で cfui を再起動します。"
+other = "Cloudflare OAuth クライアントを作成し、現在の relay callback をリダイレクト URI として登録してから client ID で cfui を再起動します。自前運用したい場合だけ Worker relay をデプロイします。"
 
 [oauth_setup_oauth_app_title]
 other = "Cloudflare OAuth クライアントフォームを入力"
@@ -830,10 +830,10 @@ other = "クライアント URL"
 other = "個人利用では空欄で構いません。公開アプリではプロジェクトまたはドキュメントの URL を入力します。"
 
 [oauth_setup_worker_title]
-other = "Relay Worker を使用または自前でデプロイ"
+other = "任意: Relay Worker を自前でデプロイ"
 
 [oauth_setup_worker_desc]
-other = "Worker は OAuth state から cfui callback を読み取り、Cloudflare から戻る code と state をこの cfui インスタンスへ転送します。下の内蔵ファイルを開くかダウンロードし、Cloudflare Workers にデプロイしてください。"
+other = "現在の relay callback を使う場合、この手順は不要です。自前で relay を運用したい場合だけ、下の内蔵 worker.js を開いて自分の Cloudflare Workers にデプロイしてください。"
 
 [oauth_setup_worker_script]
 other = "内蔵 Worker ファイル"
@@ -841,8 +841,26 @@ other = "内蔵 Worker ファイル"
 [oauth_worker_script_entry]
 other = "自前 relay 用 Worker"
 
+[oauth_relay_choice_title]
+other = "OAuth relay callback の選び方"
+
 [oauth_relay_choice_note]
-other = "提供済み relay を使う場合は、表示中の relay callback を Cloudflare OAuth クライアントのリダイレクト callback URL として登録します。自前で relay を運用したい場合だけ Worker スクリプトを開いてデプロイし、自分の Worker /oauth/callback URL を relay callback として保存してください。"
+other = "通常は現在の relay callback をそのまま使います。これは提供済みの relay アドレスなので worker.js のデプロイは不要です。Cloudflare OAuth relay を自前で運用したい場合だけ、内蔵 Worker スクリプトをデプロイしてください。"
+
+[oauth_relay_choice_provided_title]
+other = "現在の relay callback を使う"
+
+[oauth_relay_choice_recommended]
+other = "推奨"
+
+[oauth_relay_choice_provided_desc]
+other = "この URL を Cloudflare OAuth クライアントのリダイレクト callback URL として登録します。cfui は現在のインスタンスのローカル callback を OAuth state で渡します。"
+
+[oauth_relay_choice_self_host_title]
+other = "Cloudflare Worker relay を自前で運用"
+
+[oauth_relay_choice_self_host_desc]
+other = "既定の relay を使わない場合は、内蔵 worker.js を開いて自分の Cloudflare Workers にデプロイし、その /oauth/callback URL を relay callback として保存してください。"
 
 [oauth_setup_worker_open]
 other = "完全な Worker スクリプトを開く"

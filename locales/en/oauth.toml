@@ -782,7 +782,7 @@ other = "Set CFUI_OAUTH_CLIENT_ID before signing in."
 other = "OAuth setup"
 
 [oauth_setup_subtitle]
-other = "Create a Cloudflare OAuth client, use the relay callback as its redirect URI, then restart cfui with the client ID."
+other = "Create a Cloudflare OAuth client, use the current relay callback as its redirect URI, then restart cfui with the client ID. Deploy a Worker relay only when you want to self-host it."
 
 [oauth_setup_oauth_app_title]
 other = "Fill the Cloudflare OAuth client form"
@@ -830,10 +830,10 @@ other = "Client URL"
 other = "Optional for private use; use your project or documentation URL for a public app."
 
 [oauth_setup_worker_title]
-other = "Use or self-host the relay Worker"
+other = "Optional: self-host the relay Worker"
 
 [oauth_setup_worker_desc]
-other = "The Worker decodes the cfui callback from OAuth state and forwards Cloudflare's code and state back to this cfui instance. Download or open the built-in file below, then deploy it to Cloudflare Workers."
+other = "Skip this step when using the current relay callback. Only open the built-in worker.js and deploy it to your own Cloudflare Workers account when you want to self-host the relay."
 
 [oauth_setup_worker_script]
 other = "Built-in Worker file"
@@ -841,8 +841,26 @@ other = "Built-in Worker file"
 [oauth_worker_script_entry]
 other = "Self-host Worker script"
 
+[oauth_relay_choice_title]
+other = "Choose an OAuth relay callback"
+
 [oauth_relay_choice_note]
-other = "To use the provided relay, register the shown relay callback as the Cloudflare OAuth client's redirect callback URL. Only open and deploy the Worker script when you want to self-host the relay, then save your own Worker /oauth/callback URL as the relay callback."
+other = "Use the current relay callback by default; it is the provided relay address and does not require deploying worker.js. Deploy the built-in Worker script only when you want to self-host the Cloudflare OAuth relay."
+
+[oauth_relay_choice_provided_title]
+other = "Use the current relay callback"
+
+[oauth_relay_choice_recommended]
+other = "Recommended"
+
+[oauth_relay_choice_provided_desc]
+other = "Register this URL as the Cloudflare OAuth client's redirect callback URL. cfui carries the current instance's local callback through OAuth state."
+
+[oauth_relay_choice_self_host_title]
+other = "Self-host a Cloudflare Worker relay"
+
+[oauth_relay_choice_self_host_desc]
+other = "If you do not want to use the default relay, open the built-in worker.js, deploy it to your own Cloudflare Workers account, then save your /oauth/callback URL as the relay callback."
 
 [oauth_setup_worker_open]
 other = "Open full Worker script"
