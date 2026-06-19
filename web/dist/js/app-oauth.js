@@ -2169,11 +2169,15 @@
 
 	async function loadOAuthZoneSettings() {
         if (!state.oauth.selectedZoneId) return;
+        state.oauth.zoneSettingsError = '';
         try {
             const resp = await apiGet('/cf/zone-settings?zone_id=' + encodeURIComponent(state.oauth.selectedZoneId));
             state.oauth.zoneSettings = Array.isArray(resp.data) ? resp.data : [];
+            state.oauth.zoneSettingsSession = resp.session || state.oauth.zoneSettingsSession || null;
+            state.oauth.zoneSettingsCapabilities = resp.capabilities || state.oauth.zoneSettingsCapabilities || null;
         } catch (err) {
-            renderOAuthError(err.message);
+            state.oauth.zoneSettingsError = err.message || String(err);
+            state.oauth.zoneSettings = [];
         }
     }
 
@@ -2224,12 +2228,14 @@
     async function updateZoneSetting(settingID, value, control) {
         if (!state.oauth.selectedZoneId) return;
         if (control) control.disabled = true;
+        state.oauth.zoneSettingsMutationError = '';
         try {
             await apiSend(`/cf/zone-settings/${encodeURIComponent(settingID)}?zone_id=${encodeURIComponent(state.oauth.selectedZoneId)}`, 'PATCH', { value });
             await loadOAuthZoneSettings();
             renderOAuthResource();
             toast.ok(t('oauth_zone_setting_saved'));
         } catch (err) {
+            state.oauth.zoneSettingsMutationError = err.message || String(err);
             toast.err(err.message);
             await loadOAuthZoneSettings();
             renderOAuthResource();
@@ -2247,10 +2253,12 @@
         });
         if (!ok) return;
         setBusy(button, true, t('saving'));
+        state.oauth.zoneCachePurgeError = '';
         try {
             await apiSend('/cf/cache/purge?zone_id=' + encodeURIComponent(state.oauth.selectedZoneId), 'POST', {});
             toast.ok(t('oauth_cache_purged'));
         } catch (err) {
+            state.oauth.zoneCachePurgeError = err.message || String(err);
             toast.err(err.message);
         } finally {
             setBusy(button, false);
@@ -8068,6 +8076,61 @@
         ].filter(Boolean).join('\n');
     }
 
+    function zoneSettingsDiagnosticsText() {
+        const status = state.oauth.status || {};
+        const session = state.oauth.zoneSettingsSession || status.current || {};
+        return JSON.stringify({
+            type: 'cfui_oauth_zone_settings_diagnostics',
+            version: 1,
+            generated_at: new Date().toISOString(),
+            browser_origin: window.location.origin,
+            browser_path: window.location.pathname,
+            contains_oauth_token: false,
+            contains_refresh_token: false,
+            sensitive_fields_omitted: [
+                'oauth_access_token',
+                'oauth_refresh_token',
+            ],
+            selected: {
+                account_id: state.oauth.selectedAccountId || '',
+                account_name: selectedAccountName(),
+                zone_id: state.oauth.selectedZoneId || '',
+                zone_name: selectedZoneName(),
+                resource: state.oauth.resource || '',
+            },
+            identity: {
+                label: session.label || '',
+                expires_at: session.expires_at || '',
+                scopes: Array.isArray(session.scopes) ? session.scopes : [],
+            },
+            capability: {
+                zone_settings_read: canRead('zone_settings'),
+                zone_settings_write: canWrite('zone_settings'),
+                cache_purge_write: canWrite('cache_purge'),
+            },
+            state: {
+                settings_loaded: state.oauth.zoneSettings.length,
+                settings_error: state.oauth.zoneSettingsError || '',
+                mutation_error: state.oauth.zoneSettingsMutationError || '',
+                cache_purge_error: state.oauth.zoneCachePurgeError || '',
+                scope_ready: canRead('zone_settings'),
+            },
+            settings: state.oauth.zoneSettings.map(zoneSettingDiagnostics),
+            capabilities: oauthCapabilityDiagnostics(state.oauth.zoneSettingsCapabilities || status.capabilities || {}),
+        }, null, 2);
+    }
+
+    function zoneSettingDiagnostics(setting) {
+        return {
+            id: setting?.id || '',
+            value: setting?.value == null ? null : String(setting.value),
+            editable: !!setting?.editable,
+            writable_in_cfui: !!(setting?.editable && isWritableZoneSetting(setting)),
+            modified_on: setting?.modified_on || '',
+            time_remaining: setting?.time_remaining == null ? null : Number(setting.time_remaining),
+        };
+    }
+
     function metricNode(label, value) {
         const node = document.createElement('div');
         node.className = 'oauth-metric';
@@ -8086,8 +8149,20 @@
             body.appendChild(empty(t('oauth_select_zone')));
             return;
         }
+        body.appendChild(resourceActionBar(t('oauth_zone_settings'), {
+            text: t('oauth_zone_settings_copy_diagnostics'),
+            className: 'btn btn--sm btn--ghost',
+            title: t('oauth_zone_settings_copy_diagnostics_title'),
+            onClick: () => copyOAuthText(zoneSettingsDiagnosticsText()),
+        }));
         if (canWrite('zone_settings') || canWrite('cache_purge')) {
             body.appendChild(zoneSettingActionsNode());
+        }
+        if (state.oauth.zoneSettingsMutationError) body.appendChild(empty(state.oauth.zoneSettingsMutationError));
+        if (state.oauth.zoneCachePurgeError) body.appendChild(empty(state.oauth.zoneCachePurgeError));
+        if (state.oauth.zoneSettingsError) {
+            body.appendChild(empty(state.oauth.zoneSettingsError));
+            return;
         }
         if (!state.oauth.zoneSettings.length) {
             body.appendChild(empty(t('oauth_no_zone_settings')));
@@ -9258,7 +9333,7 @@
         state.oauth.snippetSession = null;
         state.oauth.snippetCapabilities = null;
         state.oauth.snippetsError = '';
-        state.oauth.zoneSettings = [];
+        resetZoneSettingsDetail();
         state.oauth.selectedAccountId = '';
         state.oauth.selectedZoneId = '';
         resetZoneDetail();
@@ -9361,7 +9436,7 @@
 
     function resetSelectedZoneResources() {
         state.oauth.dnsRecords = [];
-        state.oauth.zoneSettings = [];
+        resetZoneSettingsDetail();
         state.oauth.dnsFormMode = '';
         state.oauth.dnsEditingId = '';
         state.oauth.dnsFilter = '';
@@ -9372,6 +9447,15 @@
         resetSnippetDetail();
         resetWAFDetail();
         resetAnalyticsDetail();
+    }
+
+    function resetZoneSettingsDetail() {
+        state.oauth.zoneSettings = [];
+        state.oauth.zoneSettingsSession = null;
+        state.oauth.zoneSettingsCapabilities = null;
+        state.oauth.zoneSettingsError = '';
+        state.oauth.zoneSettingsMutationError = '';
+        state.oauth.zoneCachePurgeError = '';
     }
 
     function resetWorkerDetail() {

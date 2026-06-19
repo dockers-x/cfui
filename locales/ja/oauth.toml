@@ -1759,6 +1759,12 @@ other = "WAF Managed Rules"
 [oauth_no_zone_settings]
 other = "表示できる Zone 設定が返されませんでした。"
 
+[oauth_zone_settings_copy_diagnostics]
+other = "診断をコピー"
+
+[oauth_zone_settings_copy_diagnostics_title]
+other = "現在の Zone Settings 診断情報をコピーします。OAuth token は含めません。"
+
 [oauth_storage_scope_required]
 other = "Storage リソースを読み込むには R2、D1、または KV の read scope が必要です。"
 

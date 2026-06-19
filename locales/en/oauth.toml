@@ -1759,6 +1759,12 @@ other = "WAF Managed Rules"
 [oauth_no_zone_settings]
 other = "No supported zone settings returned."
 
+[oauth_zone_settings_copy_diagnostics]
+other = "Copy diagnostics"
+
+[oauth_zone_settings_copy_diagnostics_title]
+other = "Copy current Zone Settings diagnostics. OAuth tokens are not included."
+
 [oauth_storage_scope_required]
 other = "Grant R2, D1, or KV read scopes to load storage resources."
 

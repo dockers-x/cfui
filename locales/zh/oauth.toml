@@ -1759,6 +1759,12 @@ other = "WAF 托管规则"
 [oauth_no_zone_settings]
 other = "没有返回支持展示的 Zone 设置。"
 
+[oauth_zone_settings_copy_diagnostics]
+other = "复制诊断"
+
+[oauth_zone_settings_copy_diagnostics_title]
+other = "复制当前 Zone Settings 诊断信息，不包含 OAuth token。"
+
 [oauth_storage_scope_required]
 other = "授权 R2、D1 或 KV 读取 scope 后才能加载存储资源。"
 
