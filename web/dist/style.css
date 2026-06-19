@@ -4481,15 +4481,15 @@ details.disclosure > .body {
 .oauth-relay-assist-actions {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: 2px;
+    gap: 4px;
     align-items: center;
     justify-content: flex-end;
     min-height: 28px;
 }
 
 .oauth-relay-inline-action {
-    min-height: 24px;
-    padding: 0 3px;
+    min-height: 26px;
+    padding: 0 4px;
 }
 
 .oauth-relay-default-action,
@@ -4598,16 +4598,23 @@ details.disclosure > .body {
 }
 
 .oauth-worker-script-body {
+    display: grid;
+    grid-template-columns: minmax(340px, 0.72fr) minmax(0, 1.18fr);
+    height: min(68dvh, 600px);
+    min-height: 360px;
     padding: 0;
     background: var(--surface-2);
 }
 
 .oauth-worker-guide {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-    gap: 12px 14px;
-    padding: 14px var(--gap-4);
-    border-bottom: 1px solid var(--border);
+    align-content: start;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    min-height: 0;
+    overflow: auto;
+    padding: 12px var(--gap-4);
+    border-right: 1px solid var(--border);
     background: var(--surface);
     color: var(--text-muted);
     font-size: var(--fs-xs);
@@ -4619,10 +4626,9 @@ details.disclosure > .body {
 }
 
 .oauth-worker-summary {
-    grid-column: 1 / -1;
     max-width: 78ch;
     color: var(--text);
-    font-size: var(--fs-sm);
+    font-size: var(--fs-xs);
     font-weight: 550;
 }
 
@@ -4632,21 +4638,14 @@ details.disclosure > .body {
 }
 
 .oauth-worker-guide li + li {
-    margin-top: 2px;
+    margin-top: 1px;
 }
 
-.oauth-worker-relay-options {
+.oauth-worker-default-note,
+.oauth-worker-self-host-target {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    grid-column: 1 / -1;
-}
-
-.oauth-worker-relay-option {
-    display: grid;
-    align-content: start;
     gap: 4px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: var(--r-card);
     background: var(--surface-2);
@@ -4654,36 +4653,33 @@ details.disclosure > .body {
     line-height: 1.5;
 }
 
-.oauth-worker-relay-option[data-kind="default"] {
+.oauth-worker-default-note {
     border-color: color-mix(in srgb, var(--state-ok) 28%, var(--border));
     background: color-mix(in srgb, var(--state-ok) 5%, var(--surface-2));
 }
 
-.oauth-worker-relay-option[data-kind="self-host"] {
+.oauth-worker-self-host-target {
     border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
     background: color-mix(in srgb, var(--accent) 4%, var(--surface-2));
 }
 
-.oauth-worker-relay-option span:first-child {
+.oauth-worker-default-note span:first-child,
+.oauth-worker-self-host-target span:first-child {
     color: var(--text);
     font-weight: 700;
 }
 
-.oauth-worker-relay-option code {
+.oauth-worker-default-note code,
+.oauth-worker-self-host-target code {
     min-width: 0;
     color: var(--text);
     overflow-wrap: anywhere;
     white-space: normal;
 }
 
-.oauth-worker-relay-option span:last-child {
-    color: var(--text-muted);
-}
-
 .oauth-worker-steps {
     display: grid;
     gap: 7px;
-    grid-column: 1 / -1;
 }
 
 .oauth-worker-steps-title,
@@ -4698,7 +4694,6 @@ details.disclosure > .body {
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    grid-column: 1 / -1;
     padding-top: 6px;
     border-top: 1px solid var(--border);
 }
@@ -4711,8 +4706,8 @@ details.disclosure > .body {
 }
 
 .oauth-worker-script-code {
-    min-height: 360px;
-    max-height: min(64dvh, 620px);
+    min-width: 0;
+    min-height: 0;
     margin: 0;
     padding: var(--gap-4);
     overflow: auto;
@@ -5868,10 +5863,9 @@ details.oauth-form-section > summary {
 
     .oauth-worker-guide {
         grid-template-columns: 1fr;
-    }
-
-    .oauth-worker-relay-options {
-        grid-template-columns: 1fr;
+        max-height: none;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
     }
 
     .oauth-worker-summary,
@@ -5879,6 +5873,14 @@ details.oauth-form-section > summary {
     .oauth-worker-script-heading {
         grid-column: auto;
         grid-row: auto;
+    }
+
+    .oauth-worker-script-body {
+        grid-template-columns: 1fr;
+    }
+
+    .oauth-worker-script-code {
+        min-height: 360px;
     }
 
     .oauth-analytics-trend-meta {

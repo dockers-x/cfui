@@ -88,7 +88,7 @@
             helper.append(helperText, assistActions);
 
             const statusLine = relayStatusLine();
-            field.append(inputRow, sourceLine, helper);
+            field.append(inputRow, helper, sourceLine);
             if (statusLine) field.appendChild(statusLine);
             form.appendChild(field);
             form.addEventListener('submit', (event) => {

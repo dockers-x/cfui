@@ -2426,6 +2426,8 @@
         }
         const localCallback = $('oauth-local-callback-url');
         if (localCallback) {
+            const localCallbackItem = localCallback.closest('.oauth-config-item');
+            if (localCallbackItem) localCallbackItem.hidden = !status?.config?.configured;
             const callbackPath = status?.config?.local_callback_path || '/oauth/callback';
             localCallback.textContent = window.location.origin + callbackPath;
         }

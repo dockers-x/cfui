@@ -50,7 +50,7 @@ other = "复制中转回调 URL"
 other = "这个地址必须和 Cloudflare OAuth 客户端里的 Redirect callback URL 完全一致。"
 
 [oauth_relay_assist_text]
-other = "不想自建时点“使用提供域名”即可；需要自己的中转域名时再打开“自建说明”。"
+other = "Cloudflare OAuth 客户端的 Redirect callback URL 就填这里。"
 
 [oauth_relay_use_default]
 other = "使用提供域名"
@@ -59,7 +59,7 @@ other = "使用提供域名"
 other = "使用提供的默认 OAuth 中转域名"
 
 [oauth_relay_self_host]
-other = "自建说明"
+other = "自建"
 
 [oauth_relay_self_host_title]
 other = "查看自建 Cloudflare OAuth relay 的 Worker 脚本和部署步骤"
@@ -74,13 +74,13 @@ other = "自定义"
 other = "未保存"
 
 [oauth_relay_status_default]
-other = "当前使用提供的中转地址；Cloudflare OAuth 客户端 Redirect callback URL 也填这个地址。"
+other = "已保存：使用提供域名。"
 
 [oauth_relay_status_custom]
-other = "当前使用你保存的中转地址；Cloudflare OAuth 客户端 Redirect callback URL 必须填同一个地址。"
+other = "已保存：使用自定义中转域名。"
 
 [oauth_relay_status_unsaved]
-other = "当前输入还没有保存；保存后再填到 Cloudflare OAuth 客户端。"
+other = "未保存更改；保存后再填到 Cloudflare OAuth 客户端。"
 
 [oauth_local_callback]
 other = "本地回调"
@@ -914,7 +914,7 @@ other = "请先设置 CFUI_OAUTH_CLIENT_ID。"
 other = "OAuth 配置引导"
 
 [oauth_setup_subtitle]
-other = "先确认中转回调地址，再创建 Cloudflare OAuth 客户端，最后用 client ID 重启 cfui。"
+other = "先保存中转回调，再创建 Cloudflare OAuth 客户端，最后用 client ID 重启 cfui。"
 
 [oauth_setup_relay_title]
 other = "设置 OAuth 中转回调"
@@ -923,7 +923,7 @@ other = "设置 OAuth 中转回调"
 other = "上方输入框就是 Cloudflare OAuth 客户端要填写的 Redirect callback URL。"
 
 [oauth_setup_relay_input_note]
-other = "这里只处理一件事：把输入框里的 URL 作为 Cloudflare OAuth 客户端的 Redirect callback URL。点“使用提供域名”会填入并保存提供的中转地址；点“自建说明”会打开脚本和部署步骤。"
+other = "默认直接点“使用提供域名”。只有想用自己的域名做中转时，才点“自建”查看 Worker 脚本和部署步骤。"
 
 [oauth_setup_oauth_app_title]
 other = "填写 Cloudflare OAuth 客户端表单"
@@ -962,7 +962,7 @@ other = "None (PKCE)"
 other = "重定向回调 URL"
 
 [oauth_setup_redirect_uri_note]
-other = "这里只填 relay 的 HTTPS 回调地址，例如 https://oauth.omarchy.qzz.io/oauth/callback 或你的 https://oauth.example.com/oauth/callback。不要追加 cfui_callback_url。Cloudflare OAuth 会先回到 relay；relay 从 OAuth state 里读取 cfui 回调地址，再跳回当前 cfui 实例。"
+other = "这里只填上方输入框里的 HTTPS 中转回调地址，例如 https://oauth.omarchy.qzz.io/oauth/callback 或你的 https://oauth.example.com/oauth/callback。不要追加 cfui_callback_url。"
 
 [oauth_setup_client_url]
 other = "客户端 URL"
@@ -995,22 +995,22 @@ other = "在页面里查看完整 Worker 脚本"
 other = "Cloudflare OAuth Worker 脚本"
 
 [oauth_worker_script_dialog_subtitle]
-other = "可以直接使用提供的中转地址；只有想换成自己的域名时才需要部署这个脚本。"
+other = "默认不需要部署；只有想把中转地址换成自己的域名时才使用这个脚本。"
 
 [oauth_worker_self_host_summary]
-other = "选择一种中转回调地址：可以直接使用提供域名，也可以部署下面的 Worker 换成自己的域名。"
+other = "默认使用提供域名；只有需要自己的中转域名时才自建。"
 
 [oauth_worker_self_host_target_label]
 other = "自建后的回调 URL"
 
 [oauth_worker_self_host_target_hint]
-other = "把示例域名换成你的 Worker HTTPS 域名。Cloudflare OAuth 客户端和 cfui 输入框都必须使用同一个 URL。"
+other = "把示例域名换成你的 Worker HTTPS 域名，并在 Cloudflare 和 cfui 里使用同一个 URL。"
 
 [oauth_worker_default_relay_label]
-other = "提供的中转"
+other = "不用自建时"
 
 [oauth_worker_default_relay_desc]
-other = "不自建时，Cloudflare OAuth 客户端的 Redirect callback URL 和 cfui 输入框都填这个地址。"
+other = "Cloudflare 和 cfui 都填这个 URL。"
 
 [oauth_worker_self_host_relay_label]
 other = "自建中转"
@@ -1025,16 +1025,16 @@ other = "回调 URL 格式"
 other = "自建步骤"
 
 [oauth_worker_self_host_step_deploy]
-other = "在 Cloudflare Workers 创建 Worker，并粘贴下面完整脚本后部署。"
+other = "创建 Worker，粘贴脚本并部署。"
 
 [oauth_worker_self_host_step_callback]
-other = "把你的 Worker HTTPS 域名加 /oauth/callback 填到 Cloudflare OAuth 客户端的 Redirect callback URL。"
+other = "在 Cloudflare 注册你的 Worker /oauth/callback URL。"
 
 [oauth_worker_self_host_step_cfui]
-other = "把同一个 /oauth/callback 地址填回 cfui 的中转回调输入框并保存。"
+other = "把同一个 /oauth/callback URL 保存到 cfui。"
 
 [oauth_worker_self_host_step_allowlist]
-other = "如果这个 Worker 要服务公网 cfui 域名，在 Worker 变量里配置 CFUI_ALLOWED_CALLBACK_ORIGINS。"
+other = "服务公网 cfui 域名时设置 CFUI_ALLOWED_CALLBACK_ORIGINS。"
 
 [oauth_worker_script_loading]
 other = "正在加载 Worker 脚本..."
