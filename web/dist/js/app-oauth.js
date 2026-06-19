@@ -3459,7 +3459,7 @@
             }));
             actions.appendChild(smallButton(t('delete'), 'btn btn--sm btn--danger', (event) => deleteOAuthTunnelIngress(tunnelID, entry, event.currentTarget)));
         }
-        row.append(body, actions);
+        row.append(oauthTunnelIngressDragHandle(catchAll), body, actions);
         return row;
     }
 
@@ -3556,6 +3556,15 @@
         button.title = label;
         button.setAttribute('aria-label', label);
         return button;
+    }
+
+    function oauthTunnelIngressDragHandle(disabled = false) {
+        const handle = document.createElement('span');
+        handle.className = 'rule-drag-handle';
+        handle.title = disabled ? '' : t('tunnel_rule_reorder_handle');
+        handle.setAttribute('aria-hidden', 'true');
+        handle.innerHTML = '<svg viewBox="0 0 16 20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="4" r="1.4"></circle><circle cx="11" cy="4" r="1.4"></circle><circle cx="5" cy="10" r="1.4"></circle><circle cx="11" cy="10" r="1.4"></circle><circle cx="5" cy="16" r="1.4"></circle><circle cx="11" cy="16" r="1.4"></circle></svg>';
+        return handle;
     }
 
     function isOAuthTunnelCatchAllRule(entry, entries = []) {

@@ -367,6 +367,7 @@
                 row.draggable = true;
                 row.title = t('tunnel_rule_reorder_handle');
             }
+            const handle = tunnelRuleDragHandle(catchAll);
             const body = document.createElement('div'); body.className = 'body';
             const title = document.createElement('div'); title.className = 'title'; title.textContent = entry.hostname || t('catch_all_rule');
             const detail = document.createElement('div'); detail.className = 'detail';
@@ -381,7 +382,7 @@
             }
             const edit = document.createElement('button'); edit.className = 'btn btn--sm'; edit.type = 'button'; edit.textContent = t('edit'); edit.addEventListener('click', () => openTunnelEntryDialog(entry));
             const del = document.createElement('button'); del.className = 'btn btn--sm btn--ghost'; del.type = 'button'; del.textContent = t('delete'); del.addEventListener('click', () => confirmDeleteEntry(entry));
-            actions.append(edit, del); row.append(body, actions); list.appendChild(row);
+            actions.append(edit, del); row.append(handle, body, actions); list.appendChild(row);
         }
         bindTunnelRuleDragSort(list);
     }
@@ -402,6 +403,15 @@
         button.setAttribute('aria-label', label);
         button.addEventListener('click', onClick);
         return button;
+    }
+
+    function tunnelRuleDragHandle(disabled = false) {
+        const handle = document.createElement('span');
+        handle.className = 'rule-drag-handle';
+        handle.title = disabled ? '' : t('tunnel_rule_reorder_handle');
+        handle.setAttribute('aria-hidden', 'true');
+        handle.innerHTML = '<svg viewBox="0 0 16 20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="4" r="1.4"></circle><circle cx="11" cy="4" r="1.4"></circle><circle cx="5" cy="10" r="1.4"></circle><circle cx="11" cy="10" r="1.4"></circle><circle cx="5" cy="16" r="1.4"></circle><circle cx="11" cy="16" r="1.4"></circle></svg>';
+        return handle;
     }
 
     function bindTunnelRuleDragSort(list) {

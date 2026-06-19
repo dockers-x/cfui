@@ -1775,6 +1775,34 @@ details.disclosure > .body {
     background: var(--surface);
 }
 
+.rule-drag-handle {
+    display: inline-grid;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 32px;
+    place-items: center;
+    color: var(--text-subtle);
+    cursor: grab;
+}
+
+.rule-drag-handle svg {
+    width: 16px;
+    height: 20px;
+}
+
+.rule--draggable:hover .rule-drag-handle {
+    color: var(--text-muted);
+}
+
+.rule--draggable:active .rule-drag-handle {
+    cursor: grabbing;
+}
+
+.rule--fixed .rule-drag-handle {
+    visibility: hidden;
+    cursor: default;
+}
+
 .rule .body {
     flex: 1 1 auto;
     min-width: 0;
@@ -5289,7 +5317,7 @@ details.disclosure > .body {
 
 .oauth-ingress-rule {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 10px;
     align-items: center;
     min-height: 54px;
@@ -5575,6 +5603,15 @@ details.oauth-form-section > summary {
     .oauth-permission-row,
     .oauth-permission-header {
         grid-template-columns: 1fr;
+    }
+
+    .oauth-ingress-rule {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .oauth-ingress-rule .oauth-row-actions {
+        grid-column: 1 / -1;
+        padding-left: 30px;
     }
 
     .oauth-tail-line {
