@@ -4267,6 +4267,10 @@ details.disclosure > .body {
     overflow-wrap: anywhere;
 }
 
+.oauth-config-edit {
+    white-space: nowrap;
+}
+
 .oauth-config-hint {
     margin-top: 6px;
     color: var(--text-muted);
@@ -5300,6 +5304,7 @@ details.oauth-form-section > summary {
 
 @media (max-width: 760px) {
     .oauth-config-grid,
+    .oauth-config-value,
     .oauth-layout,
     .oauth-setup-code-row,
     .oauth-form-grid {

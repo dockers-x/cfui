@@ -34,6 +34,9 @@ other = "Relay callback"
 [oauth_relay_edit]
 other = "Edit relay callback"
 
+[oauth_relay_configure]
+other = "Set relay callback"
+
 [oauth_relay_required]
 other = "Enter a relay callback URL."
 

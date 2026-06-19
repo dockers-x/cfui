@@ -1975,13 +1975,17 @@
         text.className = 'oauth-config-text mono';
         text.textContent = configuredRelay;
         text.title = configuredRelay;
-        const edit = iconButton(t('oauth_relay_edit'), iconEditSVG(), () => {
-            state.oauth.relayEditing = true;
-            state.oauth.relayDraft = configuredRelay;
-            renderOAuthStatus(status);
-        }, 'oauth-config-edit');
+        const edit = smallButton(t('oauth_relay_configure'), 'btn btn--sm btn--ghost oauth-config-edit', () => openOAuthRelayEditor(status));
+        edit.title = t('oauth_relay_edit');
+        edit.setAttribute('aria-label', t('oauth_relay_edit'));
         wrapper.append(text, edit);
         return wrapper;
+    }
+
+    function openOAuthRelayEditor(status) {
+        state.oauth.relayEditing = true;
+        state.oauth.relayDraft = status?.config?.relay_callback_url || '';
+        renderOAuthStatus(status);
     }
 
     function setOAuthStatus(kind, text) {
@@ -2033,7 +2037,11 @@
                     setupGuideCodeRow(t('oauth_setup_response_type'), t('oauth_setup_response_type_value'), { copy: false }),
                     setupGuideCodeRow(t('oauth_setup_grant_type'), t('oauth_setup_grant_type_value'), { copy: false }),
                     setupGuideCodeRow(t('oauth_setup_token_auth_method'), t('oauth_setup_token_auth_method_value'), { copy: false }),
-                    setupGuideCodeRow(t('oauth_setup_redirect_uri'), relayURL),
+                    setupGuideCodeRow(t('oauth_setup_redirect_uri'), relayURL, {
+                        actionLabel: t('oauth_relay_configure'),
+                        actionTitle: t('oauth_relay_edit'),
+                        action: () => openOAuthRelayEditor(status),
+                    }),
                     setupGuideNote(t('oauth_setup_redirect_uri_note')),
                     setupGuideCodeRow(t('oauth_setup_client_url'), t('oauth_setup_client_url_value'), { copy: false }),
                 ]
@@ -2103,6 +2111,15 @@
         code.className = 'oauth-setup-code mono';
         code.textContent = value || '';
         row.append(label, code);
+        if (options.action && options.actionLabel) {
+            const action = smallButton(options.actionLabel, 'btn btn--sm btn--ghost', options.action);
+            if (options.actionTitle) {
+                action.title = options.actionTitle;
+                action.setAttribute('aria-label', options.actionTitle);
+            }
+            row.appendChild(action);
+            return row;
+        }
         if (options.copy !== false) {
             const copy = smallButton(t('copy'), 'btn btn--sm btn--ghost', () => copyOAuthText(value || ''));
             row.appendChild(copy);

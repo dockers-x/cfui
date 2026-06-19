@@ -34,6 +34,9 @@ other = "中转回调"
 [oauth_relay_edit]
 other = "编辑中转回调"
 
+[oauth_relay_configure]
+other = "设置中转回调"
+
 [oauth_relay_required]
 other = "请输入中转回调 URL。"
 

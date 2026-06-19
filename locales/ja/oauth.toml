@@ -34,6 +34,9 @@ other = "Relay callback"
 [oauth_relay_edit]
 other = "Relay callback を編集"
 
+[oauth_relay_configure]
+other = "Relay callback を設定"
+
 [oauth_relay_required]
 other = "Relay callback URL を入力してください。"
 
