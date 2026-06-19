@@ -1064,6 +1064,8 @@ func (s *Server) handleCFR2Objects(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		r.URL.Query().Get("account_id"),
 		r.URL.Query().Get("bucket"),
+		r.URL.Query().Get("prefix"),
+		r.URL.Query().Get("delimiter"),
 		r.URL.Query().Get("cursor"),
 		limit,
 	)

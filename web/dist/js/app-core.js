@@ -112,6 +112,8 @@
             r2Objects: [],
             r2ObjectsError: '',
             r2Cursor: '',
+            r2Prefix: '',
+            r2Delimited: [],
             r2ObjectValue: null,
             r2ObjectValueError: '',
             r2ObjectFilter: '',

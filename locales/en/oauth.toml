@@ -2032,6 +2032,18 @@ other = "Search key, content type, class, size..."
 [oauth_r2_object_search_count]
 other = "{n}/{m} loaded objects"
 
+[oauth_r2_prefix_root]
+other = "Root"
+
+[oauth_r2_prefix_root_meta]
+other = "Showing root prefix"
+
+[oauth_r2_prefix_current]
+other = "Current prefix: {prefix}"
+
+[oauth_r2_prefix_meta]
+other = "Folder"
+
 [oauth_r2_load_more_objects]
 other = "Load more objects"
 

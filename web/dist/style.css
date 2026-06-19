@@ -5138,6 +5138,49 @@ details.disclosure > .body {
     white-space: nowrap;
 }
 
+.oauth-r2-prefix-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    min-width: 0;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+}
+
+.oauth-r2-prefix-crumb {
+    min-height: 30px;
+    padding-inline: 8px;
+}
+
+.oauth-r2-prefix-separator {
+    color: var(--text-subtle);
+}
+
+.oauth-r2-prefix-meta {
+    min-width: 0;
+    margin-left: 4px;
+    overflow-wrap: anywhere;
+}
+
+.oauth-row--folder {
+    border-style: dashed;
+    background: color-mix(in srgb, var(--state-info) 4%, var(--surface));
+    cursor: pointer;
+}
+
+.oauth-row--folder .oauth-row-title::before {
+    content: "";
+    display: inline-flex;
+    width: 12px;
+    height: 9px;
+    margin-right: 8px;
+    border: 1.5px solid color-mix(in srgb, var(--state-info) 70%, var(--border));
+    border-top-width: 4px;
+    border-radius: 3px;
+    vertical-align: -1px;
+}
+
 @media (max-width: 560px) {
     .oauth-filter-bar {
         grid-template-columns: 1fr;

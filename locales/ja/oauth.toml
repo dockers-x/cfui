@@ -2032,6 +2032,18 @@ other = "key、Content-Type、クラス、サイズを検索..."
 [oauth_r2_object_search_count]
 other = "{n}/{m} 件の読み込み済みオブジェクト"
 
+[oauth_r2_prefix_root]
+other = "ルート"
+
+[oauth_r2_prefix_root_meta]
+other = "ルート prefix を表示中"
+
+[oauth_r2_prefix_current]
+other = "現在の prefix: {prefix}"
+
+[oauth_r2_prefix_meta]
+other = "フォルダー"
+
 [oauth_r2_load_more_objects]
 other = "さらにオブジェクトを読み込む"
 

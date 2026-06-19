@@ -1062,12 +1062,17 @@
             bucket: bucketName,
             limit: '100',
         });
+        const prefix = String(state.oauth.r2Prefix || '').trim();
+        if (prefix) params.set('prefix', prefix);
+        params.set('delimiter', '/');
         if (append && state.oauth.r2Cursor) params.set('cursor', state.oauth.r2Cursor);
         try {
             const resp = await apiGet('/cf/r2/objects?' + params.toString());
             const objects = Array.isArray(resp.data) ? resp.data : [];
             state.oauth.r2Objects = append ? state.oauth.r2Objects.concat(objects) : objects;
             state.oauth.r2Cursor = resp.cursor || '';
+            const delimited = Array.isArray(resp.delimited) ? resp.delimited.map(normalizeR2DelimitedPrefix) : [];
+            state.oauth.r2Delimited = append ? uniqueR2Prefixes(state.oauth.r2Delimited.concat(delimited)) : uniqueR2Prefixes(delimited);
             state.oauth.r2ObjectsError = '';
             state.oauth.r2Session = resp.session || state.oauth.r2Session;
             state.oauth.r2Capabilities = resp.capabilities || state.oauth.r2Capabilities;
@@ -1363,6 +1368,9 @@
                 delete_source: move,
             });
             state.oauth.selectedR2BucketName = destinationBucket;
+            state.oauth.r2Prefix = r2ParentPrefixFromKey(destinationKey);
+            state.oauth.r2Delimited = [];
+            state.oauth.r2Cursor = '';
             state.oauth.selectedR2ObjectKey = destinationKey;
             state.oauth.r2ObjectCreateOpen = false;
             state.oauth.r2ObjectValue = null;
@@ -5198,6 +5206,8 @@
                     state.oauth.selectedR2ObjectKey = '';
                     state.oauth.r2Objects = [];
                     state.oauth.r2Cursor = '';
+                    state.oauth.r2Prefix = '';
+                    state.oauth.r2Delimited = [];
                     state.oauth.r2ObjectValue = null;
                     state.oauth.r2ObjectFilter = '';
                     state.oauth.r2ObjectCreateOpen = false;
@@ -5441,6 +5451,8 @@
                 metrics_error: state.oauth.r2MetricsError || '',
                 objects_loaded: state.oauth.r2Objects.length,
                 objects_filtered: filtered.length,
+                object_prefix: state.oauth.r2Prefix || '',
+                object_prefixes_loaded: state.oauth.r2Delimited.length,
                 objects_has_more: !!state.oauth.r2Cursor,
                 objects_error: state.oauth.r2ObjectsError || '',
                 object_loaded: !!selectedObject,
@@ -5458,8 +5470,11 @@
             metrics: metrics ? r2MetricsDiagnostics(metrics) : null,
             buckets: state.oauth.r2Buckets.map(r2BucketDiagnostics),
             objects: {
+                prefix: state.oauth.r2Prefix || '',
+                delimiter: '/',
                 loaded_count: state.oauth.r2Objects.length,
                 filtered_count: filtered.length,
+                prefixes: state.oauth.r2Delimited.map(r2PrefixDiagnostics),
                 has_more: !!state.oauth.r2Cursor,
                 cursor_present: !!state.oauth.r2Cursor,
                 items: filtered.map(r2ObjectListDiagnostics),
@@ -5486,6 +5501,13 @@
             last_modified: object?.last_modified || '',
             storage_class: object?.storage_class || '',
             content_type: object?.http_metadata?.contentType || '',
+        };
+    }
+
+    function r2PrefixDiagnostics(prefix) {
+        return {
+            prefix: prefix || '',
+            name: r2PrefixLabel(prefix),
         };
     }
 
@@ -5818,7 +5840,7 @@
                     renderOAuthResource();
                 },
             }));
-            if (state.oauth.r2ObjectCreateOpen) body.appendChild(r2ObjectFormNode('', '', 'text/plain; charset=utf-8', true));
+            if (state.oauth.r2ObjectCreateOpen) body.appendChild(r2ObjectFormNode(state.oauth.r2Prefix || '', '', 'text/plain; charset=utf-8', true));
             body.appendChild(r2ObjectUploadFormNode());
         } else {
             body.appendChild(empty(t('oauth_r2_objects_readonly')));
@@ -5830,15 +5852,25 @@
         heading.className = 'oauth-section-title';
         heading.textContent = t('oauth_r2_objects');
         section.appendChild(heading);
+        section.appendChild(r2PrefixNavigationNode());
         section.appendChild(r2ObjectFilterNode());
         const filteredObjects = filteredR2Objects();
+        const filteredPrefixes = filteredR2Prefixes();
         if (state.oauth.r2ObjectsError) {
             section.appendChild(empty(state.oauth.r2ObjectsError));
-        } else if (!state.oauth.r2Objects.length) {
+        } else if (!state.oauth.r2Objects.length && !state.oauth.r2Delimited.length) {
             section.appendChild(empty(t('oauth_r2_no_objects')));
-        } else if (!filteredObjects.length) {
+        } else if (!filteredObjects.length && !filteredPrefixes.length) {
             section.appendChild(empty(t('oauth_r2_no_object_matches')));
         } else {
+            for (const prefix of filteredPrefixes) {
+                const row = rowNode(r2PrefixLabel(prefix), t('oauth_r2_prefix_meta'), []);
+                row.classList.add('oauth-row--folder');
+                row.addEventListener('click', async () => {
+                    await openR2Prefix(prefix);
+                });
+                section.appendChild(row);
+            }
             for (const object of filteredObjects) {
                 const meta = [
                     object.size == null ? '' : formatBytes(object.size),
@@ -9414,7 +9446,7 @@
 
         const grid = document.createElement('div');
         grid.className = 'oauth-form-grid oauth-form-grid--r2';
-        const keyInput = textInput('', 'text');
+        const keyInput = textInput(state.oauth.r2Prefix || '', 'text');
         keyInput.maxLength = 1024;
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
@@ -10028,6 +10060,88 @@
         return wrap;
     }
 
+    function r2PrefixNavigationNode() {
+        const wrap = document.createElement('div');
+        wrap.className = 'oauth-r2-prefix-nav';
+        const currentPrefix = String(state.oauth.r2Prefix || '');
+        const crumbs = r2PrefixCrumbs(currentPrefix);
+        const root = smallButton(t('oauth_r2_prefix_root'), 'btn btn--sm btn--ghost oauth-r2-prefix-crumb', async () => {
+            await openR2Prefix('');
+        });
+        root.disabled = !currentPrefix;
+        wrap.appendChild(root);
+        for (const crumb of crumbs) {
+            const sep = document.createElement('span');
+            sep.className = 'oauth-r2-prefix-separator';
+            sep.textContent = '/';
+            wrap.appendChild(sep);
+            const button = smallButton(crumb.name, 'btn btn--sm btn--ghost oauth-r2-prefix-crumb', async () => {
+                await openR2Prefix(crumb.prefix);
+            });
+            button.disabled = crumb.prefix === currentPrefix;
+            wrap.appendChild(button);
+        }
+        const meta = document.createElement('span');
+        meta.className = 'oauth-r2-prefix-meta';
+        meta.textContent = currentPrefix
+            ? t('oauth_r2_prefix_current', { prefix: currentPrefix })
+            : t('oauth_r2_prefix_root_meta');
+        wrap.appendChild(meta);
+        return wrap;
+    }
+
+    function r2PrefixCrumbs(prefix) {
+        const clean = String(prefix || '').replace(/^\/+/, '').replace(/\/+$/, '');
+        if (!clean) return [];
+        const parts = clean.split('/').filter(Boolean);
+        const crumbs = [];
+        let current = '';
+        for (const part of parts) {
+            current += `${part}/`;
+            crumbs.push({ name: part, prefix: current });
+        }
+        return crumbs;
+    }
+
+    async function openR2Prefix(prefix) {
+        state.oauth.r2Prefix = String(prefix || '').replace(/^\/+/, '');
+        state.oauth.selectedR2ObjectKey = '';
+        state.oauth.r2ObjectValue = null;
+        state.oauth.r2ObjectValueError = '';
+        state.oauth.r2ObjectCreateOpen = false;
+        state.oauth.r2Objects = [];
+        state.oauth.r2Delimited = [];
+        state.oauth.r2Cursor = '';
+        await loadR2Objects(state.oauth.selectedR2BucketName);
+        renderOAuthResource();
+    }
+
+    function r2PrefixLabel(prefix) {
+        const current = String(state.oauth.r2Prefix || '');
+        let value = String(prefix || '');
+        if (current && value.startsWith(current)) value = value.slice(current.length);
+        value = value.replace(/\/+$/, '');
+        const parts = value.split('/').filter(Boolean);
+        return parts[parts.length - 1] || prefix || t('oauth_r2_prefix_root');
+    }
+
+    function r2ParentPrefixFromKey(key) {
+        const value = String(key || '').replace(/^\/+/, '');
+        const index = value.lastIndexOf('/');
+        return index >= 0 ? value.slice(0, index + 1) : '';
+    }
+
+    function normalizeR2DelimitedPrefix(prefix) {
+        const current = String(state.oauth.r2Prefix || '').replace(/^\/+/, '');
+        const value = String(prefix || '').replace(/^\/+/, '');
+        if (!current || value.startsWith(current)) return value;
+        return current + value;
+    }
+
+    function uniqueR2Prefixes(prefixes) {
+        return Array.from(new Set((prefixes || []).map((prefix) => String(prefix || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+    }
+
     function selectedZoneName() {
         const zone = state.oauth.zones.find((item) => item.id === state.oauth.selectedZoneId);
         return zone?.name || state.oauth.selectedZoneId || '';
@@ -10062,6 +10176,12 @@
         const query = normalizeFilterText(state.oauth.r2ObjectFilter);
         if (!query) return state.oauth.r2Objects;
         return state.oauth.r2Objects.filter((object) => r2ObjectSearchText(object).includes(query));
+    }
+
+    function filteredR2Prefixes() {
+        const query = normalizeFilterText(state.oauth.r2ObjectFilter);
+        if (!query) return state.oauth.r2Delimited;
+        return state.oauth.r2Delimited.filter((prefix) => normalizeFilterText([prefix, r2PrefixLabel(prefix)].join(' ')).includes(query));
     }
 
     function r2ObjectSearchText(object) {
@@ -10308,6 +10428,8 @@
         state.oauth.r2Objects = [];
         state.oauth.r2ObjectsError = '';
         state.oauth.r2Cursor = '';
+        state.oauth.r2Prefix = '';
+        state.oauth.r2Delimited = [];
         state.oauth.r2ObjectValue = null;
         state.oauth.r2ObjectValueError = '';
         state.oauth.r2ObjectFilter = '';

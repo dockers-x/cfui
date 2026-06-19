@@ -590,6 +590,8 @@ type R2HTTPMetadata struct {
 
 type R2ObjectsResponse struct {
 	Data         []R2Object               `json:"data"`
+	Prefix       string                   `json:"prefix,omitempty"`
+	Delimited    []string                 `json:"delimited,omitempty"`
 	Cursor       string                   `json:"cursor,omitempty"`
 	Session      cfoauth.SessionSummary   `json:"session"`
 	Capabilities cfoauth.CapabilityMatrix `json:"capabilities"`
@@ -2388,7 +2390,7 @@ func (s *Service) r2Metrics(ctx context.Context, accessToken, accountID string) 
 	return metrics, nil
 }
 
-func (s *Service) R2Objects(ctx context.Context, accountID, bucketName, cursor string, limit int) (R2ObjectsResponse, error) {
+func (s *Service) R2Objects(ctx context.Context, accountID, bucketName, prefix, delimiter, cursor string, limit int) (R2ObjectsResponse, error) {
 	token, session, err := s.auth.CurrentAccessToken(ctx)
 	if err != nil {
 		return R2ObjectsResponse{}, err
@@ -2402,6 +2404,14 @@ func (s *Service) R2Objects(ctx context.Context, accountID, bucketName, cursor s
 	}
 	query := url.Values{}
 	query.Set("per_page", strconv.Itoa(limit))
+	prefix = strings.TrimSpace(prefix)
+	if prefix != "" {
+		query.Set("prefix", prefix)
+	}
+	delimiter = strings.TrimSpace(delimiter)
+	if delimiter != "" {
+		query.Set("delimiter", delimiter)
+	}
 	if strings.TrimSpace(cursor) != "" {
 		query.Set("cursor", strings.TrimSpace(cursor))
 	}
@@ -2412,8 +2422,12 @@ func (s *Service) R2Objects(ctx context.Context, accountID, bucketName, cursor s
 	}
 	resp := R2ObjectsResponse{
 		Data:         objects,
+		Prefix:       prefix,
 		Session:      session,
 		Capabilities: session.Capabilities,
+	}
+	if info != nil && len(info.Delimited) > 0 {
+		resp.Delimited = append([]string(nil), info.Delimited...)
 	}
 	if info != nil && info.IsTruncated {
 		resp.Cursor = info.Cursor
@@ -6429,11 +6443,12 @@ func (s *Service) graphQL(ctx context.Context, accessToken, query string, variab
 }
 
 type cfResultInfo struct {
-	Count       int    `json:"count"`
-	TotalCount  int    `json:"total_count"`
-	TotalPages  int    `json:"total_pages"`
-	Cursor      string `json:"cursor"`
-	IsTruncated bool   `json:"is_truncated"`
+	Count       int      `json:"count"`
+	TotalCount  int      `json:"total_count"`
+	TotalPages  int      `json:"total_pages"`
+	Cursor      string   `json:"cursor"`
+	IsTruncated bool     `json:"is_truncated"`
+	Delimited   []string `json:"delimited"`
 }
 
 func cfResultCount(info *cfResultInfo, fallback int) int {

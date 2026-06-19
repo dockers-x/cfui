@@ -2032,6 +2032,18 @@ other = "搜索 key、Content-Type、存储类型、大小..."
 [oauth_r2_object_search_count]
 other = "已加载对象 {n}/{m}"
 
+[oauth_r2_prefix_root]
+other = "根目录"
+
+[oauth_r2_prefix_root_meta]
+other = "当前显示根目录"
+
+[oauth_r2_prefix_current]
+other = "当前前缀：{prefix}"
+
+[oauth_r2_prefix_meta]
+other = "目录"
+
 [oauth_r2_load_more_objects]
 other = "加载更多对象"
 

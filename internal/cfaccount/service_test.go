@@ -2085,6 +2085,62 @@ func TestR2MetricsRequiresAccountID(t *testing.T) {
 	}
 }
 
+func TestR2ObjectsSupportsPrefixAndDelimiter(t *testing.T) {
+	ctx := context.Background()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/client/v4/accounts/account-1/r2/buckets/bucket-one/objects", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		if r.Method != http.MethodGet {
+			t.Fatalf("method = %s, want GET", r.Method)
+		}
+		query := r.URL.Query()
+		if got := query.Get("prefix"); got != "images/" {
+			t.Fatalf("prefix = %q, want images/", got)
+		}
+		if got := query.Get("delimiter"); got != "/" {
+			t.Fatalf("delimiter = %q, want /", got)
+		}
+		if got := query.Get("cursor"); got != "cursor-1" {
+			t.Fatalf("cursor = %q, want cursor-1", got)
+		}
+		if got := query.Get("per_page"); got != "250" {
+			t.Fatalf("per_page = %q, want 250", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"success": true,
+			"result": [{"key":"images/logo.png","size":42}],
+			"result_info": {
+				"is_truncated": true,
+				"cursor": "cursor-2",
+				"delimited": ["images/raw/"]
+			}
+		}`))
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	svc := NewServiceWithEndpoints(testOAuthServiceWithScopes(t, "workers-r2.read"), EndpointOverrides{
+		REST: server.URL + "/client/v4",
+	})
+	resp, err := svc.R2Objects(ctx, "account-1", "bucket-one", "images/", "/", "cursor-1", 250)
+	if err != nil {
+		t.Fatalf("R2Objects: %v", err)
+	}
+	if resp.Prefix != "images/" || resp.Cursor != "cursor-2" {
+		t.Fatalf("unexpected prefix/cursor: %#v", resp)
+	}
+	if len(resp.Delimited) != 1 || resp.Delimited[0] != "images/raw/" {
+		t.Fatalf("unexpected delimited prefixes: %#v", resp.Delimited)
+	}
+	if len(resp.Data) != 1 || resp.Data[0].Key != "images/logo.png" {
+		t.Fatalf("unexpected objects: %#v", resp.Data)
+	}
+	if resp.Session.ID != "session-1" || !resp.Capabilities["r2"].Read {
+		t.Fatalf("unexpected session/capabilities: session=%#v capabilities=%#v", resp.Session, resp.Capabilities)
+	}
+}
+
 func TestR2ObjectValueIncludesBinaryPreview(t *testing.T) {
 	ctx := context.Background()
 	payload := []byte{0x00, 0x01, 0x02, 'A', '~', '\n', 0xff, ' '}
