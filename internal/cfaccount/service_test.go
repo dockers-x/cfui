@@ -280,6 +280,59 @@ func TestD1TableHelpers(t *testing.T) {
 	}
 }
 
+func TestD1DatabaseLifecycleUsesCloudflareSDK(t *testing.T) {
+	ctx := context.Background()
+	mux := http.NewServeMux()
+	createdAt := "2026-06-18T09:00:00Z"
+	mux.HandleFunc("/client/v4/accounts/account-1/d1/database", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		switch r.Method {
+		case http.MethodPost:
+			var req cloudflare.CreateD1DatabaseParams
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("decode create d1 request: %v", err)
+			}
+			if req.Name != "prod-db" {
+				t.Fatalf("create d1 name = %q, want prod-db", req.Name)
+			}
+			writeCFEnvelope(w, `{"uuid":"database-1","name":"prod-db","num_tables":0,"file_size":0,"version":"alpha","created_at":"`+createdAt+`"}`, nil)
+		default:
+			t.Fatalf("unexpected d1 collection method = %s", r.Method)
+		}
+	})
+	mux.HandleFunc("/client/v4/accounts/account-1/d1/database/database-1", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		if r.Method != http.MethodDelete {
+			t.Fatalf("d1 delete method = %s, want DELETE", r.Method)
+		}
+		writeCFEnvelope(w, `{}`, nil)
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	svc := NewService(testOAuthServiceWithScopes(t, "d1.read d1.write"))
+	svc.restEndpoint = server.URL + "/client/v4"
+
+	created, err := svc.CreateD1Database(ctx, "account-1", D1DatabaseCreateRequest{Name: " prod-db "})
+	if err != nil {
+		t.Fatalf("CreateD1Database: %v", err)
+	}
+	if created.Database.UUID != "database-1" || created.Database.Name != "prod-db" || created.Session.ID != "session-1" {
+		t.Fatalf("unexpected created d1 response: %#v", created)
+	}
+	if created.Database.CreatedAt == nil || created.Database.CreatedAt.Format(time.RFC3339) != createdAt {
+		t.Fatalf("unexpected created_at: %v", created.Database.CreatedAt)
+	}
+
+	deleted, err := svc.DeleteD1Database(ctx, "account-1", "database-1")
+	if err != nil {
+		t.Fatalf("DeleteD1Database: %v", err)
+	}
+	if deleted.Database.UUID != "database-1" || deleted.Session.ID != "session-1" {
+		t.Fatalf("unexpected delete d1 response: %#v", deleted)
+	}
+}
+
 func TestSplitStatusComponents(t *testing.T) {
 	components := []StatusPageComponent{
 		{ID: "services", Name: "Cloudflare Sites and Services", Status: "degraded_performance", Group: true},

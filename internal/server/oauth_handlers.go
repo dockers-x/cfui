@@ -1210,16 +1210,25 @@ func isInlineR2PreviewContentType(contentType string) bool {
 }
 
 func (s *Server) handleCFD1Databases(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
+		resp, err := s.ensureCFService().D1Databases(r.Context(), r.URL.Query().Get("account_id"))
+		writeCFResponse(w, resp, err)
+	case http.MethodPost:
+		var req cfaccount.D1DatabaseCreateRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		resp, err := s.ensureCFService().CreateD1Database(r.Context(), r.URL.Query().Get("account_id"), req)
+		writeCFResponse(w, resp, err)
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
 	}
-	resp, err := s.ensureCFService().D1Databases(r.Context(), r.URL.Query().Get("account_id"))
-	writeCFResponse(w, resp, err)
 }
 
 func (s *Server) handleCFD1Database(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodGet && r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -1237,7 +1246,12 @@ func (s *Server) handleCFD1Database(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, fmt.Errorf("database_id is required"))
 		return
 	}
-	resp, err := s.ensureCFService().D1Database(r.Context(), r.URL.Query().Get("account_id"), databaseID)
+	var resp cfaccount.D1DatabaseDetailResponse
+	if r.Method == http.MethodDelete {
+		resp, err = s.ensureCFService().DeleteD1Database(r.Context(), r.URL.Query().Get("account_id"), databaseID)
+	} else {
+		resp, err = s.ensureCFService().D1Database(r.Context(), r.URL.Query().Get("account_id"), databaseID)
+	}
 	writeCFResponse(w, resp, err)
 }
 

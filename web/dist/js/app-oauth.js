@@ -729,6 +729,75 @@
         }
     }
 
+    async function createD1Database(payload, button) {
+        if (!state.oauth.selectedAccountId || !canWrite('d1')) return;
+        try {
+            setBusy(button, true, t('creating'));
+            const account = encodeURIComponent(state.oauth.selectedAccountId);
+            const resp = await apiSend('/cf/d1/databases?account_id=' + account, 'POST', payload);
+            state.oauth.d1CreateOpen = false;
+            await loadD1Databases();
+            if (resp?.database?.uuid) {
+                const created = resp.database;
+                state.oauth.selectedD1DatabaseId = created.uuid;
+                state.oauth.storageView = 'd1';
+                state.oauth.selectedD1TableName = '';
+                state.oauth.d1Tables = [];
+                state.oauth.d1TablesDatabaseId = '';
+                state.oauth.d1TableColumns = [];
+                state.oauth.d1TableRows = [];
+                state.oauth.d1EditingRow = null;
+                state.oauth.d1Results = [];
+                await loadD1Tables(created.uuid);
+            }
+            renderOAuthResource();
+            toast.ok(t('oauth_d1_database_created'));
+        } catch (err) {
+            toast.err(err.message);
+        } finally {
+            setBusy(button, false);
+        }
+    }
+
+    async function deleteD1Database(database, button) {
+        const databaseID = String(database?.uuid || '').trim();
+        if (!state.oauth.selectedAccountId || !databaseID || !canWrite('d1')) return;
+        const name = database.name || databaseID;
+        const ok = await window.cfui.confirm({
+            title: t('oauth_d1_delete_database_title'),
+            message: t('oauth_d1_delete_database_message', { name }),
+            okText: t('delete'),
+        });
+        if (!ok) return;
+        try {
+            setBusy(button, true, t('delete'));
+            const account = encodeURIComponent(state.oauth.selectedAccountId);
+            await apiSend('/cf/d1/databases/' + encodeURIComponent(databaseID) + '?account_id=' + account, 'DELETE');
+            if (state.oauth.selectedD1DatabaseId === databaseID) resetD1DetailSelection();
+            await loadD1Databases();
+            renderOAuthResource();
+            toast.ok(t('oauth_d1_database_deleted'));
+        } catch (err) {
+            toast.err(err.message);
+        } finally {
+            setBusy(button, false);
+        }
+    }
+
+    function resetD1DetailSelection() {
+        state.oauth.storageView = '';
+        state.oauth.selectedD1DatabaseId = '';
+        state.oauth.selectedD1TableName = '';
+        state.oauth.d1Tables = [];
+        state.oauth.d1TablesDatabaseId = '';
+        state.oauth.d1TableColumns = [];
+        state.oauth.d1TableRows = [];
+        state.oauth.d1TableOffset = 0;
+        state.oauth.d1TableHasMore = false;
+        state.oauth.d1EditingRow = null;
+        state.oauth.d1Results = [];
+    }
+
     async function loadR2Metrics() {
         if (!state.oauth.selectedAccountId || !canRead('r2')) return;
         state.oauth.r2Metrics = null;
@@ -1942,6 +2011,11 @@
             const callbackPath = status?.config?.local_callback_path || '/oauth/callback';
             localCallback.textContent = window.location.origin + callbackPath;
         }
+        const workerScript = $('oauth-worker-script-url');
+        if (workerScript) {
+            workerScript.innerHTML = '';
+            workerScript.appendChild(oauthWorkerScriptNode());
+        }
         const login = $('oauth-login');
         const logout = $('oauth-logout');
         if (login) {
@@ -2023,6 +2097,32 @@
         return wrapper;
     }
 
+    function oauthWorkerScriptURL() {
+        return window.location.origin + '/cloudflare-oauth-worker.js';
+    }
+
+    function oauthWorkerScriptNode() {
+        const scriptURL = oauthWorkerScriptURL();
+        const wrapper = document.createElement('div');
+        wrapper.className = 'oauth-config-value';
+        const text = document.createElement('span');
+        text.className = 'oauth-config-text mono';
+        text.textContent = scriptURL;
+        text.title = scriptURL;
+        const actions = document.createElement('div');
+        actions.className = 'oauth-config-actions';
+        actions.append(
+            smallButton(t('open'), 'btn btn--sm btn--ghost', () => openOAuthWorkerScript()),
+            smallButton(t('copy'), 'btn btn--sm btn--ghost', () => copyOAuthText(scriptURL)),
+        );
+        wrapper.append(text, actions);
+        return wrapper;
+    }
+
+    function openOAuthWorkerScript() {
+        window.open('/cloudflare-oauth-worker.js', '_blank', 'noopener');
+    }
+
     function openOAuthRelayEditor(status) {
         state.oauth.relayEditing = true;
         state.oauth.relayDraft = status?.config?.relay_callback_url || '';
@@ -2048,7 +2148,7 @@
         const callbackPath = status?.config?.local_callback_path || '/oauth/callback';
         const relayURL = status?.config?.relay_callback_url || '';
         const localCallbackURL = window.location.origin + callbackPath;
-        const workerScriptURL = window.location.origin + '/cloudflare-oauth-worker.js';
+        const workerScriptURL = oauthWorkerScriptURL();
         const minimumScopeList = oauthMinimumSetupScopes.join(' ');
         const fullConsoleScopeList = oauthFullConsoleSetupScopes.join(' ');
         const envSnippet = [
@@ -2104,7 +2204,11 @@
                 t('oauth_setup_worker_title'),
                 t('oauth_setup_worker_desc'),
                 [
-                    setupGuideCodeRow(t('oauth_setup_worker_script'), workerScriptURL),
+                    setupGuideCodeRow(t('oauth_setup_worker_script'), workerScriptURL, {
+                        actions: [
+                            { label: t('open'), title: t('oauth_setup_worker_open'), action: openOAuthWorkerScript },
+                        ],
+                    }),
                     setupGuideCodeRow(t('oauth_setup_worker_deploy_path'), t('oauth_setup_worker_deploy_path_value'), { copy: false }),
                     setupGuideCodeRow(t('oauth_setup_worker_callback_var'), `CFUI_CALLBACK_URL=${localCallbackURL}`),
                     setupGuideCodeRow(t('oauth_setup_worker_allowlist_var'), `CFUI_ALLOWED_CALLBACK_ORIGINS=${window.location.origin}`),
@@ -2161,10 +2265,23 @@
             row.appendChild(action);
             return row;
         }
+        const actions = document.createElement('div');
+        actions.className = 'oauth-config-actions';
+        if (Array.isArray(options.actions)) {
+            for (const item of options.actions) {
+                const action = smallButton(item.label, 'btn btn--sm btn--ghost', item.action);
+                if (item.title) {
+                    action.title = item.title;
+                    action.setAttribute('aria-label', item.title);
+                }
+                actions.appendChild(action);
+            }
+        }
         if (options.copy !== false) {
             const copy = smallButton(t('copy'), 'btn btn--sm btn--ghost', () => copyOAuthText(value || ''));
-            row.appendChild(copy);
+            actions.appendChild(copy);
         }
+        if (actions.childElementCount) row.appendChild(actions);
         return row;
     }
 
@@ -3589,9 +3706,23 @@
             }, t('oauth_no_r2_buckets'));
         }
         if (canRead('d1')) {
+            if (canWrite('d1')) {
+                body.appendChild(resourceActionBar(t('oauth_d1_databases'), {
+                    text: state.oauth.d1CreateOpen ? t('cancel') : t('oauth_d1_create_database'),
+                    className: state.oauth.d1CreateOpen ? 'btn btn--sm btn--ghost' : 'btn btn--sm',
+                    onClick: () => {
+                        state.oauth.d1CreateOpen = !state.oauth.d1CreateOpen;
+                        renderOAuthResource();
+                    },
+                }));
+                if (state.oauth.d1CreateOpen) body.appendChild(d1DatabaseFormNode());
+            }
             rendered += renderSection(body, t('oauth_d1_databases'), state.oauth.d1Databases, (database) => {
                 const meta = [`${database.num_tables || 0} ${t('oauth_tables')}`, formatBytes(database.file_size || 0)].join(' · ');
-                const row = rowNode(database.name || database.uuid, meta);
+                const actions = canWrite('d1') ? [
+                    smallButton(t('delete'), 'btn btn--sm btn--danger', (event) => deleteD1Database(database, event.currentTarget)),
+                ] : [];
+                const row = rowNode(database.name || database.uuid, meta, actions);
                 row.addEventListener('click', async () => {
                     state.oauth.storageView = 'd1';
                     state.oauth.selectedD1DatabaseId = database.uuid;
@@ -5899,6 +6030,47 @@
         return form;
     }
 
+    function d1DatabaseFormNode() {
+        const form = document.createElement('form');
+        form.className = 'oauth-form';
+        const title = document.createElement('h4');
+        title.className = 'oauth-section-title';
+        title.textContent = t('oauth_d1_create_database');
+        form.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'oauth-form-grid oauth-form-grid--d1-row';
+        const nameInput = textInput('', 'text');
+        nameInput.required = true;
+        nameInput.maxLength = 512;
+        nameInput.placeholder = t('oauth_d1_database_name_placeholder');
+        grid.appendChild(formField(t('oauth_d1_database_name'), nameInput));
+        form.appendChild(grid);
+
+        const hint = document.createElement('div');
+        hint.className = 'oauth-row-meta';
+        hint.textContent = t('oauth_d1_create_database_hint');
+        form.appendChild(hint);
+
+        const actions = document.createElement('div');
+        actions.className = 'oauth-form-actions';
+        actions.appendChild(smallButton(t('cancel'), 'btn btn--sm btn--ghost', () => {
+            state.oauth.d1CreateOpen = false;
+            renderOAuthResource();
+        }));
+        const submitBtn = smallButton(t('oauth_d1_create_database'), 'btn btn--sm btn--primary');
+        submitBtn.type = 'submit';
+        actions.appendChild(submitBtn);
+        form.appendChild(actions);
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            createD1Database({ name: nameInput.value.trim() }, submitBtn);
+        });
+        requestAnimationFrame(() => nameInput.focus());
+        return form;
+    }
+
     function r2ObjectFormNode(key, value, contentType, creating) {
         const form = document.createElement('form');
         form.className = 'oauth-form';
@@ -6757,6 +6929,7 @@
         state.oauth.storageView = '';
         state.oauth.r2CreateOpen = false;
         state.oauth.r2ObjectCreateOpen = false;
+        state.oauth.d1CreateOpen = false;
         state.oauth.selectedR2BucketName = '';
         state.oauth.selectedR2ObjectKey = '';
         state.oauth.r2Objects = [];

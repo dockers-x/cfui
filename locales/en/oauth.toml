@@ -838,6 +838,12 @@ other = "The Worker decodes the cfui callback from OAuth state and forwards Clou
 [oauth_setup_worker_script]
 other = "Built-in Worker file"
 
+[oauth_worker_script_entry]
+other = "Worker script"
+
+[oauth_setup_worker_open]
+other = "Open full Worker script"
+
 [oauth_setup_worker_deploy_path]
 other = "Cloudflare Worker deploy path"
 
@@ -962,7 +968,7 @@ other = "Manage zone-level Snippets and trigger rules."
 other = "Browse R2 buckets and manage bucket objects."
 
 [oauth_permission_d1_desc]
-other = "Browse D1 databases and run SQL queries."
+other = "Browse D1 databases, create/delete databases, and run SQL queries."
 
 [oauth_permission_kv_desc]
 other = "Browse KV namespaces and edit UTF-8 key values."
@@ -1803,6 +1809,30 @@ other = "Delete object {key}? This cannot be undone."
 
 [oauth_d1_databases]
 other = "D1 databases"
+
+[oauth_d1_create_database]
+other = "Create database"
+
+[oauth_d1_database_name]
+other = "Database name"
+
+[oauth_d1_database_name_placeholder]
+other = "prod-db"
+
+[oauth_d1_create_database_hint]
+other = "Creates a Cloudflare D1 database in the selected account."
+
+[oauth_d1_database_created]
+other = "D1 database created."
+
+[oauth_d1_database_deleted]
+other = "D1 database deleted."
+
+[oauth_d1_delete_database_title]
+other = "Delete D1 database"
+
+[oauth_d1_delete_database_message]
+other = "Delete D1 database {name}? This cannot be undone."
 
 [oauth_d1_database_detail]
 other = "Database detail"

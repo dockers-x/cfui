@@ -577,6 +577,10 @@ type D1Database struct {
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 }
 
+type D1DatabaseCreateRequest struct {
+	Name string `json:"name"`
+}
+
 type D1DatabaseDetailResponse struct {
 	Database     D1Database               `json:"database"`
 	Session      cfoauth.SessionSummary   `json:"session"`
@@ -2342,6 +2346,33 @@ func (s *Service) D1Databases(ctx context.Context, accountID string) (ListRespon
 	return ListResponse[D1Database]{Data: data, Session: session, Capabilities: session.Capabilities}, nil
 }
 
+func (s *Service) CreateD1Database(ctx context.Context, accountID string, req D1DatabaseCreateRequest) (D1DatabaseDetailResponse, error) {
+	client, session, err := s.currentClient(ctx)
+	if err != nil {
+		return D1DatabaseDetailResponse{}, err
+	}
+	accountID = strings.TrimSpace(accountID)
+	if accountID == "" {
+		return D1DatabaseDetailResponse{}, validationError("account_id is required")
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return D1DatabaseDetailResponse{}, validationError("database name is required")
+	}
+	if len(name) > maxD1IdentifierLen {
+		return D1DatabaseDetailResponse{}, validationError("database name is too long")
+	}
+	database, err := client.CreateD1Database(ctx, cloudflare.AccountIdentifier(accountID), cloudflare.CreateD1DatabaseParams{Name: name})
+	if err != nil {
+		return D1DatabaseDetailResponse{}, err
+	}
+	return D1DatabaseDetailResponse{
+		Database:     mapD1Database(database),
+		Session:      session,
+		Capabilities: session.Capabilities,
+	}, nil
+}
+
 func (s *Service) D1Database(ctx context.Context, accountID, databaseID string) (D1DatabaseDetailResponse, error) {
 	client, session, err := s.currentClient(ctx)
 	if err != nil {
@@ -2357,6 +2388,25 @@ func (s *Service) D1Database(ctx context.Context, accountID, databaseID string) 
 	}
 	return D1DatabaseDetailResponse{
 		Database:     mapD1Database(database),
+		Session:      session,
+		Capabilities: session.Capabilities,
+	}, nil
+}
+
+func (s *Service) DeleteD1Database(ctx context.Context, accountID, databaseID string) (D1DatabaseDetailResponse, error) {
+	client, session, err := s.currentClient(ctx)
+	if err != nil {
+		return D1DatabaseDetailResponse{}, err
+	}
+	accountID, databaseID, err = normalizeD1Target(accountID, databaseID)
+	if err != nil {
+		return D1DatabaseDetailResponse{}, err
+	}
+	if err := client.DeleteD1Database(ctx, cloudflare.AccountIdentifier(accountID), databaseID); err != nil {
+		return D1DatabaseDetailResponse{}, err
+	}
+	return D1DatabaseDetailResponse{
+		Database:     D1Database{UUID: databaseID},
 		Session:      session,
 		Capabilities: session.Capabilities,
 	}, nil

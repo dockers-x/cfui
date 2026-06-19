@@ -4239,7 +4239,7 @@ details.disclosure > .body {
 
 .oauth-config-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 12px;
     margin-top: 16px;
 }
@@ -4268,6 +4268,13 @@ details.disclosure > .body {
 }
 
 .oauth-config-edit {
+    white-space: nowrap;
+}
+
+.oauth-config-actions {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
     white-space: nowrap;
 }
 

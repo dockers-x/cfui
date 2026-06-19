@@ -838,6 +838,12 @@ other = "Worker 会从 OAuth state 里解析 cfui 回调地址，并把 Cloudfla
 [oauth_setup_worker_script]
 other = "内置 Worker 文件"
 
+[oauth_worker_script_entry]
+other = "Worker 脚本"
+
+[oauth_setup_worker_open]
+other = "打开完整 Worker 脚本"
+
 [oauth_setup_worker_deploy_path]
 other = "Cloudflare Worker 部署路径"
 
@@ -962,7 +968,7 @@ other = "管理 Zone 级 Snippets 和触发规则。"
 other = "浏览 R2 bucket 并管理 bucket 对象。"
 
 [oauth_permission_d1_desc]
-other = "浏览 D1 数据库并执行 SQL 查询。"
+other = "浏览 D1 数据库、创建/删除数据库并执行 SQL 查询。"
 
 [oauth_permission_kv_desc]
 other = "浏览 KV namespace 并编辑 UTF-8 key value。"
@@ -1803,6 +1809,30 @@ other = "删除对象 {key}？此操作不可撤销。"
 
 [oauth_d1_databases]
 other = "D1 数据库"
+
+[oauth_d1_create_database]
+other = "创建数据库"
+
+[oauth_d1_database_name]
+other = "数据库名称"
+
+[oauth_d1_database_name_placeholder]
+other = "prod-db"
+
+[oauth_d1_create_database_hint]
+other = "在当前选中的 Cloudflare 账号下创建一个 D1 数据库。"
+
+[oauth_d1_database_created]
+other = "D1 数据库已创建。"
+
+[oauth_d1_database_deleted]
+other = "D1 数据库已删除。"
+
+[oauth_d1_delete_database_title]
+other = "删除 D1 数据库"
+
+[oauth_d1_delete_database_message]
+other = "删除 D1 数据库 {name}？此操作不可撤销。"
 
 [oauth_d1_database_detail]
 other = "数据库详情"

@@ -133,6 +133,7 @@
             storageView: '',
             r2CreateOpen: false,
             r2ObjectCreateOpen: false,
+            d1CreateOpen: false,
             kvCreateOpen: false,
             tunnelCreateOpen: false,
             snippetCreateOpen: false,
