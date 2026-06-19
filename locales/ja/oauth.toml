@@ -2038,6 +2038,12 @@ other = "D1 databases"
 [oauth_d1_create_database]
 other = "データベースを作成"
 
+[oauth_d1_copy_diagnostics]
+other = "診断をコピー"
+
+[oauth_d1_copy_diagnostics_title]
+other = "現在の D1 データベース、テーブルブラウザー、クエリ状態の診断をコピーします。OAuth token、SQL テキスト、SQL パラメータ、クエリ結果行、テーブル行データは含まれません。"
+
 [oauth_d1_database_name]
 other = "データベース名"
 

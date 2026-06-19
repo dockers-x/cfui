@@ -692,20 +692,40 @@
     async function loadD1Databases() {
         if (!state.oauth.selectedAccountId || !canRead('d1')) return;
         const account = encodeURIComponent(state.oauth.selectedAccountId);
-        const resp = await apiGet('/cf/d1/databases?account_id=' + account);
-        const databases = Array.isArray(resp.data) ? resp.data : [];
-        state.oauth.d1Databases = databases;
-        if (!databases.length) return;
+        let databases = [];
+        try {
+            const resp = await apiGet('/cf/d1/databases?account_id=' + account);
+            databases = Array.isArray(resp.data) ? resp.data : [];
+            state.oauth.d1Databases = databases;
+            state.oauth.d1Session = resp.session || state.oauth.d1Session || null;
+            state.oauth.d1Capabilities = resp.capabilities || state.oauth.d1Capabilities || null;
+            state.oauth.d1DatabasesError = '';
+        } catch (err) {
+            state.oauth.d1Databases = [];
+            state.oauth.d1DatabasesError = err.message || String(err);
+            return;
+        }
+        if (!databases.length) {
+            state.oauth.d1DetailsError = '';
+            return;
+        }
 
         const detailResults = await Promise.allSettled(databases
             .filter((database) => database.uuid)
             .map((database) => apiGet(`/cf/d1/databases/${encodeURIComponent(database.uuid)}?account_id=${account}`)));
         const details = new Map();
+        const detailErrors = [];
         for (const result of detailResults) {
-            if (result.status !== 'fulfilled') continue;
+            if (result.status !== 'fulfilled') {
+                detailErrors.push(result.reason?.message || String(result.reason || ''));
+                continue;
+            }
+            state.oauth.d1Session = result.value?.session || state.oauth.d1Session || null;
+            state.oauth.d1Capabilities = result.value?.capabilities || state.oauth.d1Capabilities || null;
             const database = result.value?.database;
             if (database?.uuid) details.set(database.uuid, database);
         }
+        state.oauth.d1DetailsError = detailErrors.filter(Boolean).join('; ');
         if (details.size) {
             state.oauth.d1Databases = databases.map((database) => details.get(database.uuid) || database);
         }
@@ -726,6 +746,8 @@
             setBusy(button, true, t('creating'));
             const account = encodeURIComponent(state.oauth.selectedAccountId);
             const resp = await apiSend('/cf/d1/databases?account_id=' + account, 'POST', payload);
+            state.oauth.d1Session = resp.session || state.oauth.d1Session || null;
+            state.oauth.d1Capabilities = resp.capabilities || state.oauth.d1Capabilities || null;
             state.oauth.d1CreateOpen = false;
             await loadD1Databases();
             if (resp?.database?.uuid) {
@@ -735,10 +757,13 @@
                 state.oauth.selectedD1TableName = '';
                 state.oauth.d1Tables = [];
                 state.oauth.d1TablesDatabaseId = '';
+                state.oauth.d1TablesError = '';
                 state.oauth.d1TableColumns = [];
                 state.oauth.d1TableRows = [];
+                state.oauth.d1TableRowsError = '';
                 state.oauth.d1EditingRow = null;
                 state.oauth.d1Results = [];
+                state.oauth.d1QueryError = '';
                 await loadD1Tables(created.uuid);
             }
             renderOAuthResource();
@@ -763,7 +788,9 @@
         try {
             setBusy(button, true, t('delete'));
             const account = encodeURIComponent(state.oauth.selectedAccountId);
-            await apiSend('/cf/d1/databases/' + encodeURIComponent(databaseID) + '?account_id=' + account, 'DELETE');
+            const resp = await apiSend('/cf/d1/databases/' + encodeURIComponent(databaseID) + '?account_id=' + account, 'DELETE');
+            state.oauth.d1Session = resp.session || state.oauth.d1Session || null;
+            state.oauth.d1Capabilities = resp.capabilities || state.oauth.d1Capabilities || null;
             if (state.oauth.selectedD1DatabaseId === databaseID) resetD1DetailSelection();
             await loadD1Databases();
             renderOAuthResource();
@@ -781,12 +808,15 @@
         state.oauth.selectedD1TableName = '';
         state.oauth.d1Tables = [];
         state.oauth.d1TablesDatabaseId = '';
+        state.oauth.d1TablesError = '';
         state.oauth.d1TableColumns = [];
         state.oauth.d1TableRows = [];
+        state.oauth.d1TableRowsError = '';
         state.oauth.d1TableOffset = 0;
         state.oauth.d1TableHasMore = false;
         state.oauth.d1EditingRow = null;
         state.oauth.d1Results = [];
+        state.oauth.d1QueryError = '';
     }
 
     async function loadR2Metrics() {
@@ -1538,8 +1568,13 @@
         try {
             const resp = await apiSend('/cf/d1/query?' + params.toString(), 'POST', { sql });
             state.oauth.d1Results = Array.isArray(resp.data) ? resp.data : [];
+            state.oauth.d1Session = resp.session || state.oauth.d1Session || null;
+            state.oauth.d1Capabilities = resp.capabilities || state.oauth.d1Capabilities || null;
+            state.oauth.d1QueryError = '';
             toast.ok(t('oauth_d1_query_done'));
         } catch (err) {
+            state.oauth.d1Results = [];
+            state.oauth.d1QueryError = err.message || String(err);
             toast.err(err.message);
         } finally {
             setBusy(button, false);
@@ -1557,7 +1592,13 @@
             const resp = await apiGet('/cf/d1/tables?' + params.toString());
             state.oauth.d1Tables = Array.isArray(resp.data) ? resp.data : [];
             state.oauth.d1TablesDatabaseId = databaseId;
+            state.oauth.d1Session = resp.session || state.oauth.d1Session || null;
+            state.oauth.d1Capabilities = resp.capabilities || state.oauth.d1Capabilities || null;
+            state.oauth.d1TablesError = '';
         } catch (err) {
+            state.oauth.d1Tables = [];
+            state.oauth.d1TablesDatabaseId = databaseId;
+            state.oauth.d1TablesError = err.message || String(err);
             toast.err(err.message);
         }
     }
@@ -1573,6 +1614,7 @@
             offset: String(offset),
         });
         try {
+            state.oauth.selectedD1TableName = tableName;
             const resp = await apiGet('/cf/d1/table?' + params.toString());
             state.oauth.selectedD1TableName = resp.table || tableName;
             state.oauth.d1TableColumns = Array.isArray(resp.columns) ? resp.columns : [];
@@ -1582,7 +1624,18 @@
             state.oauth.d1TableHasMore = !!resp.has_more;
             state.oauth.d1RowIDKey = resp.rowid_key || '_cfui_rowid_';
             state.oauth.d1EditingRow = null;
+            state.oauth.d1Session = resp.session || state.oauth.d1Session || null;
+            state.oauth.d1Capabilities = resp.capabilities || state.oauth.d1Capabilities || null;
+            state.oauth.d1TableRowsError = '';
         } catch (err) {
+            state.oauth.selectedD1TableName = tableName;
+            if (!append) {
+                state.oauth.d1TableColumns = [];
+                state.oauth.d1TableRows = [];
+                state.oauth.d1TableOffset = 0;
+                state.oauth.d1TableHasMore = false;
+            }
+            state.oauth.d1TableRowsError = err.message || String(err);
             toast.err(err.message);
         }
     }
@@ -1598,10 +1651,14 @@
             table: state.oauth.selectedD1TableName,
         });
         try {
-            await apiSend('/cf/d1/table?' + params.toString(), 'PATCH', { rowid: String(rowid), changes });
+            const resp = await apiSend('/cf/d1/table?' + params.toString(), 'PATCH', { rowid: String(rowid), changes });
+            state.oauth.d1Session = resp.session || state.oauth.d1Session || null;
+            state.oauth.d1Capabilities = resp.capabilities || state.oauth.d1Capabilities || null;
             await loadD1TableRows(state.oauth.selectedD1TableName);
+            state.oauth.d1TableRowsError = '';
             toast.ok(t('oauth_d1_row_saved'));
         } catch (err) {
+            state.oauth.d1TableRowsError = err.message || String(err);
             toast.err(err.message);
         } finally {
             setBusy(button, false);
@@ -1623,10 +1680,14 @@
             table: state.oauth.selectedD1TableName,
         });
         try {
-            await apiSend('/cf/d1/table?' + params.toString(), 'DELETE', { rowid: String(rowid) });
+            const resp = await apiSend('/cf/d1/table?' + params.toString(), 'DELETE', { rowid: String(rowid) });
+            state.oauth.d1Session = resp.session || state.oauth.d1Session || null;
+            state.oauth.d1Capabilities = resp.capabilities || state.oauth.d1Capabilities || null;
             await loadD1TableRows(state.oauth.selectedD1TableName);
+            state.oauth.d1TableRowsError = '';
             toast.ok(t('oauth_d1_row_deleted'));
         } catch (err) {
+            state.oauth.d1TableRowsError = err.message || String(err);
             toast.err(err.message);
         }
     }
@@ -4397,8 +4458,9 @@
             }, t('oauth_no_r2_buckets'));
         }
         if (canRead('d1')) {
+            const d1Actions = [];
             if (canWrite('d1')) {
-                body.appendChild(resourceActionBar(t('oauth_d1_databases'), {
+                d1Actions.push({
                     text: state.oauth.d1CreateOpen ? t('cancel') : t('oauth_d1_create_database'),
                     className: state.oauth.d1CreateOpen ? 'btn btn--sm btn--ghost' : 'btn btn--sm',
                     onClick: () => {
@@ -4410,31 +4472,47 @@
                         }
                         renderOAuthResource();
                     },
-                }));
-                if (state.oauth.d1CreateOpen) body.appendChild(d1DatabaseFormNode());
-            }
-            rendered += renderSection(body, t('oauth_d1_databases'), state.oauth.d1Databases, (database) => {
-                const meta = [`${database.num_tables || 0} ${t('oauth_tables')}`, formatBytes(database.file_size || 0)].join(' · ');
-                const actions = canWrite('d1') ? [
-                    smallButton(t('delete'), 'btn btn--sm btn--danger', (event) => deleteD1Database(database, event.currentTarget)),
-                ] : [];
-                const row = rowNode(database.name || database.uuid, meta, actions);
-                row.addEventListener('click', async () => {
-                    state.oauth.storageView = 'd1';
-                    state.oauth.selectedD1DatabaseId = database.uuid;
-                    state.oauth.selectedD1TableName = '';
-                    state.oauth.d1Tables = [];
-                    state.oauth.d1TablesDatabaseId = '';
-                    state.oauth.d1TableColumns = [];
-                    state.oauth.d1TableRows = [];
-                    state.oauth.d1EditingRow = null;
-                    state.oauth.d1Results = [];
-                    state.oauth.d1Sql = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name;";
-                    await loadD1Tables(database.uuid);
-                    renderOAuthResource();
                 });
-                return row;
-            }, t('oauth_no_d1_databases'));
+            }
+            d1Actions.push({
+                text: t('oauth_d1_copy_diagnostics'),
+                className: 'btn btn--sm btn--ghost',
+                title: t('oauth_d1_copy_diagnostics_title'),
+                onClick: () => copyOAuthText(d1DiagnosticsText()),
+            });
+            body.appendChild(resourceActionBar(t('oauth_d1_databases'), d1Actions));
+            if (canWrite('d1') && state.oauth.d1CreateOpen) body.appendChild(d1DatabaseFormNode());
+            if (state.oauth.d1DatabasesError) {
+                body.appendChild(empty(state.oauth.d1DatabasesError));
+                rendered += 1;
+            } else {
+                if (state.oauth.d1DetailsError) body.appendChild(empty(state.oauth.d1DetailsError));
+                rendered += renderSection(body, t('oauth_d1_databases'), state.oauth.d1Databases, (database) => {
+                    const meta = [`${database.num_tables || 0} ${t('oauth_tables')}`, formatBytes(database.file_size || 0)].join(' · ');
+                    const actions = canWrite('d1') ? [
+                        smallButton(t('delete'), 'btn btn--sm btn--danger', (event) => deleteD1Database(database, event.currentTarget)),
+                    ] : [];
+                    const row = rowNode(database.name || database.uuid, meta, actions);
+                    row.addEventListener('click', async () => {
+                        state.oauth.storageView = 'd1';
+                        state.oauth.selectedD1DatabaseId = database.uuid;
+                        state.oauth.selectedD1TableName = '';
+                        state.oauth.d1Tables = [];
+                        state.oauth.d1TablesDatabaseId = '';
+                        state.oauth.d1TablesError = '';
+                        state.oauth.d1TableColumns = [];
+                        state.oauth.d1TableRows = [];
+                        state.oauth.d1TableRowsError = '';
+                        state.oauth.d1EditingRow = null;
+                        state.oauth.d1Results = [];
+                        state.oauth.d1QueryError = '';
+                        state.oauth.d1Sql = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name;";
+                        await loadD1Tables(database.uuid);
+                        renderOAuthResource();
+                    });
+                    return row;
+                }, t('oauth_no_d1_databases'));
+            }
         }
         if (canRead('kv')) {
             const kvActions = [];
@@ -4705,6 +4783,144 @@
             chunk_index: Number(progress.chunkIndex || 0),
             total_chunks: Number(progress.totalChunks || 0),
             mode: progress.mode || '',
+        };
+    }
+
+    function d1DiagnosticsText() {
+        const status = state.oauth.status || {};
+        const session = state.oauth.d1Session || status.current || {};
+        const database = selectedD1Database();
+        return JSON.stringify({
+            type: 'cfui_oauth_d1_diagnostics',
+            version: 1,
+            generated_at: new Date().toISOString(),
+            browser_origin: window.location.origin,
+            browser_path: window.location.pathname,
+            contains_oauth_token: false,
+            contains_refresh_token: false,
+            contains_sql_text: false,
+            contains_sql_parameters: false,
+            contains_query_rows: false,
+            contains_table_rows: false,
+            contains_editing_row_values: false,
+            sensitive_fields_omitted: [
+                'oauth_access_token',
+                'oauth_refresh_token',
+                'd1_sql_text',
+                'd1_sql_parameters',
+                'd1_query_result_rows',
+                'd1_table_row_values',
+                'd1_editing_row_values',
+            ],
+            selected: {
+                account_id: state.oauth.selectedAccountId || '',
+                account_name: selectedAccountName(),
+                database_id: state.oauth.selectedD1DatabaseId || '',
+                database_name: database?.name || '',
+                table: state.oauth.selectedD1TableName || '',
+                storage_view: state.oauth.storageView || '',
+            },
+            identity: {
+                label: session.label || '',
+                expires_at: session.expires_at || '',
+                scopes: Array.isArray(session.scopes) ? session.scopes : [],
+            },
+            capability: {
+                d1_read: canRead('d1'),
+                d1_write: canWrite('d1'),
+            },
+            state: {
+                database_count: state.oauth.d1Databases.length,
+                databases_error: state.oauth.d1DatabasesError || '',
+                detail_error: state.oauth.d1DetailsError || '',
+                tables_loaded: state.oauth.d1Tables.length,
+                tables_database_id: state.oauth.d1TablesDatabaseId || '',
+                tables_error: state.oauth.d1TablesError || '',
+                table_rows_loaded: state.oauth.d1TableRows.length,
+                table_rows_error: state.oauth.d1TableRowsError || '',
+                table_has_more: !!state.oauth.d1TableHasMore,
+                query_result_count: state.oauth.d1Results.length,
+                query_error: state.oauth.d1QueryError || '',
+                query_text_included: false,
+                query_text_length: String(state.oauth.d1Sql || '').length,
+                editing_row_active: !!state.oauth.d1EditingRow,
+                editing_row_values_included: false,
+                create_database_open: !!state.oauth.d1CreateOpen,
+                scope_ready: canRead('d1'),
+            },
+            pagination: {
+                limit: Number(state.oauth.d1TableLimit || 0),
+                offset: Number(state.oauth.d1TableOffset || 0),
+                has_more: !!state.oauth.d1TableHasMore,
+            },
+            databases: state.oauth.d1Databases.map(d1DatabaseDiagnostics),
+            tables: {
+                loaded_count: state.oauth.d1Tables.length,
+                names: state.oauth.d1Tables.slice(),
+            },
+            selected_table: state.oauth.selectedD1TableName ? d1SelectedTableDiagnostics() : null,
+            query_results: state.oauth.d1Results.map(d1QueryResultDiagnostics),
+            capabilities: oauthCapabilityDiagnostics(state.oauth.d1Capabilities || status.capabilities || {}),
+        }, null, 2);
+    }
+
+    function d1DatabaseDiagnostics(database) {
+        return {
+            uuid: database?.uuid || '',
+            name: database?.name || '',
+            version: database?.version || '',
+            num_tables: Number(database?.num_tables || 0),
+            file_size: Number(database?.file_size || 0),
+            created_at: database?.created_at || '',
+        };
+    }
+
+    function d1SelectedTableDiagnostics() {
+        return {
+            name: state.oauth.selectedD1TableName || '',
+            columns: state.oauth.d1TableColumns.map(d1ColumnDiagnostics),
+            row_count_loaded: state.oauth.d1TableRows.length,
+            row_values_included: false,
+            rowid_key: state.oauth.d1RowIDKey || '',
+            limit: Number(state.oauth.d1TableLimit || 0),
+            offset: Number(state.oauth.d1TableOffset || 0),
+            has_more: !!state.oauth.d1TableHasMore,
+        };
+    }
+
+    function d1ColumnDiagnostics(column) {
+        return {
+            name: column?.name || '',
+            type: column?.type || '',
+            not_null: !!column?.not_null,
+            primary_key: !!column?.primary_key,
+        };
+    }
+
+    function d1QueryResultDiagnostics(result) {
+        const rows = Array.isArray(result?.results) ? result.results : [];
+        return {
+            success: result?.success ?? null,
+            row_count: rows.length,
+            row_values_included: false,
+            columns: d1ResultColumnNames(rows),
+            meta: d1ResultMetaDiagnostics(result?.meta || {}),
+        };
+    }
+
+    function d1ResultColumnNames(rows) {
+        const columns = new Set();
+        for (const row of rows) Object.keys(row || {}).forEach((key) => columns.add(key));
+        return Array.from(columns).sort();
+    }
+
+    function d1ResultMetaDiagnostics(meta) {
+        return {
+            duration: meta.duration == null ? null : Number(meta.duration),
+            rows_read: meta.rows_read == null ? null : Number(meta.rows_read),
+            rows_written: meta.rows_written == null ? null : Number(meta.rows_written),
+            changes: meta.changes == null ? null : Number(meta.changes),
+            changed_db: meta.changed_db == null ? null : !!meta.changed_db,
         };
     }
 
@@ -5035,7 +5251,12 @@
             body.appendChild(empty(t('oauth_select_account')));
             return;
         }
-        body.appendChild(storageBackHeader(database.name || database.uuid, database.uuid));
+        body.appendChild(storageBackHeader(database.name || database.uuid, database.uuid, [{
+            text: t('oauth_d1_copy_diagnostics'),
+            className: 'btn btn--sm btn--ghost',
+            title: t('oauth_d1_copy_diagnostics_title'),
+            onClick: () => copyOAuthText(d1DiagnosticsText()),
+        }]));
         body.appendChild(d1DatabaseInfoNode(database));
         if (!canWrite('d1')) body.appendChild(empty(t('oauth_d1_readonly_warning')));
 
@@ -5077,7 +5298,9 @@
         heading.className = 'oauth-section-title';
         heading.textContent = t('oauth_d1_results');
         resultSection.appendChild(heading);
-        if (!state.oauth.d1Results.length) {
+        if (state.oauth.d1QueryError) {
+            resultSection.appendChild(empty(state.oauth.d1QueryError));
+        } else if (!state.oauth.d1Results.length) {
             resultSection.appendChild(empty(t('oauth_d1_no_results')));
         } else {
             state.oauth.d1Results.forEach((result, index) => {
@@ -5121,6 +5344,10 @@
             }));
             return section;
         }
+        if (state.oauth.d1TablesError) {
+            section.appendChild(empty(state.oauth.d1TablesError));
+            return section;
+        }
         if (!state.oauth.d1Tables.length) {
             section.appendChild(empty(t('oauth_d1_no_tables')));
             return section;
@@ -5159,6 +5386,10 @@
         }
         section.appendChild(header);
 
+        if (state.oauth.d1TableRowsError) {
+            section.appendChild(empty(state.oauth.d1TableRowsError));
+            return section;
+        }
         if (!state.oauth.d1TableRows.length) {
             section.appendChild(empty(t('oauth_d1_empty_table')));
             return section;
@@ -8501,6 +8732,10 @@
         state.oauth.r2Session = null;
         state.oauth.r2Capabilities = null;
         state.oauth.d1Databases = [];
+        state.oauth.d1Session = null;
+        state.oauth.d1Capabilities = null;
+        state.oauth.d1DatabasesError = '';
+        state.oauth.d1DetailsError = '';
         state.oauth.kvNamespaces = [];
         state.oauth.kvSession = null;
         state.oauth.kvCapabilities = null;
@@ -8552,12 +8787,15 @@
         state.oauth.selectedD1TableName = '';
         state.oauth.d1Tables = [];
         state.oauth.d1TablesDatabaseId = '';
+        state.oauth.d1TablesError = '';
         state.oauth.d1TableColumns = [];
         state.oauth.d1TableRows = [];
+        state.oauth.d1TableRowsError = '';
         state.oauth.d1TableOffset = 0;
         state.oauth.d1TableHasMore = false;
         state.oauth.d1EditingRow = null;
         state.oauth.d1Results = [];
+        state.oauth.d1QueryError = '';
     }
 
     function resetKVDetailSelection() {

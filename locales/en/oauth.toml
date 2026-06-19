@@ -2038,6 +2038,12 @@ other = "D1 databases"
 [oauth_d1_create_database]
 other = "Create database"
 
+[oauth_d1_copy_diagnostics]
+other = "Copy diagnostics"
+
+[oauth_d1_copy_diagnostics_title]
+other = "Copy current D1 database, table browser, and query-state diagnostics. OAuth tokens, SQL text, SQL parameters, query result rows, and table row data are not included."
+
 [oauth_d1_database_name]
 other = "Database name"
 

@@ -2038,6 +2038,12 @@ other = "D1 数据库"
 [oauth_d1_create_database]
 other = "创建数据库"
 
+[oauth_d1_copy_diagnostics]
+other = "复制诊断"
+
+[oauth_d1_copy_diagnostics_title]
+other = "复制当前 D1 数据库、表浏览和查询状态诊断。OAuth token、SQL 文本、SQL 参数、查询结果行和表格行数据不会包含在内。"
+
 [oauth_d1_database_name]
 other = "数据库名称"
 
