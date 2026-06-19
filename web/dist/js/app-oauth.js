@@ -207,14 +207,20 @@
     }
 
     async function loadOAuthAccounts() {
+        state.oauth.accountsError = '';
         try {
             const resp = await apiGet('/cf/accounts');
             state.oauth.accounts = Array.isArray(resp.data) ? resp.data : [];
+            state.oauth.accountsSession = resp.session || state.oauth.accountsSession || null;
+            state.oauth.accountsCapabilities = resp.capabilities || state.oauth.accountsCapabilities || null;
             if (!state.oauth.selectedAccountId && state.oauth.accounts.length) {
                 state.oauth.selectedAccountId = state.oauth.accounts[0].id;
             }
             renderOAuthAccounts();
         } catch (err) {
+            state.oauth.accounts = [];
+            state.oauth.accountsError = err.message || String(err);
+            renderOAuthAccounts();
             renderOAuthError(err.message);
         }
     }
@@ -2945,12 +2951,71 @@
         }
     }
 
+    function accountsDiagnosticsText() {
+        const status = state.oauth.status || {};
+        const session = state.oauth.accountsSession || status.current || {};
+        const sessions = Array.isArray(status.sessions) ? status.sessions : [];
+        return JSON.stringify({
+            type: 'cfui_oauth_accounts_diagnostics',
+            version: 1,
+            generated_at: new Date().toISOString(),
+            browser_origin: window.location.origin,
+            browser_path: window.location.pathname,
+            contains_oauth_token: false,
+            contains_refresh_token: false,
+            sensitive_fields_omitted: [
+                'oauth_access_token',
+                'oauth_refresh_token',
+            ],
+            oauth_configured: !!status.config?.configured,
+            logged_in: !!status.logged_in,
+            selected: {
+                account_id: state.oauth.selectedAccountId || '',
+                account_name: selectedAccountName(),
+                zone_id: state.oauth.selectedZoneId || '',
+                zone_name: selectedZoneName(),
+                resource: state.oauth.resource || '',
+            },
+            identity: {
+                label: session.label || '',
+                expires_at: session.expires_at || '',
+                scopes: Array.isArray(session.scopes) ? session.scopes : [],
+            },
+            identity_sessions: sessions.map((item) => ({
+                label: item?.label || '',
+                current: !!item?.current,
+                expires_at: item?.expires_at || '',
+                scope_count: Array.isArray(item?.scopes) ? item.scopes.length : 0,
+            })),
+            state: {
+                accounts_loaded: state.oauth.accounts.length,
+                accounts_error: state.oauth.accountsError || '',
+                scope_ready: canRead('accounts'),
+            },
+            accounts: state.oauth.accounts.map(accountDiagnostics),
+            capabilities: oauthCapabilityDiagnostics(state.oauth.accountsCapabilities || status.capabilities || {}),
+        }, null, 2);
+    }
+
+    function accountDiagnostics(account) {
+        return {
+            id: account?.id || '',
+            name: account?.name || '',
+            type: account?.type || '',
+            selected: account?.id === state.oauth.selectedAccountId,
+        };
+    }
+
     function renderOAuthAccounts() {
         const list = $('oauth-account-list');
         if (!list) return;
         list.innerHTML = '';
         if (!state.oauth.status?.logged_in) {
             list.appendChild(empty(t('oauth_login_required')));
+            return;
+        }
+        if (state.oauth.accountsError) {
+            list.appendChild(empty(state.oauth.accountsError));
             return;
         }
         if (!state.oauth.accounts.length) {
@@ -9491,6 +9556,9 @@
     function resetOAuthResourceState({ keepStatus = false } = {}) {
         const status = state.oauth.status;
         state.oauth.accounts = [];
+        state.oauth.accountsSession = null;
+        state.oauth.accountsCapabilities = null;
+        state.oauth.accountsError = '';
         state.oauth.zones = [];
         state.oauth.zonesSession = null;
         state.oauth.zonesCapabilities = null;
@@ -10145,6 +10213,7 @@
             copyOAuthText(state.oauth.workerScriptContent || '');
         });
         $('oauth-worker-script-open')?.addEventListener('click', openOAuthWorkerScript);
+        $('oauth-accounts-diagnostics')?.addEventListener('click', () => copyOAuthText(accountsDiagnosticsText()));
         $('oauth-refresh')?.addEventListener('click', async () => {
             await fetchOAuthStatus();
             if (state.oauth.resource === 'status') {

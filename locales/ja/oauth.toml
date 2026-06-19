@@ -79,6 +79,9 @@ other = "Local callback"
 [oauth_accounts]
 other = "Accounts"
 
+[oauth_accounts_copy_diagnostics_title]
+other = "現在の OAuth アカウント一覧診断情報をコピーします。OAuth token は含めません。"
+
 [oauth_resources]
 other = "Resources"
 

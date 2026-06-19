@@ -1460,6 +1460,11 @@ select.form-select {
     justify-content: flex-end;
 }
 
+.btn-row--compact {
+    flex-wrap: nowrap;
+    gap: 6px;
+}
+
 /* ============================================================
    Switches
    ============================================================ */

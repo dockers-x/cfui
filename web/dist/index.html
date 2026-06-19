@@ -156,9 +156,14 @@
                                 <div class="card-header-text">
                                     <h3 class="card-title" data-i18n="oauth_accounts">Accounts</h3>
                                 </div>
-                                <button id="oauth-refresh" type="button" class="icon-btn" aria-label="Refresh Cloudflare data" title="Refresh" data-i18n-attr="aria-label|refresh;title|refresh">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10"></path><path d="M3.51 15a9 9 0 0 0 14.85 3.36L23 14"></path></svg>
-                                </button>
+                                <div class="btn-row btn-row--compact">
+                                    <button id="oauth-accounts-diagnostics" type="button" class="icon-btn" aria-label="Copy accounts diagnostics" title="Copy accounts diagnostics" data-i18n-attr="aria-label|oauth_accounts_copy_diagnostics_title;title|oauth_accounts_copy_diagnostics_title">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                    </button>
+                                    <button id="oauth-refresh" type="button" class="icon-btn" aria-label="Refresh Cloudflare data" title="Refresh" data-i18n-attr="aria-label|refresh;title|refresh">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10"></path><path d="M3.51 15a9 9 0 0 0 14.85 3.36L23 14"></path></svg>
+                                    </button>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div id="oauth-identity-list" class="oauth-identity-list"></div>

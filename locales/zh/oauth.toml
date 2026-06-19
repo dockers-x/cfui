@@ -79,6 +79,9 @@ other = "本地回调"
 [oauth_accounts]
 other = "账号"
 
+[oauth_accounts_copy_diagnostics_title]
+other = "复制当前 OAuth 账号列表诊断信息，不包含 OAuth token。"
+
 [oauth_resources]
 other = "资源"
 
