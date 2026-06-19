@@ -379,6 +379,12 @@ other = "opened {time}"
 [oauth_tunnel_pending_reconnect]
 other = "pending reconnect"
 
+[oauth_tunnel_copy_diagnostics]
+other = "診断をコピー"
+
+[oauth_tunnel_copy_diagnostics_title]
+other = "現在の Tunnel、ingress、ローカルプロファイル診断情報をコピーします。OAuth token と connector token は含まれません。"
+
 [oauth_tunnel_ingress]
 other = "公開ホスト名"
 

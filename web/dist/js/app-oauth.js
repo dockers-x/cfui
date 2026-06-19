@@ -3433,6 +3433,112 @@
         return `${base} ${t('oauth_tunnel_ingress_local_stopped_hint')}`;
     }
 
+    function tunnelDiagnosticsText(tunnel, localProfile) {
+        const tunnelID = String(tunnel?.id || '').trim();
+        ensureTunnelConfigState();
+        const config = state.oauth.tunnelConfigs?.[tunnelID] || null;
+        const entries = Array.isArray(config?.entries) ? config.entries : [];
+        const configError = state.oauth.tunnelConfigErrors?.[tunnelID] || '';
+        const configLoading = !!state.oauth.tunnelConfigLoading?.[tunnelID];
+        return JSON.stringify({
+            type: 'cfui_oauth_tunnel_diagnostics',
+            version: 1,
+            generated_at: new Date().toISOString(),
+            browser_origin: window.location.origin,
+            browser_path: window.location.pathname,
+            contains_oauth_token: false,
+            contains_connector_token: false,
+            config_loaded: !!config,
+            config_loading: configLoading,
+            config_error: configError,
+            sensitive_fields_omitted: [
+                'oauth_access_token',
+                'oauth_refresh_token',
+                'connector_token',
+                'tunnel_secret',
+            ],
+            selected: {
+                account_id: state.oauth.selectedAccountId || '',
+                account_name: selectedAccountName(),
+            },
+            capability: {
+                tunnels_read: canRead('tunnels'),
+                tunnels_write: canWrite('tunnels'),
+            },
+            tunnel: {
+                id: tunnelID,
+                name: tunnel?.name || '',
+                status: tunnel?.status || '',
+                status_label: tunnelStatusLabel(tunnel?.status),
+                type: tunnel?.type || '',
+                remote_config: !!tunnel?.remote_config,
+                created_at: tunnel?.created_at || '',
+                deleted_at: tunnel?.deleted_at || '',
+                connections_active_at: tunnel?.connections_active_at || '',
+                connections_inactive_at: tunnel?.connections_inactive_at || '',
+                connection_count: tunnelConnectionCount(tunnel),
+                connections: tunnelConnectionsDiagnostics(tunnel),
+            },
+            local_profile: localProfileDiagnostics(localProfile),
+            config_state: {
+                loaded: !!config,
+                loading: configLoading,
+                error: configError,
+            },
+            remote_config: {
+                tunnel_id: config?.tunnel_id || tunnelID,
+                version: Number.isFinite(Number(config?.version)) ? Number(config.version) : 0,
+                warp_routing_enabled: !!config?.warp_routing_enabled,
+                ingress_count: entries.length,
+                ingress: entries.map((entry) => tunnelIngressDiagnostics(entry, entries)),
+            },
+        }, null, 2);
+    }
+
+    function tunnelConnectionsDiagnostics(tunnel) {
+        const connections = Array.isArray(tunnel?.connections) ? tunnel.connections : [];
+        return connections.map((connection, index) => ({
+            index,
+            id: connection?.id || '',
+            colo_name: connection?.colo_name || '',
+            client_version: connection?.client_version || '',
+            opened_at: connection?.opened_at || '',
+            origin_ip: connection?.origin_ip || '',
+            is_pending_reconnect: !!connection?.is_pending_reconnect,
+            summary: tunnelConnectionSummary(connection || {}),
+        }));
+    }
+
+    function localProfileDiagnostics(profile) {
+        if (!profile) return null;
+        return {
+            key: profile.key || '',
+            name: profile.name || '',
+            account_id: profile.account_id || '',
+            tunnel_id: profile.tunnel_id || '',
+            local_enabled: !!profile.local_enabled,
+            remote_management_enabled: !!profile.remote_management_enabled,
+            active: !!profile.active,
+            running: !!profile.running,
+            status: profile.status || '',
+            protocol: profile.protocol || '',
+            runner_label: localTunnelRunnerLabel(profile),
+        };
+    }
+
+    function tunnelIngressDiagnostics(entry, entries) {
+        return {
+            index: Number.isFinite(Number(entry?.index)) ? Number(entry.index) : 0,
+            hostname: entry?.hostname || '',
+            path: entry?.path || '',
+            service: entry?.service || '',
+            no_tls_verify: !!entry?.no_tls_verify,
+            http_host_header: entry?.http_host_header || '',
+            origin_server_name: entry?.origin_server_name || '',
+            catch_all: isOAuthTunnelCatchAllRule(entry || {}, entries),
+        };
+    }
+
     function tunnelDetailNode(tunnel, localProfile) {
         const rows = [];
         const add = (label, value) => {
@@ -3495,6 +3601,10 @@
 
         const actions = document.createElement('div');
         actions.className = 'oauth-row-actions';
+        const diagnostics = smallButton(t('oauth_tunnel_copy_diagnostics'), 'btn btn--sm btn--ghost', () => copyOAuthText(tunnelDiagnosticsText(tunnel, localProfileForTunnel(tunnel))));
+        diagnostics.title = t('oauth_tunnel_copy_diagnostics_title');
+        diagnostics.setAttribute('aria-label', t('oauth_tunnel_copy_diagnostics_title'));
+        actions.appendChild(diagnostics);
         actions.appendChild(smallButton(
             config ? t('oauth_tunnel_ingress_refresh') : t('oauth_tunnel_ingress_load'),
             'btn btn--sm btn--ghost',

@@ -379,6 +379,12 @@ other = "打开于 {time}"
 [oauth_tunnel_pending_reconnect]
 other = "等待重连"
 
+[oauth_tunnel_copy_diagnostics]
+other = "复制诊断"
+
+[oauth_tunnel_copy_diagnostics_title]
+other = "复制当前 Tunnel、ingress 和本地 profile 诊断信息，不包含 OAuth token 或 connector token。"
+
 [oauth_tunnel_ingress]
 other = "公开主机名"
 

@@ -379,6 +379,12 @@ other = "opened {time}"
 [oauth_tunnel_pending_reconnect]
 other = "pending reconnect"
 
+[oauth_tunnel_copy_diagnostics]
+other = "Copy diagnostics"
+
+[oauth_tunnel_copy_diagnostics_title]
+other = "Copy current Tunnel, ingress, and local profile diagnostics. OAuth tokens and connector tokens are not included."
+
 [oauth_tunnel_ingress]
 other = "Public hostnames"
 
