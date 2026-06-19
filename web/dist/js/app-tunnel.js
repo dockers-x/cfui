@@ -115,8 +115,9 @@
         try {
             const data = await apiGet('/config');
             state.config = data;
-            state.selectedTunnelKey = selectExistingTunnelKey(state.selectedTunnelKey || data.active_tunnel_key, data);
-            if (!state.tunnelManager.selectedTunnelKey) state.tunnelManager.selectedTunnelKey = state.selectedTunnelKey;
+            const handoffKey = consumeLocalTunnelHandoffKey(data);
+            state.selectedTunnelKey = selectExistingTunnelKey(handoffKey || state.selectedTunnelKey || data.active_tunnel_key, data);
+            if (handoffKey || !state.tunnelManager.selectedTunnelKey) state.tunnelManager.selectedTunnelKey = state.selectedTunnelKey;
             renderTunnelProfileSelector();
             window.cfui.renderTunnelManagerProfileSelector?.();
             writeConfigToForm(data);
@@ -367,6 +368,20 @@
         const profiles = tunnelProfiles(cfg);
         if (profiles.some((p) => p.key === key)) return key;
         return activeTunnelKey(cfg);
+    }
+
+    function consumeLocalTunnelHandoffKey(cfg = state.config) {
+        const path = window.location.pathname.replace(/\/+$/, '') || '/';
+        if (path !== '/local') return '';
+        const params = new URLSearchParams(window.location.search);
+        const raw = String(params.get('tunnel_key') || '').trim();
+        if (!raw) return '';
+        const key = selectExistingTunnelKey(raw, cfg);
+        params.delete('tunnel_key');
+        const query = params.toString();
+        const target = query ? `/local?${query}` : '/local';
+        history.replaceState({ workspace: 'local' }, '', target);
+        return key;
     }
 
     function selectedTunnelProfile(cfg = state.config) {

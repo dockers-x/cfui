@@ -4389,20 +4389,32 @@
         meta.className = 'oauth-tunnel-local-hint-meta';
         meta.textContent = [localTunnelRunnerLabel(localProfile), hint].filter(Boolean).join(' · ');
         copy.append(title, meta);
-        const action = smallButton(t('oauth_tunnel_open_local_workspace'), 'btn btn--sm btn--ghost', openOAuthLocalWorkspace);
+        const action = smallButton(t('oauth_tunnel_open_local_workspace'), 'btn btn--sm btn--ghost', () => openOAuthLocalWorkspace(localProfile));
         action.title = t('oauth_tunnel_open_local_workspace_title');
         action.setAttribute('aria-label', t('oauth_tunnel_open_local_workspace_title'));
         wrap.append(copy, action);
         return wrap;
     }
 
-    function openOAuthLocalWorkspace() {
-        if (window.cfui.activateTab?.('local')) return;
-        if (window.cfui.setWorkspace) {
-            window.cfui.setWorkspace('local');
+    function openOAuthLocalWorkspace(localProfile) {
+        const key = String(localProfile?.key || '').trim();
+        const target = key ? `/local?tunnel_key=${encodeURIComponent(key)}` : '/local';
+        if (key) {
+            state.selectedTunnelKey = key;
+            state.tunnelManager.selectedTunnelKey = key;
+        }
+        if (window.cfui.activateTab?.('local')) {
+            if (`${window.location.pathname}${window.location.search}` !== target) {
+                history.pushState({ workspace: 'local', tunnel_key: key }, '', target);
+            }
             return;
         }
-        window.location.href = '/local';
+        if (window.cfui.setWorkspace) {
+            window.cfui.setWorkspace('local', { updateRoute: false });
+            history.pushState({ workspace: 'local', tunnel_key: key }, '', target);
+            return;
+        }
+        window.location.href = target;
     }
 
     function tunnelIngressRuleNode(tunnelID, entry, entries) {
