@@ -157,6 +157,39 @@ other = "API 状态"
 [oauth_validation_api_summary]
 other = "{{ .ok }}/{{ .total }} 可用，{{ .limited }} 个受限，{{ .missing }} 个缺少 scope，{{ .unavailable }} 个不可用。"
 
+[oauth_validation_action_items]
+other = "处理建议"
+
+[oauth_validation_no_action_items]
+other = "未发现需要处理的 OAuth scope 或 API 可用性问题。"
+
+[oauth_validation_missing_scope_action]
+other = "在 Cloudflare OAuth app 权限白名单中加入这些 scope，然后重新登录。"
+
+[oauth_validation_api_missing_scope_action]
+other = "该 API 当前缺少 scope；确认 OAuth app 权限白名单和本次登录请求的 scope。"
+
+[oauth_validation_api_unavailable_action]
+other = "该 API 当前不可用；检查账号套餐、产品是否开通，或查看复制报告里的 API 错误。"
+
+[oauth_validation_api_limited_action]
+other = "该项结果被截断；进入对应资源页面加载完整列表。"
+
+[oauth_validation_missing_scopes]
+other = "缺失 scope"
+
+[oauth_validation_api_issues]
+other = "API 问题"
+
+[oauth_validation_status_limited]
+other = "结果限制为前 {{ .n }} 个"
+
+[oauth_validation_status_missing_scope]
+other = "缺少 scope"
+
+[oauth_validation_status_unavailable]
+other = "不可用"
+
 [oauth_overview_no_context]
 other = "选择账号后加载账号级资源。"
 

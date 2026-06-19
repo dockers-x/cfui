@@ -157,6 +157,39 @@ other = "API 状態"
 [oauth_validation_api_summary]
 other = "{{ .ok }}/{{ .total }} が利用可能、{{ .limited }} 件が制限付き、{{ .missing }} 件が scope 不足、{{ .unavailable }} 件が利用不可です。"
 
+[oauth_validation_action_items]
+other = "対応項目"
+
+[oauth_validation_no_action_items]
+other = "対応が必要な OAuth scope または API 利用可否の問題はありません。"
+
+[oauth_validation_missing_scope_action]
+other = "これらの scope を Cloudflare OAuth アプリの許可リストに追加し、再度サインインしてください。"
+
+[oauth_validation_api_missing_scope_action]
+other = "この API は scope が不足しています。OAuth アプリの許可リストと今回要求した scope を確認してください。"
+
+[oauth_validation_api_unavailable_action]
+other = "この API は利用できません。アカウントプラン、製品の有効化状態、またはコピーしたレポート内の API エラーを確認してください。"
+
+[oauth_validation_api_limited_action]
+other = "この結果は制限されています。対応するリソースページを開いて完全な一覧を読み込んでください。"
+
+[oauth_validation_missing_scopes]
+other = "不足している scope"
+
+[oauth_validation_api_issues]
+other = "API の問題"
+
+[oauth_validation_status_limited]
+other = "先頭 {{ .n }} 件に制限"
+
+[oauth_validation_status_missing_scope]
+other = "scope 不足"
+
+[oauth_validation_status_unavailable]
+other = "利用不可"
+
 [oauth_overview_no_context]
 other = "アカウントを選択するとアカウントスコープのリソースを読み込みます。"
 

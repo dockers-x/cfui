@@ -19,6 +19,19 @@ func TestCapabilitiesDeriveReadWriteFromScopes(t *testing.T) {
 	}
 }
 
+func TestFeatureScopesReturnsDefensiveCopy(t *testing.T) {
+	scopes := FeatureScopes()
+	if len(scopes) == 0 {
+		t.Fatal("expected feature scopes")
+	}
+	scopes[0].ReadScopes[0] = "mutated.read"
+
+	matrix := Capabilities("account-settings.read")
+	if !matrix["account"].Read {
+		t.Fatalf("feature scope mutation leaked into capability matrix: %#v", matrix["account"])
+	}
+}
+
 func TestCapabilitiesAreCaseInsensitive(t *testing.T) {
 	matrix := Capabilities("DNS.READ Cloudflare-Tunnel.WRITE")
 

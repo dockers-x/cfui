@@ -58,6 +58,18 @@ var featureScopes = []FeatureScope{
 	{ID: "analytics", ReadScopes: []string{"account-analytics.read", "analytics.read"}},
 }
 
+func FeatureScopes() []FeatureScope {
+	out := make([]FeatureScope, 0, len(featureScopes))
+	for _, feature := range featureScopes {
+		out = append(out, FeatureScope{
+			ID:          feature.ID,
+			ReadScopes:  append([]string(nil), feature.ReadScopes...),
+			WriteScopes: append([]string(nil), feature.WriteScopes...),
+		})
+	}
+	return out
+}
+
 func Capabilities(scope string) CapabilityMatrix {
 	granted := scopeSet(scope)
 	matrix := make(CapabilityMatrix, len(featureScopes))

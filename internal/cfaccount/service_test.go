@@ -1394,6 +1394,9 @@ func TestValidationReportSeparatesScopeAndAPISmoke(t *testing.T) {
 	if scopeChecks["workers_tail"].Status != "missing_scope" {
 		t.Fatalf("workers_tail scope status = %#v", scopeChecks["workers_tail"])
 	}
+	if got := strings.Join(scopeChecks["workers_tail"].MissingReadScopes, " "); got != "workers-tail.read" {
+		t.Fatalf("workers_tail missing read scopes = %q", got)
+	}
 	apiChecks := validationAPICheckMap(report.APIChecks)
 	if apiChecks["dns_records"].Status != "ok" || apiChecks["dns_records"].Value != 7 {
 		t.Fatalf("dns_records api check = %#v", apiChecks["dns_records"])
@@ -1403,6 +1406,12 @@ func TestValidationReportSeparatesScopeAndAPISmoke(t *testing.T) {
 	}
 	if report.Summary.ScopeMissing != 1 || report.Summary.APIAvailable == 0 || report.Summary.APIMissingScope == 0 {
 		t.Fatalf("unexpected validation summary: %#v", report.Summary)
+	}
+	if !validationActionItemsContain(report.ActionItems, "missing_scope", "workers_tail") {
+		t.Fatalf("expected workers_tail missing scope action item: %#v", report.ActionItems)
+	}
+	if !validationActionItemsContain(report.ActionItems, "api_missing_scope", "r2") {
+		t.Fatalf("expected r2 api missing scope action item: %#v", report.ActionItems)
 	}
 }
 
@@ -3250,6 +3259,15 @@ func validationAPICheckMap(items []ValidationAPICheck) map[string]ValidationAPIC
 		out[item.ID] = item
 	}
 	return out
+}
+
+func validationActionItemsContain(items []ValidationActionItem, kind, feature string) bool {
+	for _, item := range items {
+		if item.Kind == kind && item.Feature == feature {
+			return true
+		}
+	}
+	return false
 }
 
 func mustDecodeGraphQLQuery(t *testing.T, r *http.Request) string {

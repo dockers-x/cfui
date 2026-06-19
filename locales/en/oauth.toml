@@ -157,6 +157,39 @@ other = "API status"
 [oauth_validation_api_summary]
 other = "{{ .ok }}/{{ .total }} available, {{ .limited }} limited, {{ .missing }} missing scope, {{ .unavailable }} unavailable."
 
+[oauth_validation_action_items]
+other = "Action items"
+
+[oauth_validation_no_action_items]
+other = "No OAuth scope or API availability issue needs action."
+
+[oauth_validation_missing_scope_action]
+other = "Add these scopes to the Cloudflare OAuth app allowlist, then sign in again."
+
+[oauth_validation_api_missing_scope_action]
+other = "This API is missing scope; check the OAuth app allowlist and the scopes requested for this sign-in."
+
+[oauth_validation_api_unavailable_action]
+other = "This API is unavailable; check the account plan, product enablement, or the API error in the copied report."
+
+[oauth_validation_api_limited_action]
+other = "This result is limited; open the matching resource page to load the full list."
+
+[oauth_validation_missing_scopes]
+other = "Missing scopes"
+
+[oauth_validation_api_issues]
+other = "API issues"
+
+[oauth_validation_status_limited]
+other = "limited to first {{ .n }}"
+
+[oauth_validation_status_missing_scope]
+other = "missing scope"
+
+[oauth_validation_status_unavailable]
+other = "unavailable"
+
 [oauth_overview_no_context]
 other = "Select an account to load account-scoped resources."
 

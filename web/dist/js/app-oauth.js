@@ -3087,7 +3087,149 @@
                 total: summary.api_checks || 0,
             })
         ));
+        const actions = validationActionItemsNode(state.oauth.validationReport);
+        if (actions) section.appendChild(actions);
+        const missingScopes = validationMissingScopesNode(state.oauth.validationReport);
+        if (missingScopes) section.appendChild(missingScopes);
+        const apiIssues = validationAPIIssuesNode(state.oauth.validationReport);
+        if (apiIssues) section.appendChild(apiIssues);
         return section;
+    }
+
+    function validationActionItemsNode(report) {
+        const items = (report?.action_items || []).filter((item) => item?.kind && item.kind !== 'ok');
+        const panel = validationPanel(t('oauth_validation_action_items'));
+        if (!items.length) {
+            panel.appendChild(empty(t('oauth_validation_no_action_items')));
+            return panel;
+        }
+        for (const item of items) {
+            panel.appendChild(validationItemNode(validationActionTitle(item), validationActionMeta(item), item.severity));
+        }
+        return panel;
+    }
+
+    function validationMissingScopesNode(report) {
+        const checks = (report?.scope_checks || []).filter((check) => check?.status === 'missing_scope');
+        if (!checks.length) return null;
+        const panel = validationPanel(t('oauth_validation_missing_scopes'));
+        for (const check of checks) {
+            const scopes = [
+                ...(check.missing_read_scopes || []),
+                ...(check.missing_write_scopes || []),
+            ];
+            panel.appendChild(validationItemNode(
+                validationFeatureLabel(check.feature),
+                scopes.length ? scopes.join(' ') : t('oauth_validation_missing_scope_action'),
+                'error'
+            ));
+        }
+        return panel;
+    }
+
+    function validationAPIIssuesNode(report) {
+        const checks = (report?.api_checks || []).filter((check) => check?.status && check.status !== 'ok');
+        if (!checks.length) return null;
+        const panel = validationPanel(t('oauth_validation_api_issues'));
+        for (const check of checks) {
+            panel.appendChild(validationItemNode(
+                validationMetricLabel(check.id),
+                validationAPIStatusText(check),
+                check.status === 'limited' ? 'info' : (check.status === 'missing_scope' ? 'warn' : 'error')
+            ));
+        }
+        return panel;
+    }
+
+    function validationPanel(titleText) {
+        const panel = document.createElement('div');
+        panel.className = 'oauth-validation-panel';
+        const title = document.createElement('div');
+        title.className = 'oauth-validation-panel-title';
+        title.textContent = titleText;
+        panel.appendChild(title);
+        return panel;
+    }
+
+    function validationItemNode(titleText, metaText, severity) {
+        const item = document.createElement('div');
+        item.className = 'oauth-validation-item';
+        item.dataset.severity = severity || 'info';
+        const dot = document.createElement('span');
+        dot.className = 'oauth-validation-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        const copy = document.createElement('div');
+        copy.className = 'oauth-validation-copy';
+        const title = document.createElement('div');
+        title.className = 'oauth-validation-title';
+        title.textContent = titleText || '';
+        const meta = document.createElement('div');
+        meta.className = 'oauth-validation-meta';
+        meta.textContent = metaText || '';
+        copy.append(title, meta);
+        item.append(dot, copy);
+        return item;
+    }
+
+    function validationActionTitle(item) {
+        if (item?.id) return validationMetricLabel(item.id);
+        if (item?.feature) return validationFeatureLabel(item.feature);
+        return t('oauth_validation_action_items');
+    }
+
+    function validationActionMeta(item) {
+        const scopes = Array.isArray(item?.scopes) && item.scopes.length
+            ? `${t('oauth_validation_missing_scopes')}: ${item.scopes.join(' ')}`
+            : '';
+        let message = '';
+        switch (item?.kind) {
+        case 'missing_scope':
+            message = t('oauth_validation_missing_scope_action');
+            break;
+        case 'api_missing_scope':
+            message = t('oauth_validation_api_missing_scope_action');
+            break;
+        case 'api_unavailable':
+            message = t('oauth_validation_api_unavailable_action');
+            break;
+        case 'api_limited':
+            message = t('oauth_validation_api_limited_action');
+            break;
+        default:
+            message = item?.kind || '';
+        }
+        return [message, scopes].filter(Boolean).join(' · ');
+    }
+
+    function validationFeatureLabel(feature) {
+        const definition = oauthPermissionDefinitions.find((item) => item.id === feature);
+        if (definition?.title) return definition.title();
+        return feature || '';
+    }
+
+    function validationMetricLabel(id) {
+        const metric = overviewMetricDefinitions.find(([metricID]) => metricID === id);
+        if (metric) return t(metric[1]);
+        return id || '';
+    }
+
+    function validationAPIStatusText(check) {
+        const parts = [];
+        switch (check?.status) {
+        case 'limited':
+            parts.push(t('oauth_validation_status_limited', { n: check.limit || 0 }));
+            break;
+        case 'missing_scope':
+            parts.push(t('oauth_validation_status_missing_scope'));
+            break;
+        case 'unavailable':
+            parts.push(t('oauth_validation_status_unavailable'));
+            break;
+        default:
+            parts.push(check?.status || t('oauth_unavailable'));
+        }
+        if (check?.error && check.error !== check.status) parts.push(overviewMetricErrorLabel(check.error));
+        return parts.filter(Boolean).join(' · ');
     }
 
     function validationReportText(report) {

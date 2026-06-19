@@ -5218,6 +5218,72 @@ details.disclosure > .body {
     overflow-wrap: anywhere;
 }
 
+.oauth-validation-panel {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    background: var(--surface-2);
+}
+
+.oauth-validation-panel-title {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.oauth-validation-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-control);
+    background: var(--surface);
+}
+
+.oauth-validation-dot {
+    width: 8px;
+    height: 8px;
+    margin-top: 6px;
+    border-radius: 999px;
+    background: var(--state-info);
+}
+
+.oauth-validation-item[data-severity="error"] .oauth-validation-dot {
+    background: var(--state-error);
+}
+
+.oauth-validation-item[data-severity="warn"] .oauth-validation-dot {
+    background: var(--state-warn);
+}
+
+.oauth-validation-item[data-severity="info"] .oauth-validation-dot {
+    background: var(--state-info);
+}
+
+.oauth-validation-copy {
+    min-width: 0;
+}
+
+.oauth-validation-title {
+    color: var(--text);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.oauth-validation-meta {
+    margin-top: 2px;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
 .oauth-action-bar {
     display: flex;
     flex-wrap: wrap;

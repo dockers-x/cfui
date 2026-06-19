@@ -204,6 +204,7 @@ type ValidationReport struct {
 	Summary                 ValidationSummary        `json:"summary"`
 	ScopeChecks             []ValidationScopeCheck   `json:"scope_checks"`
 	APIChecks               []ValidationAPICheck     `json:"api_checks"`
+	ActionItems             []ValidationActionItem   `json:"action_items"`
 	Capabilities            cfoauth.CapabilityMatrix `json:"capabilities"`
 }
 
@@ -219,12 +220,14 @@ type ValidationSummary struct {
 }
 
 type ValidationScopeCheck struct {
-	Feature        string `json:"feature"`
-	RequestedRead  bool   `json:"requested_read"`
-	RequestedWrite bool   `json:"requested_write"`
-	GrantedRead    bool   `json:"granted_read"`
-	GrantedWrite   bool   `json:"granted_write"`
-	Status         string `json:"status"`
+	Feature            string   `json:"feature"`
+	RequestedRead      bool     `json:"requested_read"`
+	RequestedWrite     bool     `json:"requested_write"`
+	GrantedRead        bool     `json:"granted_read"`
+	GrantedWrite       bool     `json:"granted_write"`
+	MissingReadScopes  []string `json:"missing_read_scopes,omitempty"`
+	MissingWriteScopes []string `json:"missing_write_scopes,omitempty"`
+	Status             string   `json:"status"`
 }
 
 type ValidationAPICheck struct {
@@ -236,6 +239,14 @@ type ValidationAPICheck struct {
 	Error     string `json:"error,omitempty"`
 	Limited   bool   `json:"limited,omitempty"`
 	Limit     int    `json:"limit,omitempty"`
+}
+
+type ValidationActionItem struct {
+	Kind     string   `json:"kind"`
+	Severity string   `json:"severity"`
+	Feature  string   `json:"feature,omitempty"`
+	ID       string   `json:"id,omitempty"`
+	Scopes   []string `json:"scopes,omitempty"`
 }
 
 type DNSRecord struct {
@@ -1271,6 +1282,9 @@ func (s *Service) ValidationReport(ctx context.Context, accountID string) (Valid
 	if err != nil {
 		return ValidationReport{}, err
 	}
+	requestedScopes := scopeList(s.auth.Config().Scopes)
+	requestedScopeSet := validationScopeSet(requestedScopes)
+	featureScopes := validationFeatureScopes()
 	requestedCapabilities := cfoauth.Capabilities(s.auth.Config().Scopes)
 	report := ValidationReport{
 		Version:                 1,
@@ -1278,7 +1292,7 @@ func (s *Service) ValidationReport(ctx context.Context, accountID string) (Valid
 		ContainsOAuthToken:      false,
 		ContainsRefreshToken:    false,
 		SensitiveFieldsOmitted:  []string{"oauth_access_token", "oauth_refresh_token", "connector_token", "dns_record_content", "r2_object_body", "kv_value", "sql_rows", "waf_expression"},
-		RequestedTemplateScopes: scopeList(s.auth.Config().Scopes),
+		RequestedTemplateScopes: requestedScopes,
 		Session:                 overview.Session,
 		Account:                 overview.Account,
 		Zone:                    overview.Zone,
@@ -1287,13 +1301,16 @@ func (s *Service) ValidationReport(ctx context.Context, accountID string) (Valid
 	for _, feature := range validationFeatureOrder {
 		requested := requestedCapabilities[feature]
 		granted := overview.Capabilities[feature]
+		scopeDef := featureScopes[feature]
 		check := ValidationScopeCheck{
-			Feature:        feature,
-			RequestedRead:  requested.Read,
-			RequestedWrite: requested.Write,
-			GrantedRead:    granted.Read,
-			GrantedWrite:   granted.Write,
-			Status:         validationScopeStatus(requested, granted),
+			Feature:            feature,
+			RequestedRead:      requested.Read,
+			RequestedWrite:     requested.Write,
+			GrantedRead:        granted.Read,
+			GrantedWrite:       granted.Write,
+			MissingReadScopes:  validationMissingScopes(requested.Read && !granted.Read, scopeDef.ReadScopes, requestedScopeSet),
+			MissingWriteScopes: validationMissingScopes(requested.Write && !granted.Write, scopeDef.WriteScopes, requestedScopeSet),
+			Status:             validationScopeStatus(requested, granted),
 		}
 		report.ScopeChecks = append(report.ScopeChecks, check)
 		report.Summary.ScopeChecks++
@@ -1301,6 +1318,12 @@ func (s *Service) ValidationReport(ctx context.Context, accountID string) (Valid
 			report.Summary.ScopeReady++
 		} else if check.Status == "missing_scope" {
 			report.Summary.ScopeMissing++
+			report.ActionItems = append(report.ActionItems, ValidationActionItem{
+				Kind:     "missing_scope",
+				Severity: "error",
+				Feature:  feature,
+				Scopes:   append(append([]string(nil), check.MissingReadScopes...), check.MissingWriteScopes...),
+			})
 		}
 	}
 	for _, metric := range overview.Metrics {
@@ -1322,11 +1345,35 @@ func (s *Service) ValidationReport(ctx context.Context, accountID string) (Valid
 		case "limited":
 			report.Summary.APIAvailable++
 			report.Summary.APILimited++
+			report.ActionItems = append(report.ActionItems, ValidationActionItem{
+				Kind:     "api_limited",
+				Severity: "info",
+				Feature:  check.Feature,
+				ID:       check.ID,
+			})
 		case "missing_scope":
 			report.Summary.APIMissingScope++
+			report.ActionItems = append(report.ActionItems, ValidationActionItem{
+				Kind:     "api_missing_scope",
+				Severity: "warn",
+				Feature:  check.Feature,
+				ID:       check.ID,
+			})
 		default:
 			report.Summary.APIUnavailable++
+			report.ActionItems = append(report.ActionItems, ValidationActionItem{
+				Kind:     "api_unavailable",
+				Severity: "error",
+				Feature:  check.Feature,
+				ID:       check.ID,
+			})
 		}
+	}
+	if len(report.ActionItems) == 0 {
+		report.ActionItems = append(report.ActionItems, ValidationActionItem{
+			Kind:     "ok",
+			Severity: "info",
+		})
 	}
 	return report, nil
 }
@@ -1371,6 +1418,44 @@ func validationAPIStatus(metric OverviewMetric) string {
 		return "missing_scope"
 	}
 	return "unavailable"
+}
+
+func validationFeatureScopes() map[string]cfoauth.FeatureScope {
+	out := make(map[string]cfoauth.FeatureScope, len(validationFeatureOrder))
+	for _, feature := range cfoauth.FeatureScopes() {
+		out[feature.ID] = feature
+	}
+	return out
+}
+
+func validationScopeSet(scopes []string) map[string]struct{} {
+	out := make(map[string]struct{}, len(scopes))
+	for _, scope := range scopes {
+		scope = strings.ToLower(strings.TrimSpace(scope))
+		if scope != "" {
+			out[scope] = struct{}{}
+		}
+	}
+	return out
+}
+
+func validationMissingScopes(missing bool, candidates []string, requested map[string]struct{}) []string {
+	if !missing {
+		return nil
+	}
+	var scopes []string
+	for _, scope := range candidates {
+		if _, ok := requested[strings.ToLower(scope)]; ok {
+			scopes = append(scopes, scope)
+		}
+	}
+	if len(scopes) == 0 {
+		scopes = append(scopes, candidates...)
+	}
+	sort.Slice(scopes, func(i, j int) bool {
+		return strings.ToLower(scopes[i]) < strings.ToLower(scopes[j])
+	})
+	return scopes
 }
 
 func (s *Service) overviewAccounts(ctx context.Context, token string) ([]Account, error) {
