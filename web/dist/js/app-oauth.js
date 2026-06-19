@@ -4196,6 +4196,7 @@
                 connections: tunnelConnectionsDiagnostics(tunnel),
             },
             local_profile: localProfileDiagnostics(localProfile),
+            local_handoff: localProfileHandoffDiagnostics(localProfile),
             config_state: {
                 loaded: !!config,
                 loading: configLoading,
@@ -4239,6 +4240,26 @@
             status: profile.status || '',
             protocol: profile.protocol || '',
             runner_label: localTunnelRunnerLabel(profile),
+        };
+    }
+
+    function localProfileHandoffPath(localProfile) {
+        const key = String(localProfile?.key || '').trim();
+        return key ? `/local?tunnel_key=${encodeURIComponent(key)}` : '/local';
+    }
+
+    function localProfileHandoffURL(localProfile) {
+        return `${window.location.origin}${localProfileHandoffPath(localProfile)}`;
+    }
+
+    function localProfileHandoffDiagnostics(localProfile) {
+        const key = String(localProfile?.key || '').trim();
+        return {
+            available: true,
+            selects_profile: !!key,
+            profile_key: key,
+            path: localProfileHandoffPath(localProfile),
+            url: localProfileHandoffURL(localProfile),
         };
     }
 
@@ -4398,7 +4419,7 @@
 
     function openOAuthLocalWorkspace(localProfile) {
         const key = String(localProfile?.key || '').trim();
-        const target = key ? `/local?tunnel_key=${encodeURIComponent(key)}` : '/local';
+        const target = localProfileHandoffPath(localProfile);
         if (key) {
             state.selectedTunnelKey = key;
             state.tunnelManager.selectedTunnelKey = key;
