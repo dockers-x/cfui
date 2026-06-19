@@ -2245,6 +2245,96 @@ other = "opened {time}"
 [oauth_tunnel_pending_reconnect]
 other = "pending reconnect"
 
+[oauth_tunnel_ingress]
+other = "公開ホスト名"
+
+[oauth_tunnel_ingress_not_loaded]
+other = "ルールは未読み込みです"
+
+[oauth_tunnel_ingress_rules_meta]
+other = "{n} 件のルール · バージョン {version}"
+
+[oauth_tunnel_ingress_load]
+other = "ルールを読み込む"
+
+[oauth_tunnel_ingress_refresh]
+other = "ルールを更新"
+
+[oauth_tunnel_ingress_loading]
+other = "ingress ルールを読み込み中..."
+
+[oauth_tunnel_ingress_error]
+other = "ingress ルールの読み込みに失敗しました: {error}"
+
+[oauth_tunnel_ingress_empty]
+other = "公開ホスト名ルールはありません。"
+
+[oauth_tunnel_ingress_readonly]
+other = "現在の OAuth scope では Tunnel ingress ルールの読み取りのみ可能です。編集するには cloudflare-tunnel.write を追加してください。"
+
+[oauth_tunnel_ingress_create]
+other = "ホスト名を追加"
+
+[oauth_tunnel_ingress_edit]
+other = "ホスト名を編集"
+
+[oauth_tunnel_ingress_hostname]
+other = "ホスト名"
+
+[oauth_tunnel_ingress_hostname_placeholder]
+other = "app.example.com"
+
+[oauth_tunnel_ingress_path]
+other = "パス"
+
+[oauth_tunnel_ingress_path_placeholder]
+other = "/api/*"
+
+[oauth_tunnel_ingress_service_type]
+other = "サービスタイプ"
+
+[oauth_tunnel_ingress_service]
+other = "サービス"
+
+[oauth_tunnel_ingress_advanced]
+other = "オリジンリクエスト"
+
+[oauth_tunnel_ingress_no_tls_verify]
+other = "TLS 検証を無効化"
+
+[oauth_tunnel_ingress_http_host_header]
+other = "HTTP Host ヘッダー"
+
+[oauth_tunnel_ingress_origin_server_name]
+other = "オリジンサーバー名"
+
+[oauth_tunnel_ingress_saved]
+other = "Tunnel ingress ルールを保存しました。"
+
+[oauth_tunnel_ingress_deleted]
+other = "Tunnel ingress ルールを削除しました。"
+
+[oauth_tunnel_ingress_reordered]
+other = "Tunnel ingress ルールの順序を更新しました。"
+
+[oauth_tunnel_ingress_load_failed]
+other = "Tunnel ingress ルールの読み込みに失敗しました"
+
+[oauth_tunnel_ingress_save_failed]
+other = "Tunnel ingress ルールの保存に失敗しました"
+
+[oauth_tunnel_ingress_delete_failed]
+other = "Tunnel ingress ルールの削除に失敗しました"
+
+[oauth_tunnel_ingress_reorder_failed]
+other = "Tunnel ingress ルールの並べ替えに失敗しました"
+
+[oauth_tunnel_ingress_delete_title]
+other = "公開ホスト名を削除しますか？"
+
+[oauth_tunnel_ingress_delete_message]
+other = "ingress ルール {hostname}{path} を削除しますか？"
+
 [oauth_workers]
 other = "Workers"
 

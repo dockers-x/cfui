@@ -4803,6 +4803,11 @@ details.disclosure > .body {
     background: var(--surface-2);
 }
 
+.oauth-action-bar--subtle {
+    padding: 8px 10px;
+    background: var(--surface);
+}
+
 .oauth-action-title {
     font-weight: 700;
 }
@@ -5001,6 +5006,49 @@ details.disclosure > .body {
     white-space: pre-wrap;
 }
 
+.oauth-tunnel-ingress {
+    grid-column: 1 / -1;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.oauth-ingress-list {
+    display: grid;
+    gap: 8px;
+}
+
+.oauth-ingress-rule {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    min-height: 54px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-control);
+    background: var(--surface-2);
+}
+
+.oauth-ingress-rule.rule--fixed {
+    background: var(--surface);
+}
+
+.oauth-ingress-rule__body {
+    min-width: 0;
+}
+
+.oauth-ingress-rule__title {
+    color: var(--text);
+    font-size: var(--fs-sm);
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+
+.oauth-tunnel-ingress-form {
+    grid-column: 1 / -1;
+}
+
 .oauth-form,
 .oauth-settings-actions {
     display: grid;
@@ -5027,6 +5075,14 @@ details.disclosure > .body {
 
 .oauth-form-grid--tunnel {
     grid-template-columns: minmax(180px, 0.45fr) minmax(0, 1fr);
+}
+
+.oauth-form-grid--ingress {
+    grid-template-columns: minmax(180px, 1fr) minmax(120px, 0.5fr) minmax(120px, 0.5fr) minmax(180px, 1fr);
+}
+
+.oauth-form-grid--ingress-advanced {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .oauth-form-grid--d1-row {
@@ -5208,6 +5264,7 @@ details.oauth-form-section > summary {
     }
 
     .oauth-row,
+    .oauth-ingress-rule,
     .oauth-identity-item,
     .oauth-permission-row,
     .oauth-permission-header {

@@ -2245,6 +2245,96 @@ other = "opened {time}"
 [oauth_tunnel_pending_reconnect]
 other = "pending reconnect"
 
+[oauth_tunnel_ingress]
+other = "Public hostnames"
+
+[oauth_tunnel_ingress_not_loaded]
+other = "Rules not loaded"
+
+[oauth_tunnel_ingress_rules_meta]
+other = "{n} rules · version {version}"
+
+[oauth_tunnel_ingress_load]
+other = "Load rules"
+
+[oauth_tunnel_ingress_refresh]
+other = "Refresh rules"
+
+[oauth_tunnel_ingress_loading]
+other = "Loading ingress rules..."
+
+[oauth_tunnel_ingress_error]
+other = "Ingress rules failed to load: {error}"
+
+[oauth_tunnel_ingress_empty]
+other = "No public hostname rules found."
+
+[oauth_tunnel_ingress_readonly]
+other = "Current OAuth scopes can read tunnel ingress rules only. Add cloudflare-tunnel.write to edit them."
+
+[oauth_tunnel_ingress_create]
+other = "Add hostname"
+
+[oauth_tunnel_ingress_edit]
+other = "Edit hostname"
+
+[oauth_tunnel_ingress_hostname]
+other = "Hostname"
+
+[oauth_tunnel_ingress_hostname_placeholder]
+other = "app.example.com"
+
+[oauth_tunnel_ingress_path]
+other = "Path"
+
+[oauth_tunnel_ingress_path_placeholder]
+other = "/api/*"
+
+[oauth_tunnel_ingress_service_type]
+other = "Service type"
+
+[oauth_tunnel_ingress_service]
+other = "Service"
+
+[oauth_tunnel_ingress_advanced]
+other = "Origin request"
+
+[oauth_tunnel_ingress_no_tls_verify]
+other = "Disable TLS verification"
+
+[oauth_tunnel_ingress_http_host_header]
+other = "HTTP Host header"
+
+[oauth_tunnel_ingress_origin_server_name]
+other = "Origin server name"
+
+[oauth_tunnel_ingress_saved]
+other = "Tunnel ingress rule saved."
+
+[oauth_tunnel_ingress_deleted]
+other = "Tunnel ingress rule deleted."
+
+[oauth_tunnel_ingress_reordered]
+other = "Tunnel ingress rules reordered."
+
+[oauth_tunnel_ingress_load_failed]
+other = "Failed to load tunnel ingress rules"
+
+[oauth_tunnel_ingress_save_failed]
+other = "Failed to save tunnel ingress rule"
+
+[oauth_tunnel_ingress_delete_failed]
+other = "Failed to delete tunnel ingress rule"
+
+[oauth_tunnel_ingress_reorder_failed]
+other = "Failed to reorder tunnel ingress rules"
+
+[oauth_tunnel_ingress_delete_title]
+other = "Delete public hostname?"
+
+[oauth_tunnel_ingress_delete_message]
+other = "Delete ingress rule {hostname}{path}?"
+
 [oauth_workers]
 other = "Workers"
 

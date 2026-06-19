@@ -500,6 +500,7 @@
             const resp = await apiGet('/cf/tunnels?account_id=' + encodeURIComponent(state.oauth.selectedAccountId));
             state.oauth.tunnels = Array.isArray(resp.data) ? resp.data : [];
             state.oauth.localTunnelProfiles = Array.isArray(resp.local_profiles) ? resp.local_profiles : [];
+            pruneOAuthTunnelConfigs();
         } catch (err) {
             renderOAuthError(err.message);
         }
@@ -545,6 +546,11 @@
                 delete_local_profile: localProfile ? 'true' : 'false',
             });
             await apiSend(`/cf/tunnels/${encodeURIComponent(tunnelID)}?${params.toString()}`, 'DELETE');
+            delete state.oauth.tunnelConfigs?.[tunnelID];
+            delete state.oauth.tunnelConfigLoading?.[tunnelID];
+            delete state.oauth.tunnelConfigErrors?.[tunnelID];
+            if (state.oauth.tunnelIngressCreateTunnelId === tunnelID) state.oauth.tunnelIngressCreateTunnelId = '';
+            if (state.oauth.tunnelIngressEditing?.tunnel_id === tunnelID) state.oauth.tunnelIngressEditing = null;
             await loadOAuthTunnels();
             renderOAuthResource();
             toast.ok(localProfile
@@ -555,6 +561,137 @@
         } finally {
             setBusy(button, false);
         }
+    }
+
+    function ensureTunnelConfigState() {
+        if (!state.oauth.tunnelConfigs || typeof state.oauth.tunnelConfigs !== 'object') state.oauth.tunnelConfigs = {};
+        if (!state.oauth.tunnelConfigLoading || typeof state.oauth.tunnelConfigLoading !== 'object') state.oauth.tunnelConfigLoading = {};
+        if (!state.oauth.tunnelConfigErrors || typeof state.oauth.tunnelConfigErrors !== 'object') state.oauth.tunnelConfigErrors = {};
+    }
+
+    function pruneOAuthTunnelConfigs() {
+        ensureTunnelConfigState();
+        const live = new Set((state.oauth.tunnels || []).map((tunnel) => String(tunnel?.id || '').trim()).filter(Boolean));
+        for (const key of Object.keys(state.oauth.tunnelConfigs)) if (!live.has(key)) delete state.oauth.tunnelConfigs[key];
+        for (const key of Object.keys(state.oauth.tunnelConfigLoading)) if (!live.has(key)) delete state.oauth.tunnelConfigLoading[key];
+        for (const key of Object.keys(state.oauth.tunnelConfigErrors)) if (!live.has(key)) delete state.oauth.tunnelConfigErrors[key];
+    }
+
+    async function loadOAuthTunnelConfig(tunnelID, button, silent = false) {
+        tunnelID = String(tunnelID || '').trim();
+        if (!state.oauth.selectedAccountId || !tunnelID) return null;
+        ensureTunnelConfigState();
+        state.oauth.tunnelConfigLoading[tunnelID] = true;
+        state.oauth.tunnelConfigErrors[tunnelID] = '';
+        if (!silent) renderOAuthResource();
+        if (button) setBusy(button, true);
+        try {
+            const params = new URLSearchParams({ account_id: state.oauth.selectedAccountId });
+            const config = await apiGet(`/cf/tunnels/${encodeURIComponent(tunnelID)}/config?${params.toString()}`);
+            state.oauth.tunnelConfigs[tunnelID] = config;
+            state.oauth.tunnelConfigErrors[tunnelID] = '';
+            return config;
+        } catch (err) {
+            state.oauth.tunnelConfigErrors[tunnelID] = err.message;
+            if (!silent) toast.err(t('oauth_tunnel_ingress_load_failed') + ': ' + err.message);
+            return null;
+        } finally {
+            state.oauth.tunnelConfigLoading[tunnelID] = false;
+            if (button) setBusy(button, false);
+            renderOAuthResource();
+        }
+    }
+
+    async function submitOAuthTunnelIngress(tunnelID, index, payload, button) {
+        tunnelID = String(tunnelID || '').trim();
+        if (!state.oauth.selectedAccountId || !tunnelID) return;
+        if (!String(payload?.service || '').trim()) {
+            toast.err(t('service_required'));
+            return;
+        }
+        try {
+            setBusy(button, true);
+            const params = new URLSearchParams({ account_id: state.oauth.selectedAccountId });
+            const editing = Number.isInteger(index);
+            const path = editing
+                ? `/cf/tunnels/${encodeURIComponent(tunnelID)}/config/entries/${index}?${params.toString()}`
+                : `/cf/tunnels/${encodeURIComponent(tunnelID)}/config/entries?${params.toString()}`;
+            const config = await apiSend(path, editing ? 'PUT' : 'POST', payload);
+            ensureTunnelConfigState();
+            state.oauth.tunnelConfigs[tunnelID] = config;
+            state.oauth.tunnelConfigErrors[tunnelID] = '';
+            state.oauth.tunnelIngressCreateTunnelId = '';
+            state.oauth.tunnelIngressEditing = null;
+            renderOAuthResource();
+            toast.ok(t('oauth_tunnel_ingress_saved'));
+        } catch (err) {
+            toast.err(t('oauth_tunnel_ingress_save_failed') + ': ' + err.message);
+        } finally {
+            setBusy(button, false);
+        }
+    }
+
+    async function deleteOAuthTunnelIngress(tunnelID, entry, button) {
+        tunnelID = String(tunnelID || '').trim();
+        const index = Number(entry?.index);
+        if (!state.oauth.selectedAccountId || !tunnelID || !Number.isInteger(index)) return;
+        const ok = await window.cfui.confirm({
+            title: t('oauth_tunnel_ingress_delete_title'),
+            message: t('oauth_tunnel_ingress_delete_message', { hostname: entry.hostname || t('catch_all_rule'), path: entry.path || '/' }),
+            okText: t('delete'),
+        });
+        if (!ok) return;
+        try {
+            setBusy(button, true);
+            const params = new URLSearchParams({ account_id: state.oauth.selectedAccountId });
+            const config = await apiSend(`/cf/tunnels/${encodeURIComponent(tunnelID)}/config/entries/${index}?${params.toString()}`, 'DELETE');
+            ensureTunnelConfigState();
+            state.oauth.tunnelConfigs[tunnelID] = config;
+            state.oauth.tunnelConfigErrors[tunnelID] = '';
+            if (state.oauth.tunnelIngressEditing?.tunnel_id === tunnelID && state.oauth.tunnelIngressEditing.index === index) {
+                state.oauth.tunnelIngressEditing = null;
+            }
+            renderOAuthResource();
+            toast.ok(t('oauth_tunnel_ingress_deleted'));
+        } catch (err) {
+            toast.err(t('oauth_tunnel_ingress_delete_failed') + ': ' + err.message);
+        } finally {
+            setBusy(button, false);
+        }
+    }
+
+    async function reorderOAuthTunnelIngress(tunnelID, order) {
+        tunnelID = String(tunnelID || '').trim();
+        if (!state.oauth.selectedAccountId || !tunnelID || !Array.isArray(order) || !order.length) return;
+        try {
+            const params = new URLSearchParams({ account_id: state.oauth.selectedAccountId });
+            const config = await apiSend(`/cf/tunnels/${encodeURIComponent(tunnelID)}/config/entries/reorder?${params.toString()}`, 'POST', { order });
+            ensureTunnelConfigState();
+            state.oauth.tunnelConfigs[tunnelID] = config;
+            state.oauth.tunnelConfigErrors[tunnelID] = '';
+            renderOAuthResource();
+            toast.ok(t('oauth_tunnel_ingress_reordered'));
+        } catch (err) {
+            toast.err(t('oauth_tunnel_ingress_reorder_failed') + ': ' + err.message);
+            renderOAuthResource();
+        }
+    }
+
+    async function moveOAuthTunnelIngress(tunnelID, index, delta) {
+        const config = state.oauth.tunnelConfigs?.[tunnelID];
+        const entries = config?.entries || [];
+        const movable = entries.filter((entry) => !isOAuthTunnelCatchAllRule(entry, entries));
+        const from = movable.findIndex((entry) => entry.index === index);
+        if (from < 0) return;
+        const to = from + delta;
+        if (to < 0 || to >= movable.length) return;
+        const next = movable.slice();
+        const [entry] = next.splice(from, 1);
+        next.splice(to, 0, entry);
+        const catchAll = entries.find((entry) => isOAuthTunnelCatchAllRule(entry, entries));
+        const order = next.map((entry) => entry.index);
+        if (catchAll) order.push(catchAll.index);
+        await reorderOAuthTunnelIngress(tunnelID, order);
     }
 
     async function loadOAuthWorkers() {
@@ -2288,6 +2425,7 @@
                 state.oauth.selectedZoneId = '';
                 resetOverview();
                 resetZoneDetail();
+                resetTunnelDetail();
                 resetWorkerDetail();
                 resetStorageDetail();
                 resetSnippetDetail();
@@ -2562,6 +2700,7 @@
             body.appendChild(empty(t('oauth_select_account')));
             return;
         }
+        ensureTunnelConfigState();
         const canCreate = canWrite('tunnels');
         body.appendChild(resourceActionBar(t('oauth_tunnels'), canCreate ? {
             text: state.oauth.tunnelCreateOpen ? t('cancel') : t('oauth_tunnel_create'),
@@ -2597,6 +2736,7 @@
             const row = rowNode(tunnel.name || tunnel.id, meta, actions);
             const detail = tunnelDetailNode(tunnel, localProfile);
             if (detail) row.appendChild(detail);
+            row.appendChild(tunnelIngressPanelNode(tunnel));
             body.appendChild(row);
         }
     }
@@ -2710,6 +2850,314 @@
             detail.appendChild(item);
         }
         return detail;
+    }
+
+    function tunnelIngressPanelNode(tunnel) {
+        const tunnelID = String(tunnel?.id || '').trim();
+        const section = document.createElement('section');
+        section.className = 'oauth-section oauth-tunnel-ingress';
+        const header = document.createElement('div');
+        header.className = 'oauth-action-bar oauth-action-bar--subtle';
+        const copy = document.createElement('div');
+        const title = document.createElement('div');
+        title.className = 'oauth-action-title';
+        title.textContent = t('oauth_tunnel_ingress');
+        const meta = document.createElement('div');
+        meta.className = 'oauth-action-meta';
+        const config = state.oauth.tunnelConfigs?.[tunnelID];
+        const loading = !!state.oauth.tunnelConfigLoading?.[tunnelID];
+        const error = state.oauth.tunnelConfigErrors?.[tunnelID] || '';
+        meta.textContent = config ? t('oauth_tunnel_ingress_rules_meta', {
+            n: (config.entries || []).length,
+            version: config.version || 0,
+        }) : t('oauth_tunnel_ingress_not_loaded');
+        copy.append(title, meta);
+        header.appendChild(copy);
+
+        const actions = document.createElement('div');
+        actions.className = 'oauth-row-actions';
+        actions.appendChild(smallButton(
+            config ? t('oauth_tunnel_ingress_refresh') : t('oauth_tunnel_ingress_load'),
+            'btn btn--sm btn--ghost',
+            (event) => loadOAuthTunnelConfig(tunnelID, event.currentTarget)
+        ));
+        if (config && canWrite('tunnels')) {
+            actions.appendChild(smallButton(
+                state.oauth.tunnelIngressCreateTunnelId === tunnelID ? t('cancel') : t('oauth_tunnel_ingress_create'),
+                state.oauth.tunnelIngressCreateTunnelId === tunnelID ? 'btn btn--sm btn--ghost' : 'btn btn--sm btn--primary',
+                () => {
+                    state.oauth.tunnelIngressCreateTunnelId = state.oauth.tunnelIngressCreateTunnelId === tunnelID ? '' : tunnelID;
+                    state.oauth.tunnelIngressEditing = null;
+                    renderOAuthResource();
+                }
+            ));
+        }
+        header.appendChild(actions);
+        section.appendChild(header);
+
+        if (!canWrite('tunnels')) section.appendChild(empty(t('oauth_tunnel_ingress_readonly')));
+        if (loading) {
+            section.appendChild(empty(t('oauth_tunnel_ingress_loading')));
+            return section;
+        }
+        if (error) section.appendChild(empty(t('oauth_tunnel_ingress_error', { error })));
+        if (!config) return section;
+        if (canWrite('tunnels') && state.oauth.tunnelIngressCreateTunnelId === tunnelID) {
+            section.appendChild(tunnelIngressFormNode(tunnelID, null));
+        }
+
+        const entries = Array.isArray(config.entries) ? config.entries : [];
+        if (!entries.length) {
+            section.appendChild(empty(t('oauth_tunnel_ingress_empty')));
+            return section;
+        }
+        const list = document.createElement('div');
+        list.className = 'oauth-ingress-list';
+        list.dataset.tunnelId = tunnelID;
+        for (const entry of entries) {
+            const editing = state.oauth.tunnelIngressEditing?.tunnel_id === tunnelID && state.oauth.tunnelIngressEditing.index === entry.index;
+            if (editing && canWrite('tunnels')) {
+                list.appendChild(tunnelIngressFormNode(tunnelID, entry));
+            } else {
+                list.appendChild(tunnelIngressRuleNode(tunnelID, entry, entries));
+            }
+        }
+        section.appendChild(list);
+        if (canWrite('tunnels')) bindOAuthTunnelIngressDragSort(list);
+        return section;
+    }
+
+    function tunnelIngressRuleNode(tunnelID, entry, entries) {
+        const catchAll = isOAuthTunnelCatchAllRule(entry, entries);
+        const row = document.createElement('div');
+        row.className = catchAll ? 'oauth-ingress-rule rule--fixed' : 'oauth-ingress-rule rule--draggable';
+        row.dataset.ruleIndex = String(entry.index);
+        if (catchAll) row.dataset.catchAll = 'true';
+        if (canWrite('tunnels') && !catchAll) {
+            row.dataset.draggable = 'true';
+            row.draggable = true;
+            row.title = t('tunnel_rule_reorder_handle');
+        }
+
+        const body = document.createElement('div');
+        body.className = 'oauth-ingress-rule__body';
+        const title = document.createElement('div');
+        title.className = 'oauth-ingress-rule__title';
+        title.textContent = entry.hostname || t('catch_all_rule');
+        const detail = document.createElement('div');
+        detail.className = 'oauth-row-meta';
+        detail.textContent = tunnelIngressRuleSummary(entry);
+        body.append(title, detail);
+
+        const actions = document.createElement('div');
+        actions.className = 'oauth-row-actions';
+        if (canWrite('tunnels') && !catchAll) {
+            actions.appendChild(iconTextButton(t('tunnel_rule_move_up'), '↑', () => moveOAuthTunnelIngress(tunnelID, entry.index, -1)));
+            actions.appendChild(iconTextButton(t('tunnel_rule_move_down'), '↓', () => moveOAuthTunnelIngress(tunnelID, entry.index, 1)));
+            actions.appendChild(smallButton(t('edit'), 'btn btn--sm btn--ghost', () => {
+                state.oauth.tunnelIngressCreateTunnelId = '';
+                state.oauth.tunnelIngressEditing = { tunnel_id: tunnelID, index: entry.index };
+                renderOAuthResource();
+            }));
+            actions.appendChild(smallButton(t('delete'), 'btn btn--sm btn--danger', (event) => deleteOAuthTunnelIngress(tunnelID, entry, event.currentTarget)));
+        }
+        row.append(body, actions);
+        return row;
+    }
+
+    function tunnelIngressFormNode(tunnelID, entry) {
+        const form = document.createElement('form');
+        form.className = 'oauth-form oauth-tunnel-ingress-form';
+        form.dataset.ruleIndex = entry ? String(entry.index) : '';
+        const title = document.createElement('h4');
+        title.className = 'oauth-section-title';
+        title.textContent = entry ? t('oauth_tunnel_ingress_edit') : t('oauth_tunnel_ingress_create');
+        form.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'oauth-form-grid oauth-form-grid--ingress';
+        const hostInput = textInput(entry?.hostname || '', 'text');
+        hostInput.placeholder = t('oauth_tunnel_ingress_hostname_placeholder');
+        grid.appendChild(formField(t('oauth_tunnel_ingress_hostname'), hostInput));
+
+        const pathInput = textInput(entry?.path || '', 'text');
+        pathInput.placeholder = t('oauth_tunnel_ingress_path_placeholder');
+        grid.appendChild(formField(t('oauth_tunnel_ingress_path'), pathInput));
+
+        const service = splitOAuthTunnelService(entry?.service || '');
+        const typeSelect = document.createElement('select');
+        typeSelect.className = 'form-select';
+        for (const value of ['http', 'https', 'ssh', 'rdp', 'tcp', 'unix', 'http_status', 'raw']) {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = tunnelServiceTypeLabel(value);
+            typeSelect.appendChild(option);
+        }
+        typeSelect.value = service.type;
+        grid.appendChild(formField(t('oauth_tunnel_ingress_service_type'), typeSelect));
+
+        const serviceInput = textInput(service.value, 'text');
+        serviceInput.required = true;
+        serviceInput.placeholder = tunnelServicePlaceholder(typeSelect.value);
+        typeSelect.addEventListener('change', () => { serviceInput.placeholder = tunnelServicePlaceholder(typeSelect.value); });
+        grid.appendChild(formField(t('oauth_tunnel_ingress_service'), serviceInput));
+        form.appendChild(grid);
+
+        const options = document.createElement('div');
+        options.className = 'oauth-form-options oauth-form-options--stacked';
+        const noTLS = toggleOption(t('oauth_tunnel_ingress_no_tls_verify'), !!entry?.no_tls_verify);
+        options.appendChild(noTLS.node);
+        form.appendChild(options);
+
+        const advanced = document.createElement('details');
+        advanced.className = 'oauth-form-section';
+        const summary = document.createElement('summary');
+        summary.className = 'oauth-form-section-title';
+        summary.textContent = t('oauth_tunnel_ingress_advanced');
+        advanced.appendChild(summary);
+        const advancedGrid = document.createElement('div');
+        advancedGrid.className = 'oauth-form-grid oauth-form-grid--ingress-advanced';
+        const hostHeaderInput = textInput(entry?.http_host_header || '', 'text');
+        hostHeaderInput.placeholder = 'origin.internal';
+        advancedGrid.appendChild(formField(t('oauth_tunnel_ingress_http_host_header'), hostHeaderInput));
+        const originServerNameInput = textInput(entry?.origin_server_name || '', 'text');
+        originServerNameInput.placeholder = 'origin.example.com';
+        advancedGrid.appendChild(formField(t('oauth_tunnel_ingress_origin_server_name'), originServerNameInput));
+        advanced.appendChild(advancedGrid);
+        form.appendChild(advanced);
+
+        const actions = document.createElement('div');
+        actions.className = 'oauth-form-actions';
+        actions.appendChild(smallButton(t('cancel'), 'btn btn--sm btn--ghost', () => {
+            if (entry) state.oauth.tunnelIngressEditing = null;
+            else state.oauth.tunnelIngressCreateTunnelId = '';
+            renderOAuthResource();
+        }));
+        const submitBtn = smallButton(entry ? t('update_rule') : t('add_rule'), 'btn btn--sm btn--primary');
+        submitBtn.type = 'submit';
+        actions.appendChild(submitBtn);
+        form.appendChild(actions);
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const payload = {
+                hostname: hostInput.value.trim(),
+                path: pathInput.value.trim(),
+                service: buildOAuthTunnelService(typeSelect.value, serviceInput.value),
+                no_tls_verify: noTLS.input.checked,
+                http_host_header: hostHeaderInput.value.trim(),
+                origin_server_name: originServerNameInput.value.trim(),
+            };
+            submitOAuthTunnelIngress(tunnelID, entry ? Number(entry.index) : null, payload, submitBtn);
+        });
+        return form;
+    }
+
+    function iconTextButton(label, text, onClick) {
+        const button = smallButton(text, 'btn btn--sm btn--ghost btn--square', onClick);
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        return button;
+    }
+
+    function isOAuthTunnelCatchAllRule(entry, entries = []) {
+        const last = entries[entries.length - 1];
+        return !!last && entry.index === last.index && !String(entry.hostname || '').trim() && !String(entry.path || '').trim() && !!String(entry.service || '').trim();
+    }
+
+    function tunnelIngressRuleSummary(entry) {
+        const parts = [
+            `${entry.path || '/'} -> ${entry.service || ''}`,
+            entry.no_tls_verify ? t('no_tls_verify_detail') : '',
+            entry.http_host_header ? `${t('oauth_tunnel_ingress_http_host_header')} ${entry.http_host_header}` : '',
+            entry.origin_server_name ? `${t('oauth_tunnel_ingress_origin_server_name')} ${entry.origin_server_name}` : '',
+        ];
+        return parts.filter(Boolean).join(' · ');
+    }
+
+    function bindOAuthTunnelIngressDragSort(list) {
+        list.ondragstart = (event) => {
+            if (event.target.closest('button, input, select, textarea, details')) {
+                event.preventDefault();
+                return;
+            }
+            const row = event.target.closest('.oauth-ingress-rule[data-draggable="true"]');
+            if (!row) return;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', row.dataset.ruleIndex || '');
+            row.classList.add('rule--dragging');
+        };
+        list.ondragover = (event) => {
+            const dragging = list.querySelector('.rule--dragging');
+            if (!dragging) return;
+            event.preventDefault();
+            const before = oauthTunnelIngressDragTarget(list, event.clientY);
+            const catchAll = list.querySelector('.oauth-ingress-rule[data-catch-all="true"]');
+            if (before) list.insertBefore(dragging, before);
+            else if (catchAll) list.insertBefore(dragging, catchAll);
+            else list.appendChild(dragging);
+        };
+        list.ondrop = async (event) => {
+            const dragging = list.querySelector('.rule--dragging');
+            if (!dragging) return;
+            event.preventDefault();
+            dragging.classList.remove('rule--dragging');
+            await reorderOAuthTunnelIngress(list.dataset.tunnelId, oauthTunnelIngressOrderFromDOM(list));
+        };
+        list.ondragend = () => {
+            list.querySelector('.rule--dragging')?.classList.remove('rule--dragging');
+        };
+    }
+
+    function oauthTunnelIngressDragTarget(list, y) {
+        const rows = [...list.querySelectorAll('.oauth-ingress-rule[data-draggable="true"]:not(.rule--dragging)')];
+        return rows.reduce((closest, row) => {
+            const box = row.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) return { offset, row };
+            return closest;
+        }, { offset: Number.NEGATIVE_INFINITY, row: null }).row;
+    }
+
+    function oauthTunnelIngressOrderFromDOM(list) {
+        return [...list.querySelectorAll('.oauth-ingress-rule[data-rule-index]')]
+            .map((row) => Number(row.dataset.ruleIndex))
+            .filter((index) => Number.isInteger(index));
+    }
+
+    function splitOAuthTunnelService(value) {
+        const service = String(value || '').trim();
+        if (service.startsWith('http_status:')) return { type: 'http_status', value: service.slice(12) };
+        const match = service.match(/^([a-z_]+):\/\/(.+)$/i);
+        if (!match) return { type: 'raw', value: service };
+        const type = ['http', 'https', 'ssh', 'rdp', 'tcp', 'unix'].includes(match[1]) ? match[1] : 'raw';
+        return type === 'raw' ? { type, value: service } : { type, value: match[2] };
+    }
+
+    function buildOAuthTunnelService(type, value) {
+        value = String(value || '').trim();
+        if (type === 'raw') return value;
+        if (type === 'http_status') return value.startsWith('http_status:') ? value : `http_status:${value || '404'}`;
+        return value.startsWith(`${type}:`) ? value : `${type}://${value}`;
+    }
+
+    function tunnelServicePlaceholder(type) {
+        return {
+            http: 'localhost:8080',
+            https: 'localhost:8443',
+            ssh: 'localhost:22',
+            rdp: 'localhost:3389',
+            tcp: 'localhost:5432',
+            unix: '/var/run/app.sock',
+            http_status: '404',
+            raw: 'http://localhost:8080',
+        }[type] || 'localhost:8080';
+    }
+
+    function tunnelServiceTypeLabel(type) {
+        if (type === 'http_status') return 'HTTP status';
+        if (type === 'raw') return 'Raw';
+        return String(type || '').toUpperCase();
     }
 
     function tunnelConnectionSummary(connection) {
@@ -6193,7 +6641,7 @@
         state.oauth.dnsRecords = [];
         state.oauth.tunnels = [];
         state.oauth.localTunnelProfiles = [];
-        state.oauth.tunnelCreateOpen = false;
+        resetTunnelDetail();
         state.oauth.workers = [];
         state.oauth.r2Buckets = [];
         state.oauth.r2Metrics = null;
@@ -6246,6 +6694,15 @@
         state.oauth.d1TableHasMore = false;
         state.oauth.d1EditingRow = null;
         state.oauth.d1Results = [];
+    }
+
+    function resetTunnelDetail() {
+        state.oauth.tunnelCreateOpen = false;
+        state.oauth.tunnelConfigs = {};
+        state.oauth.tunnelConfigLoading = {};
+        state.oauth.tunnelConfigErrors = {};
+        state.oauth.tunnelIngressCreateTunnelId = '';
+        state.oauth.tunnelIngressEditing = null;
     }
 
     function resetOverview() {
@@ -6777,7 +7234,11 @@
                 state.oauth.resource = btn.dataset.oauthResource || 'zones';
                 if (state.oauth.resource !== 'workers') resetWorkerDetail();
                 if (state.oauth.resource !== 'storage') resetStorageDetail();
-                if (state.oauth.resource !== 'tunnels') state.oauth.tunnelCreateOpen = false;
+                if (state.oauth.resource !== 'tunnels') {
+                    state.oauth.tunnelCreateOpen = false;
+                    state.oauth.tunnelIngressCreateTunnelId = '';
+                    state.oauth.tunnelIngressEditing = null;
+                }
                 state.oauth.dnsFormMode = '';
                 state.oauth.dnsEditingId = '';
                 if (state.oauth.resource !== 'snippets') resetSnippetDetail();

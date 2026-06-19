@@ -2245,6 +2245,96 @@ other = "打开于 {time}"
 [oauth_tunnel_pending_reconnect]
 other = "等待重连"
 
+[oauth_tunnel_ingress]
+other = "公开主机名"
+
+[oauth_tunnel_ingress_not_loaded]
+other = "规则未加载"
+
+[oauth_tunnel_ingress_rules_meta]
+other = "{n} 条规则 · 版本 {version}"
+
+[oauth_tunnel_ingress_load]
+other = "加载规则"
+
+[oauth_tunnel_ingress_refresh]
+other = "刷新规则"
+
+[oauth_tunnel_ingress_loading]
+other = "正在加载 ingress 规则..."
+
+[oauth_tunnel_ingress_error]
+other = "ingress 规则加载失败：{error}"
+
+[oauth_tunnel_ingress_empty]
+other = "还没有公开主机名规则。"
+
+[oauth_tunnel_ingress_readonly]
+other = "当前 OAuth scope 只能读取 Tunnel ingress 规则。添加 cloudflare-tunnel.write 后才能编辑。"
+
+[oauth_tunnel_ingress_create]
+other = "添加主机名"
+
+[oauth_tunnel_ingress_edit]
+other = "编辑主机名"
+
+[oauth_tunnel_ingress_hostname]
+other = "主机名"
+
+[oauth_tunnel_ingress_hostname_placeholder]
+other = "app.example.com"
+
+[oauth_tunnel_ingress_path]
+other = "路径"
+
+[oauth_tunnel_ingress_path_placeholder]
+other = "/api/*"
+
+[oauth_tunnel_ingress_service_type]
+other = "服务类型"
+
+[oauth_tunnel_ingress_service]
+other = "服务"
+
+[oauth_tunnel_ingress_advanced]
+other = "源站请求"
+
+[oauth_tunnel_ingress_no_tls_verify]
+other = "关闭 TLS 校验"
+
+[oauth_tunnel_ingress_http_host_header]
+other = "HTTP Host 头"
+
+[oauth_tunnel_ingress_origin_server_name]
+other = "源站服务器名"
+
+[oauth_tunnel_ingress_saved]
+other = "Tunnel ingress 规则已保存。"
+
+[oauth_tunnel_ingress_deleted]
+other = "Tunnel ingress 规则已删除。"
+
+[oauth_tunnel_ingress_reordered]
+other = "Tunnel ingress 规则顺序已更新。"
+
+[oauth_tunnel_ingress_load_failed]
+other = "加载 Tunnel ingress 规则失败"
+
+[oauth_tunnel_ingress_save_failed]
+other = "保存 Tunnel ingress 规则失败"
+
+[oauth_tunnel_ingress_delete_failed]
+other = "删除 Tunnel ingress 规则失败"
+
+[oauth_tunnel_ingress_reorder_failed]
+other = "调整 Tunnel ingress 规则顺序失败"
+
+[oauth_tunnel_ingress_delete_title]
+other = "删除公开主机名？"
+
+[oauth_tunnel_ingress_delete_message]
+other = "删除 ingress 规则 {hostname}{path}？"
+
 [oauth_workers]
 other = "Workers"
 

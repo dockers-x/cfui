@@ -600,6 +600,109 @@ func TestAddTunnelIngressRuleRequiresWriteScope(t *testing.T) {
 	}
 }
 
+func TestReorderTunnelIngressRulesPreservesRequestedOrderAndCatchAll(t *testing.T) {
+	ctx := context.Background()
+	putSeen := false
+	mux := http.NewServeMux()
+	mux.HandleFunc("/client/v4/accounts/account-1/cfd_tunnel/tunnel-1/configurations", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		switch r.Method {
+		case http.MethodGet:
+			writeCFEnvelope(w, `{
+				"tunnel_id":"tunnel-1",
+				"version":4,
+				"config":{"ingress":[
+					{"hostname":"root.example.com","path":"/","service":"http://localhost:8080"},
+					{"hostname":"root.example.com","path":"/aaaa","service":"http://localhost:8081"},
+					{"hostname":"api.example.com","path":"/","service":"http://localhost:9090"},
+					{"service":"http_status:404"}
+				]}
+			}`, nil)
+		case http.MethodPut:
+			var req cloudflare.TunnelConfigurationParams
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("decode tunnel configuration update: %v", err)
+			}
+			if len(req.Config.Ingress) != 4 {
+				t.Fatalf("updated ingress length = %d, want 4: %#v", len(req.Config.Ingress), req.Config.Ingress)
+			}
+			if req.Config.Ingress[0].Path != "/aaaa" || req.Config.Ingress[1].Path != "/" || req.Config.Ingress[3].Service != "http_status:404" {
+				t.Fatalf("unexpected reordered ingress: %#v", req.Config.Ingress)
+			}
+			putSeen = true
+			writeCFEnvelope(w, `{
+				"tunnel_id":"tunnel-1",
+				"version":5,
+				"config":{"ingress":[
+					{"hostname":"root.example.com","path":"/aaaa","service":"http://localhost:8081"},
+					{"hostname":"root.example.com","path":"/","service":"http://localhost:8080"},
+					{"hostname":"api.example.com","path":"/","service":"http://localhost:9090"},
+					{"service":"http_status:404"}
+				]}
+			}`, nil)
+		default:
+			t.Fatalf("tunnel configuration method = %s", r.Method)
+		}
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	svc := NewServiceWithEndpoints(testOAuthServiceWithScopes(t, "cloudflare-tunnel.read cloudflare-tunnel.write"), EndpointOverrides{
+		REST: server.URL + "/client/v4",
+	})
+	resp, err := svc.ReorderTunnelIngressRules(ctx, "account-1", "tunnel-1", []int{1, 0, 2, 3})
+	if err != nil {
+		t.Fatalf("ReorderTunnelIngressRules: %v", err)
+	}
+	if !putSeen {
+		t.Fatal("expected update request")
+	}
+	if resp.Version != 5 || len(resp.Entries) != 4 || resp.Entries[0].Path != "/aaaa" || resp.Entries[3].Service != "http_status:404" {
+		t.Fatalf("unexpected reorder response: %#v", resp)
+	}
+}
+
+func TestReorderTunnelIngressRulesRejectsMovingCatchAll(t *testing.T) {
+	ctx := context.Background()
+	putSeen := false
+	mux := http.NewServeMux()
+	mux.HandleFunc("/client/v4/accounts/account-1/cfd_tunnel/tunnel-1/configurations", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		switch r.Method {
+		case http.MethodGet:
+			writeCFEnvelope(w, `{
+				"tunnel_id":"tunnel-1",
+				"version":4,
+				"config":{"ingress":[
+					{"hostname":"app.example.com","service":"http://localhost:8080"},
+					{"service":"http_status:404"}
+				]}
+			}`, nil)
+		case http.MethodPut:
+			putSeen = true
+			t.Fatalf("unexpected tunnel configuration update")
+		default:
+			t.Fatalf("tunnel configuration method = %s", r.Method)
+		}
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	svc := NewServiceWithEndpoints(testOAuthServiceWithScopes(t, "cloudflare-tunnel.read cloudflare-tunnel.write"), EndpointOverrides{
+		REST: server.URL + "/client/v4",
+	})
+	_, err := svc.ReorderTunnelIngressRules(ctx, "account-1", "tunnel-1", []int{1, 0})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "catch-all") {
+		t.Fatalf("expected catch-all error, got %v", err)
+	}
+	if putSeen {
+		t.Fatal("unexpected update request")
+	}
+}
+
 func TestOverviewAggregatesCloudflareAccountResources(t *testing.T) {
 	ctx := context.Background()
 	mux := http.NewServeMux()

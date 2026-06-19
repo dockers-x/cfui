@@ -47,6 +47,7 @@ func TestOAuthCloudflareResourceHandlersRequireLogin(t *testing.T) {
 		{name: "tunnel delete", method: http.MethodDelete, target: "/api/cf/tunnels/tunnel-1?account_id=account-1", handler: s.handleCFTunnel},
 		{name: "tunnel config", method: http.MethodGet, target: "/api/cf/tunnels/tunnel-1/config?account_id=account-1", handler: s.handleCFTunnel},
 		{name: "tunnel config entry create", method: http.MethodPost, target: "/api/cf/tunnels/tunnel-1/config/entries?account_id=account-1", body: strings.NewReader(`{"hostname":"app.example.com","service":"http://localhost:8080"}`), handler: s.handleCFTunnel},
+		{name: "tunnel config entry reorder", method: http.MethodPost, target: "/api/cf/tunnels/tunnel-1/config/entries/reorder?account_id=account-1", body: strings.NewReader(`{"order":[1,0]}`), handler: s.handleCFTunnel},
 		{name: "tunnel config entry update", method: http.MethodPut, target: "/api/cf/tunnels/tunnel-1/config/entries/0?account_id=account-1", body: strings.NewReader(`{"hostname":"app.example.com","service":"http://localhost:8080"}`), handler: s.handleCFTunnel},
 		{name: "tunnel config entry delete", method: http.MethodDelete, target: "/api/cf/tunnels/tunnel-1/config/entries/0?account_id=account-1", handler: s.handleCFTunnel},
 		{name: "workers", method: http.MethodGet, target: "/api/cf/workers?account_id=account-1", handler: s.handleCFWorkers},
@@ -625,6 +626,27 @@ func TestCFTunnelConfigurationHandlersMutateIngress(t *testing.T) {
 	}
 	if created.Version != 8 || len(created.Entries) != 3 || created.Entries[1].Hostname != "app.example.com" || !created.Entries[1].NoTLSVerify || created.Entries[2].Service != "http_status:404" {
 		t.Fatalf("unexpected created config: %#v", created)
+	}
+
+	body = strings.NewReader(`{"order":[1,0,2]}`)
+	req = httptest.NewRequest(http.MethodPost, "/api/cf/tunnels/tunnel-1/config/entries/reorder?account_id=account-1", body)
+	rec = httptest.NewRecorder()
+	s.handleCFTunnel(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("reorder entry status %d: %s", rec.Code, rec.Body.String())
+	}
+	var reordered struct {
+		Version int `json:"version"`
+		Entries []struct {
+			Hostname string `json:"hostname"`
+			Service  string `json:"service"`
+		} `json:"entries"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&reordered); err != nil {
+		t.Fatalf("decode reordered config: %v", err)
+	}
+	if reordered.Version != 9 || len(reordered.Entries) != 3 || reordered.Entries[0].Hostname != "app.example.com" || reordered.Entries[1].Hostname != "old.example.com" || reordered.Entries[2].Service != "http_status:404" {
+		t.Fatalf("unexpected reordered config: %#v", reordered)
 	}
 
 	req = httptest.NewRequest(http.MethodDelete, "/api/cf/tunnels/tunnel-1/config/entries/0?account_id=account-1", nil)

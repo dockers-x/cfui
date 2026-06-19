@@ -1765,6 +1765,35 @@ func (s *Service) DeleteTunnelIngressRule(ctx context.Context, accountID, tunnel
 	})
 }
 
+func (s *Service) ReorderTunnelIngressRules(ctx context.Context, accountID, tunnelID string, order []int) (TunnelConfigurationResponse, error) {
+	return s.mutateTunnelConfiguration(ctx, accountID, tunnelID, func(cfg *cloudflare.TunnelConfiguration) error {
+		if len(order) != len(cfg.Ingress) {
+			return validationError("entry order length %d does not match current rule count %d", len(order), len(cfg.Ingress))
+		}
+		if len(order) == 0 {
+			return nil
+		}
+		if tunnelConfigHasCatchAll(cfg.Ingress) && order[len(order)-1] != len(cfg.Ingress)-1 {
+			return validationError("catch-all rule must remain last")
+		}
+		next := make([]cloudflare.UnvalidatedIngressRule, 0, len(cfg.Ingress))
+		seen := make([]bool, len(cfg.Ingress))
+		for _, index := range order {
+			if index < 0 || index >= len(cfg.Ingress) {
+				return validationError("entry index %d is out of range", index)
+			}
+			if seen[index] {
+				return validationError("entry index %d appears more than once", index)
+			}
+			seen[index] = true
+			next = append(next, cfg.Ingress[index])
+		}
+		cfg.Ingress = next
+		ensureTunnelConfigCatchAll(cfg)
+		return nil
+	})
+}
+
 func (s *Service) mutateTunnelConfiguration(ctx context.Context, accountID, tunnelID string, mutate func(*cloudflare.TunnelConfiguration) error) (TunnelConfigurationResponse, error) {
 	client, session, accountID, tunnelID, err := s.currentTunnelConfigClient(ctx, accountID, tunnelID, true)
 	if err != nil {

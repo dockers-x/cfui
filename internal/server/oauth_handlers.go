@@ -428,6 +428,22 @@ func (s *Server) handleCFTunnelSubresource(w http.ResponseWriter, r *http.Reques
 		writeCFResponse(w, resp, err)
 		return
 	}
+	if len(target.Segments) == 3 && target.Segments[0] == "config" && target.Segments[1] == "entries" && target.Segments[2] == "reorder" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var req struct {
+			Order []int `json:"order"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err)
+			return
+		}
+		resp, err := s.ensureCFService().ReorderTunnelIngressRules(r.Context(), r.URL.Query().Get("account_id"), target.TunnelID, req.Order)
+		writeCFResponse(w, resp, err)
+		return
+	}
 	if len(target.Segments) == 3 && target.Segments[0] == "config" && target.Segments[1] == "entries" {
 		index, err := strconv.Atoi(target.Segments[2])
 		if err != nil {
