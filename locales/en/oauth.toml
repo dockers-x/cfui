@@ -2140,6 +2140,12 @@ other = "Read only"
 [oauth_dns_create]
 other = "Create record"
 
+[oauth_dns_copy_diagnostics]
+other = "Copy diagnostics"
+
+[oauth_dns_copy_diagnostics_title]
+other = "Copy current DNS record list, filter, and proxy-state diagnostics. OAuth tokens, DNS record content, and record comments are not included."
+
 [oauth_dns_edit]
 other = "Edit DNS record"
 

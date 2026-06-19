@@ -2140,6 +2140,12 @@ other = "只读"
 [oauth_dns_create]
 other = "创建记录"
 
+[oauth_dns_copy_diagnostics]
+other = "复制诊断"
+
+[oauth_dns_copy_diagnostics_title]
+other = "复制当前 DNS 记录列表、筛选和代理状态诊断。OAuth token、DNS 记录内容和备注原文不会包含在内。"
+
 [oauth_dns_edit]
 other = "编辑 DNS 记录"
 

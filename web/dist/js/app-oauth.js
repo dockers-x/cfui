@@ -272,6 +272,8 @@
             if (state.oauth.selectedZoneId === zoneID) {
                 state.oauth.zoneDNSCount = Number.isFinite(Number(resp.count)) ? Number(resp.count) : null;
                 state.oauth.zoneDNSCountError = '';
+                state.oauth.dnsSession = resp.session || state.oauth.dnsSession || null;
+                state.oauth.dnsCapabilities = resp.capabilities || state.oauth.dnsCapabilities || null;
             }
         } catch (err) {
             if (state.oauth.selectedZoneId === zoneID) {
@@ -290,8 +292,12 @@
         try {
             const resp = await apiGet('/cf/dns?zone_id=' + encodeURIComponent(state.oauth.selectedZoneId));
             state.oauth.dnsRecords = Array.isArray(resp.data) ? resp.data : [];
+            state.oauth.dnsSession = resp.session || state.oauth.dnsSession || null;
+            state.oauth.dnsCapabilities = resp.capabilities || state.oauth.dnsCapabilities || null;
+            state.oauth.dnsRecordsError = '';
         } catch (err) {
-            renderOAuthError(err.message);
+            state.oauth.dnsRecords = [];
+            state.oauth.dnsRecordsError = err.message || String(err);
         }
     }
 
@@ -2114,10 +2120,12 @@
             await apiSend(path, editing ? 'PUT' : 'POST', payload);
             state.oauth.dnsFormMode = '';
             state.oauth.dnsEditingId = '';
+            state.oauth.dnsMutationError = '';
             await loadOAuthDNS();
             renderOAuthResource();
             toast.ok(t(editing ? 'oauth_dns_updated' : 'oauth_dns_created'));
         } catch (err) {
+            state.oauth.dnsMutationError = err.message || String(err);
             toast.err(err.message);
         } finally {
             setBusy(button, false);
@@ -2134,10 +2142,12 @@
         if (!ok) return;
         try {
             await apiSend(`/cf/dns/${encodeURIComponent(record.id)}?zone_id=${encodeURIComponent(state.oauth.selectedZoneId)}`, 'DELETE');
+            state.oauth.dnsMutationError = '';
             await loadOAuthDNS();
             renderOAuthResource();
             toast.ok(t('oauth_dns_deleted'));
         } catch (err) {
+            state.oauth.dnsMutationError = err.message || String(err);
             toast.err(err.message);
         }
     }
@@ -3261,23 +3271,129 @@
         return t('oauth_zone_unavailable');
     }
 
+    function dnsDiagnosticsText() {
+        const status = state.oauth.status || {};
+        const session = state.oauth.dnsSession || status.current || {};
+        const zone = state.oauth.zoneDetail?.zone?.id === state.oauth.selectedZoneId
+            ? state.oauth.zoneDetail.zone
+            : state.oauth.zones.find((item) => item.id === state.oauth.selectedZoneId);
+        const filtered = filteredDNSRecords();
+        return JSON.stringify({
+            type: 'cfui_oauth_dns_diagnostics',
+            version: 1,
+            generated_at: new Date().toISOString(),
+            browser_origin: window.location.origin,
+            browser_path: window.location.pathname,
+            contains_oauth_token: false,
+            contains_refresh_token: false,
+            contains_record_content: false,
+            contains_record_comment: false,
+            sensitive_fields_omitted: [
+                'oauth_access_token',
+                'oauth_refresh_token',
+                'dns_record_content',
+                'dns_record_comment',
+            ],
+            selected: {
+                account_id: state.oauth.selectedAccountId || '',
+                account_name: selectedAccountName(),
+                zone_id: state.oauth.selectedZoneId || '',
+                zone_name: selectedZoneName(),
+                resource: state.oauth.resource || '',
+            },
+            zone: {
+                id: zone?.id || '',
+                name: zone?.name || '',
+                status: zone?.status || '',
+                paused: !!zone?.paused,
+                type: zone?.type || '',
+                name_servers: Array.isArray(zone?.name_servers) ? zone.name_servers : [],
+                plan_name: zone?.plan?.name || '',
+            },
+            identity: {
+                label: session.label || '',
+                expires_at: session.expires_at || '',
+                scopes: Array.isArray(session.scopes) ? session.scopes : [],
+            },
+            capability: {
+                dns_read: canRead('dns'),
+                dns_write: canWrite('dns'),
+            },
+            state: {
+                records_loaded: state.oauth.dnsRecords.length,
+                records_filtered: filtered.length,
+                records_error: state.oauth.dnsRecordsError || '',
+                mutation_error: state.oauth.dnsMutationError || '',
+                filter_active: !!String(state.oauth.dnsFilter || '').trim(),
+                form_mode: state.oauth.dnsFormMode || '',
+                editing_record_id: state.oauth.dnsEditingId || '',
+                count_loaded: state.oauth.zoneDNSCount != null,
+                count_value: state.oauth.zoneDNSCount == null ? null : Number(state.oauth.zoneDNSCount),
+                count_error: state.oauth.zoneDNSCountError || '',
+                count_loading: !!state.oauth.zoneDNSCountLoading,
+                count_zone_id: state.oauth.zoneDNSCountZoneId || '',
+                scope_ready: canRead('dns'),
+            },
+            records: {
+                loaded_count: state.oauth.dnsRecords.length,
+                filtered_count: filtered.length,
+                items: filtered.map(dnsRecordDiagnostics),
+            },
+            capabilities: oauthCapabilityDiagnostics(state.oauth.dnsCapabilities || status.capabilities || {}),
+        }, null, 2);
+    }
+
+    function dnsRecordDiagnostics(record) {
+        return {
+            id: record?.id || '',
+            type: record?.type || '',
+            name: record?.name || '',
+            ttl: Number(record?.ttl || 0),
+            proxied: record?.proxied == null ? null : !!record.proxied,
+            proxiable: !!record?.proxiable,
+            content_included: false,
+            content_length: String(record?.content || '').length,
+            comment_included: false,
+            comment_present: !!record?.comment,
+            created_on: record?.created_on || '',
+            modified_on: record?.modified_on || '',
+        };
+    }
+
     function renderDNS(body) {
         if (!state.oauth.selectedZoneId) {
             body.appendChild(empty(t('oauth_select_zone')));
             return;
         }
         const canEdit = canWrite('dns');
-        body.appendChild(resourceActionBar(selectedZoneName(), canEdit ? {
-            text: state.oauth.dnsFormMode === 'create' ? t('cancel') : t('oauth_dns_create'),
-            className: state.oauth.dnsFormMode === 'create' ? 'btn btn--sm btn--ghost' : 'btn btn--sm',
-            onClick: () => {
-                state.oauth.dnsEditingId = '';
-                state.oauth.dnsFormMode = state.oauth.dnsFormMode === 'create' ? '' : 'create';
-                renderOAuthResource();
-            },
-        } : null));
+        const actions = [];
+        if (canEdit) {
+            actions.push({
+                text: state.oauth.dnsFormMode === 'create' ? t('cancel') : t('oauth_dns_create'),
+                className: state.oauth.dnsFormMode === 'create' ? 'btn btn--sm btn--ghost' : 'btn btn--sm',
+                onClick: () => {
+                    state.oauth.dnsEditingId = '';
+                    state.oauth.dnsFormMode = state.oauth.dnsFormMode === 'create' ? '' : 'create';
+                    renderOAuthResource();
+                },
+            });
+        }
+        actions.push({
+            text: t('oauth_dns_copy_diagnostics'),
+            className: 'btn btn--sm btn--ghost',
+            title: t('oauth_dns_copy_diagnostics_title'),
+            onClick: () => copyOAuthText(dnsDiagnosticsText()),
+        });
+        body.appendChild(resourceActionBar(selectedZoneName(), actions));
         if (canEdit && state.oauth.dnsFormMode === 'create') {
             body.appendChild(dnsFormNode(null));
+        }
+        if (state.oauth.dnsMutationError) {
+            body.appendChild(empty(state.oauth.dnsMutationError));
+        }
+        if (state.oauth.dnsRecordsError) {
+            body.appendChild(empty(state.oauth.dnsRecordsError));
+            return;
         }
         if (!state.oauth.dnsRecords.length) {
             body.appendChild(empty(t('oauth_no_dns')));
@@ -8721,6 +8837,10 @@
         state.oauth.zones = [];
         resetOverview();
         state.oauth.dnsRecords = [];
+        state.oauth.dnsSession = null;
+        state.oauth.dnsCapabilities = null;
+        state.oauth.dnsRecordsError = '';
+        state.oauth.dnsMutationError = '';
         state.oauth.tunnels = [];
         state.oauth.localTunnelProfiles = [];
         resetTunnelDetail();
