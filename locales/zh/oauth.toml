@@ -50,7 +50,7 @@ other = "复制中转回调 URL"
 other = "这个地址必须和 Cloudflare OAuth 客户端里的 Redirect callback URL 完全一致。"
 
 [oauth_relay_assist_text]
-other = "这个地址必须和 Cloudflare OAuth 应用里的 Redirect callback URL 完全一致。"
+other = "可直接使用提供域名；如需放到自己的 Cloudflare 账号下，再自建 Worker。"
 
 [oauth_relay_use_default]
 other = "默认"
@@ -2667,6 +2667,18 @@ other = "已删除 {count} 个 KV key。"
 
 [oauth_kv_no_keys]
 other = "该 namespace 暂无 key。"
+
+[oauth_kv_key_search_placeholder]
+other = "搜索 key 名或过期时间..."
+
+[oauth_kv_key_search_label]
+other = "搜索 KV key"
+
+[oauth_kv_key_search_count]
+other = "已加载条目 {n}/{m}"
+
+[oauth_kv_no_key_matches]
+other = "当前已加载前缀中没有匹配的 key 或目录。"
 
 [oauth_kv_select_key]
 other = "选择一个 key 查看值。"

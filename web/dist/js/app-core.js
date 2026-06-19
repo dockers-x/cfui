@@ -130,6 +130,7 @@
             kvKeysError: '',
             kvCursor: '',
             kvPrefix: '',
+            kvKeyFilter: '',
             kvValue: null,
             kvValueError: '',
             d1Tables: [],

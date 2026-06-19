@@ -50,7 +50,7 @@ other = "Copy relay callback URL"
 other = "This address must exactly match the Redirect callback URL in the Cloudflare OAuth client."
 
 [oauth_relay_assist_text]
-other = "This address must exactly match the Redirect callback URL in your Cloudflare OAuth app."
+other = "Use the provided domain directly, or self-host the Worker under your own Cloudflare account."
 
 [oauth_relay_use_default]
 other = "Default"
@@ -2667,6 +2667,18 @@ other = "{count} KV keys deleted."
 
 [oauth_kv_no_keys]
 other = "No keys in this namespace."
+
+[oauth_kv_key_search_placeholder]
+other = "Search key name or expiration..."
+
+[oauth_kv_key_search_label]
+other = "Search KV keys"
+
+[oauth_kv_key_search_count]
+other = "{n}/{m} loaded entries"
+
+[oauth_kv_no_key_matches]
+other = "No matching keys or folders in the loaded prefix."
 
 [oauth_kv_select_key]
 other = "Select a key to view its value."

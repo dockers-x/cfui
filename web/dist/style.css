@@ -4369,7 +4369,7 @@ details.disclosure > .body {
 
 .oauth-relay-editor {
     display: grid;
-    gap: 6px;
+    gap: 8px;
     max-width: 980px;
 }
 
@@ -4394,7 +4394,7 @@ details.disclosure > .body {
 
 .oauth-relay-primary-actions {
     display: inline-flex;
-    gap: 4px;
+    gap: 6px;
     align-items: center;
     justify-content: flex-end;
     white-space: nowrap;
@@ -4532,7 +4532,7 @@ details.disclosure > .body {
 .oauth-relay-helper {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px 10px;
+    gap: 2px 8px;
     align-items: center;
     color: var(--text-muted);
     font-size: var(--fs-xs);
@@ -4549,7 +4549,7 @@ details.disclosure > .body {
 .oauth-relay-assist-actions {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 2px;
     align-items: center;
     justify-content: flex-start;
     min-height: 0;
@@ -4558,12 +4558,14 @@ details.disclosure > .body {
 
 .oauth-relay-inline-action {
     min-height: var(--tap);
-    padding: 0 6px;
+    padding: 0 7px;
+    border-radius: var(--r-control);
 }
 
 .oauth-relay-default-action,
 .oauth-relay-self-host-action {
     border: 0;
+    background: transparent;
     color: var(--text-muted);
     font-size: var(--fs-xs);
     font-weight: 650;
@@ -4577,7 +4579,7 @@ details.disclosure > .body {
 .oauth-relay-default-action:hover,
 .oauth-relay-self-host-action:hover {
     color: var(--cf-orange-strong);
-    background: transparent;
+    background: color-mix(in srgb, var(--cf-orange) 8%, transparent);
 }
 
 .oauth-relay-action-separator {
@@ -6150,6 +6152,16 @@ details.oauth-form-section > summary {
 
     .oauth-media-frame--pdf {
         min-height: 360px;
+    }
+}
+
+@media (max-width: 540px) {
+    .oauth-relay-input-row {
+        grid-template-columns: 1fr;
+    }
+
+    .oauth-relay-primary-actions {
+        justify-content: flex-start;
     }
 }
 

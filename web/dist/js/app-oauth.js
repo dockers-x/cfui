@@ -1700,6 +1700,7 @@
                 state.oauth.kvKeys = [];
                 state.oauth.kvCursor = '';
                 state.oauth.kvPrefix = '';
+                state.oauth.kvKeyFilter = '';
                 state.oauth.kvValue = null;
                 state.oauth.kvKeysError = '';
                 state.oauth.kvValueError = '';
@@ -5331,6 +5332,9 @@
                     state.oauth.selectedKVKey = '';
                     state.oauth.kvSelectedKeys = [];
                     state.oauth.kvPrefix = '';
+                    state.oauth.kvKeyFilter = '';
+                    state.oauth.kvKeys = [];
+                    state.oauth.kvCursor = '';
                     state.oauth.kvValue = null;
                     state.oauth.kvKeysError = '';
                     state.oauth.kvValueError = '';
@@ -5718,6 +5722,8 @@
         const selectedValue = state.oauth.kvValue || null;
         const selectedListKey = selectedKVListKey(selectedValue?.key || state.oauth.selectedKVKey);
         const entries = kvKeyEntries();
+        const filteredFolders = filteredKVPrefixes(entries.folders);
+        const filteredKeys = filteredKVKeys(entries.keys);
         return JSON.stringify({
             type: 'cfui_oauth_kv_diagnostics',
             version: 1,
@@ -5745,6 +5751,7 @@
                 namespace_title: namespace?.title || '',
                 key: state.oauth.selectedKVKey || '',
                 key_prefix: state.oauth.kvPrefix || '',
+                key_filter: String(state.oauth.kvKeyFilter || '').trim(),
                 storage_view: state.oauth.storageView || '',
             },
             identity: {
@@ -5762,6 +5769,9 @@
                 key_prefix: state.oauth.kvPrefix || '',
                 key_prefixes_loaded: entries.folders.length,
                 direct_keys_loaded: entries.keys.length,
+                key_filter: String(state.oauth.kvKeyFilter || '').trim(),
+                key_filter_active: !!String(state.oauth.kvKeyFilter || '').trim(),
+                key_filter_matches: filteredFolders.length + filteredKeys.length,
                 keys_has_more: !!state.oauth.kvCursor,
                 keys_error: state.oauth.kvKeysError || '',
                 value_loaded: !!selectedValue,
@@ -5779,10 +5789,11 @@
                 prefix: state.oauth.kvPrefix || '',
                 loaded_count: state.oauth.kvKeys.length,
                 direct_count: entries.keys.length,
-                prefixes: entries.folders.map(kvPrefixDiagnostics),
+                filtered_count: filteredFolders.length + filteredKeys.length,
+                prefixes: filteredFolders.map(kvPrefixDiagnostics),
                 has_more: !!state.oauth.kvCursor,
                 cursor_present: !!state.oauth.kvCursor,
-                items: entries.keys.map(kvKeyDiagnostics),
+                items: filteredKeys.map(kvKeyDiagnostics),
             },
             selected_value: selectedValue ? kvSelectedValueDiagnostics(selectedValue, selectedListKey) : null,
             bulk_selection: kvBulkSelectionDiagnostics(),
@@ -5979,14 +5990,19 @@
         heading.textContent = t('oauth_kv_keys');
         section.appendChild(heading);
         section.appendChild(kvPrefixNavigationNode());
+        section.appendChild(kvKeyFilterNode());
         const entries = kvKeyEntries();
+        const filteredFolders = filteredKVPrefixes(entries.folders);
+        const filteredKeys = filteredKVKeys(entries.keys);
         if (state.oauth.kvKeysError) {
             section.appendChild(empty(state.oauth.kvKeysError));
         } else if (!state.oauth.kvKeys.length) {
             section.appendChild(empty(t('oauth_kv_no_keys')));
+        } else if (!filteredFolders.length && !filteredKeys.length) {
+            section.appendChild(empty(t('oauth_kv_no_key_matches')));
         } else {
-            if (canEdit) section.appendChild(kvBulkActionsNode(entries.keys));
-            for (const folder of entries.folders) {
+            if (canEdit) section.appendChild(kvBulkActionsNode(filteredKeys));
+            for (const folder of filteredFolders) {
                 const row = rowNode(kvPrefixLabel(folder.prefix), t('oauth_kv_prefix_meta'), []);
                 row.classList.add('oauth-row--folder');
                 row.addEventListener('click', async () => {
@@ -5994,7 +6010,7 @@
                 });
                 section.appendChild(row);
             }
-            for (const key of entries.keys) {
+            for (const key of filteredKeys) {
                 const meta = key.expiration ? `${t('oauth_kv_expiration')} ${formatDate(key.expiration * 1000)}` : '';
                 const actions = canEdit ? [kvKeySelectCheckbox(key.name)] : [];
                 const row = rowNode(key.name, meta, actions);
@@ -10094,6 +10110,37 @@
         return wrap;
     }
 
+    function kvKeyFilterNode() {
+        const wrap = document.createElement('div');
+        wrap.className = 'oauth-filter-bar';
+        const input = textInput(state.oauth.kvKeyFilter || '', 'search');
+        input.setAttribute('data-oauth-kv-key-filter', 'true');
+        input.placeholder = t('oauth_kv_key_search_placeholder');
+        input.setAttribute('aria-label', t('oauth_kv_key_search_label'));
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+        input.addEventListener('input', () => {
+            state.oauth.kvKeyFilter = input.value;
+            renderOAuthResource();
+            requestAnimationFrame(() => {
+                const next = document.querySelector('[data-oauth-kv-key-filter="true"]');
+                if (!next) return;
+                next.focus();
+                const end = next.value.length;
+                next.setSelectionRange(end, end);
+            });
+        });
+        const entries = kvKeyEntries();
+        const meta = document.createElement('div');
+        meta.className = 'oauth-filter-meta';
+        meta.textContent = t('oauth_kv_key_search_count', {
+            n: filteredKVPrefixes(entries.folders).length + filteredKVKeys(entries.keys).length,
+            m: entries.folders.length + entries.keys.length,
+        });
+        wrap.append(input, meta);
+        return wrap;
+    }
+
     function r2PrefixNavigationNode() {
         const wrap = document.createElement('div');
         wrap.className = 'oauth-r2-prefix-nav';
@@ -10208,6 +10255,7 @@
 
     async function openKVPrefix(prefix) {
         state.oauth.kvPrefix = String(prefix || '').replace(/^\/+/, '');
+        state.oauth.kvKeyFilter = '';
         state.oauth.selectedKVKey = '';
         state.oauth.kvValue = null;
         state.oauth.kvValueError = '';
@@ -10303,6 +10351,18 @@
         return state.oauth.r2Delimited.filter((prefix) => normalizeFilterText([prefix, r2PrefixLabel(prefix)].join(' ')).includes(query));
     }
 
+    function filteredKVKeys(keys = kvDirectKeys()) {
+        const query = normalizeFilterText(state.oauth.kvKeyFilter);
+        if (!query) return keys;
+        return keys.filter((key) => kvKeySearchText(key).includes(query));
+    }
+
+    function filteredKVPrefixes(folders = kvKeyEntries().folders) {
+        const query = normalizeFilterText(state.oauth.kvKeyFilter);
+        if (!query) return folders;
+        return folders.filter((folder) => normalizeFilterText([folder?.prefix, kvPrefixLabel(folder?.prefix)].join(' ')).includes(query));
+    }
+
     function r2ObjectSearchText(object) {
         return normalizeFilterText([
             object?.key,
@@ -10313,6 +10373,14 @@
             object?.size,
             object?.size == null ? '' : formatBytes(object.size),
         ].filter((item) => item != null && item !== '').join(' '));
+    }
+
+    function kvKeySearchText(key) {
+        const expiration = Number(key?.expiration || 0);
+        return normalizeFilterText([
+            key?.name,
+            expiration ? formatDate(expiration * 1000) : '',
+        ].filter(Boolean).join(' '));
     }
 
     function normalizeFilterText(value) {
@@ -10563,6 +10631,7 @@
         state.oauth.kvKeysError = '';
         state.oauth.kvCursor = '';
         state.oauth.kvPrefix = '';
+        state.oauth.kvKeyFilter = '';
         state.oauth.kvValue = null;
         state.oauth.kvValueError = '';
         state.oauth.kvCreateOpen = false;
@@ -10590,6 +10659,7 @@
         state.oauth.kvKeysError = '';
         state.oauth.kvCursor = '';
         state.oauth.kvPrefix = '';
+        state.oauth.kvKeyFilter = '';
         state.oauth.kvValue = null;
         state.oauth.kvValueError = '';
         state.oauth.kvCreateOpen = false;

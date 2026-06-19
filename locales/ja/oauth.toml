@@ -50,7 +50,7 @@ other = "中継 callback URL をコピー"
 other = "このアドレスは Cloudflare OAuth クライアントの Redirect callback URL と完全に一致している必要があります。"
 
 [oauth_relay_assist_text]
-other = "このアドレスは Cloudflare OAuth アプリの Redirect callback URL と完全に一致している必要があります。"
+other = "提供済みドメインをそのまま使うか、自分の Cloudflare アカウントで Worker を自前運用できます。"
 
 [oauth_relay_use_default]
 other = "既定"
@@ -2667,6 +2667,18 @@ other = "{count} 個の KV key を削除しました。"
 
 [oauth_kv_no_keys]
 other = "この namespace に key はありません。"
+
+[oauth_kv_key_search_placeholder]
+other = "key 名または有効期限を検索..."
+
+[oauth_kv_key_search_label]
+other = "KV key を検索"
+
+[oauth_kv_key_search_count]
+other = "{n}/{m} 件の読み込み済み項目"
+
+[oauth_kv_no_key_matches]
+other = "読み込み済み prefix に一致する key またはフォルダーはありません。"
 
 [oauth_kv_select_key]
 other = "key を選択して値を表示します。"
