@@ -4365,7 +4365,7 @@ details.disclosure > .body {
 
 .oauth-relay-editor {
     display: grid;
-    gap: 6px;
+    gap: 8px;
     max-width: 920px;
 }
 
@@ -4405,11 +4405,12 @@ details.disclosure > .body {
     min-width: 72px;
 }
 
-.oauth-relay-status-line {
+.oauth-relay-feedback-line {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 6px 8px;
     align-items: center;
+    min-height: 24px;
     color: var(--text-muted);
     font-size: var(--fs-xs);
     line-height: 1.45;
@@ -4423,6 +4424,10 @@ details.disclosure > .body {
     color: var(--text-muted);
     font-size: var(--fs-xs);
     line-height: 1.45;
+}
+
+.oauth-relay-feedback-separator {
+    color: var(--text-subtle);
 }
 
 .oauth-relay-source-pill[data-source="default"] {
@@ -4463,8 +4468,8 @@ details.disclosure > .body {
 .oauth-relay-helper {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 12px;
-    align-items: baseline;
+    gap: 6px 10px;
+    align-items: center;
     justify-content: space-between;
     color: var(--text-muted);
     font-size: var(--fs-xs);
@@ -4481,7 +4486,7 @@ details.disclosure > .body {
 .oauth-relay-assist-actions {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 2px;
     align-items: center;
     justify-content: flex-end;
     min-height: 28px;
@@ -4489,7 +4494,7 @@ details.disclosure > .body {
 
 .oauth-relay-inline-action {
     min-height: 26px;
-    padding: 0 4px;
+    padding: 0 6px;
 }
 
 .oauth-relay-default-action,
@@ -4498,6 +4503,12 @@ details.disclosure > .body {
     color: var(--text-muted);
     font-size: var(--fs-xs);
     font-weight: 650;
+}
+
+.oauth-relay-default-action:hover,
+.oauth-relay-self-host-action:hover {
+    color: var(--text);
+    background: transparent;
 }
 
 .oauth-relay-self-host-action {
@@ -4610,15 +4621,15 @@ details.disclosure > .body {
     display: grid;
     align-content: start;
     grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
+    gap: 8px;
     min-height: 0;
     overflow: auto;
-    padding: 12px var(--gap-4);
+    padding: 10px 14px 16px;
     border-right: 1px solid var(--border);
     background: var(--surface);
     color: var(--text-muted);
     font-size: var(--fs-xs);
-    line-height: 1.45;
+    line-height: 1.35;
 }
 
 .oauth-worker-guide p {
@@ -4638,19 +4649,19 @@ details.disclosure > .body {
 }
 
 .oauth-worker-guide li + li {
-    margin-top: 1px;
+    margin-top: 0;
 }
 
 .oauth-worker-default-note,
 .oauth-worker-self-host-target {
     display: grid;
     gap: 4px;
-    padding: 8px 10px;
+    padding: 7px 10px;
     border: 1px solid var(--border);
     border-radius: var(--r-card);
     background: var(--surface-2);
     font-size: var(--fs-xs);
-    line-height: 1.5;
+    line-height: 1.4;
 }
 
 .oauth-worker-default-note {
@@ -5585,6 +5596,24 @@ details.disclosure > .body {
 
 .oauth-d1-date-actions {
     justify-content: flex-start;
+}
+
+.oauth-d1-nullable-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: start;
+    min-width: 0;
+}
+
+.oauth-d1-nullable-control {
+    min-width: 0;
+}
+
+.oauth-d1-null-toggle {
+    min-height: var(--tap);
+    padding: 8px 10px;
+    white-space: nowrap;
 }
 
 .oauth-d1-textarea {

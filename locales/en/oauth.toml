@@ -50,7 +50,7 @@ other = "Copy relay callback URL"
 other = "This address must exactly match the Redirect callback URL in the Cloudflare OAuth client."
 
 [oauth_relay_assist_text]
-other = "Enter this exact value as the Cloudflare OAuth client's Redirect callback URL."
+other = "Use this exact value as the Cloudflare OAuth client's Redirect callback URL. Do not append cfui_callback_url."
 
 [oauth_relay_use_default]
 other = "Use provided domain"
@@ -59,7 +59,7 @@ other = "Use provided domain"
 other = "Use the provided default OAuth relay domain"
 
 [oauth_relay_self_host]
-other = "Self-host"
+other = "Self-host..."
 
 [oauth_relay_self_host_title]
 other = "Show the Worker script and deployment steps for a self-hosted Cloudflare OAuth relay"
@@ -74,10 +74,10 @@ other = "Custom"
 other = "Unsaved"
 
 [oauth_relay_status_default]
-other = "Saved: provided domain."
+other = "Saved. Use this provided domain in Cloudflare too."
 
 [oauth_relay_status_custom]
-other = "Saved: custom relay domain."
+other = "Saved. Use this custom domain in Cloudflare too."
 
 [oauth_relay_status_unsaved]
 other = "Unsaved change. Save it before entering it in Cloudflare."
@@ -920,10 +920,10 @@ other = "Save the relay callback, create the Cloudflare OAuth client, then resta
 other = "Set the OAuth relay callback"
 
 [oauth_setup_relay_desc]
-other = "The input above is the Redirect callback URL to register in the Cloudflare OAuth client."
+other = "The input above is the only Redirect callback URL to register in the Cloudflare OAuth client."
 
 [oauth_setup_relay_input_note]
-other = "Use \"Use provided domain\" by default. Open \"Self-host\" only when you want your own relay domain and need the Worker script."
+other = "Use \"Use provided domain\" by default. Open \"Self-host...\" only when you want your own relay domain and need the Worker script."
 
 [oauth_setup_oauth_app_title]
 other = "Fill the Cloudflare OAuth client form"
@@ -995,10 +995,10 @@ other = "View the full Worker script in this page"
 other = "Cloudflare OAuth Worker script"
 
 [oauth_worker_script_dialog_subtitle]
-other = "Deployment is optional. Use this script only when you want the relay address to use your own domain."
+other = "Use the provided domain by default; no deployment is required. Use this script only when you want the relay address to use your own domain."
 
 [oauth_worker_self_host_summary]
-other = "Use the provided domain unless you need your own relay domain."
+other = "Use the provided domain by default. To self-host, Cloudflare and cfui use the same /oauth/callback URL."
 
 [oauth_worker_self_host_target_label]
 other = "Self-host callback URL"
@@ -1034,7 +1034,7 @@ other = "Register your Worker /oauth/callback URL in Cloudflare."
 other = "Save the same /oauth/callback URL in cfui."
 
 [oauth_worker_self_host_step_allowlist]
-other = "For public cfui domains, set CFUI_ALLOWED_CALLBACK_ORIGINS."
+other = "Public cfui domains need CFUI_ALLOWED_CALLBACK_ORIGINS."
 
 [oauth_worker_script_loading]
 other = "Loading Worker script..."
@@ -2486,7 +2486,7 @@ other = "This table has no rows."
 other = "Edit row {rowid}"
 
 [oauth_d1_edit_hint]
-other = "Inputs adapt to column types for numbers, booleans, dates, and text. Saves still use parameterized D1 queries and leave unchanged fields as-is."
+other = "Inputs adapt to column types. Nullable columns can be saved as SQL NULL; unchanged fields stay as-is."
 
 [oauth_d1_null]
 other = "NULL"

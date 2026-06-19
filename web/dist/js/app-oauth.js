@@ -5697,9 +5697,10 @@
             event.preventDefault();
             const changes = {};
             for (const column of state.oauth.d1TableColumns) {
-                const original = fieldEditValue(row?.[column.name]);
-                const next = inputs.get(column.name)?.value() ?? '';
-                if (next !== original) changes[column.name] = next;
+                const original = d1MutationValue(row?.[column.name]);
+                const editor = inputs.get(column.name);
+                const next = editor ? editor.value() : '';
+                if (!d1SameMutationValue(next, original)) changes[column.name] = next;
             }
             if (!Object.keys(changes).length) {
                 toast.err(t('oauth_d1_no_changes'));
@@ -5720,18 +5721,64 @@
     }
 
     function d1ColumnEditor(column, value) {
-        const original = fieldEditValue(value);
+        const originalValue = d1MutationValue(value);
+        const original = originalValue == null ? '' : String(originalValue);
         const kind = d1InputKind(column?.type || '');
+        let editor;
         if ((kind === 'integer' || kind === 'real') && d1CanUseNumberInput(original)) {
             const input = textInput(original, 'number');
             input.inputMode = kind === 'integer' ? 'numeric' : 'decimal';
             input.step = kind === 'integer' ? '1' : 'any';
             input.maxLength = 65536;
-            return { node: input, value: () => input.value };
+            editor = { node: input, value: () => input.value };
+        } else if (kind === 'boolean') {
+            editor = d1BooleanEditor(original);
+        } else if (kind === 'datetime' || kind === 'date') {
+            editor = d1DateEditor(original, kind === 'datetime');
+        } else {
+            editor = d1TextEditor(original);
         }
-        if (kind === 'boolean') return d1BooleanEditor(original);
-        if (kind === 'datetime' || kind === 'date') return d1DateEditor(original, kind === 'datetime');
-        return d1TextEditor(original);
+        return d1NullableEditor(column, value, editor);
+    }
+
+    function d1MutationValue(value) {
+        if (value == null) return null;
+        if (typeof value === 'boolean') return value ? '1' : '0';
+        return fieldEditValue(value);
+    }
+
+    function d1SameMutationValue(a, b) {
+        if (a == null || b == null) return a == null && b == null;
+        return String(a) === String(b);
+    }
+
+    function d1NullableEditor(column, rawValue, editor) {
+        if (column?.not_null || column?.primary_key) return editor;
+        const wrap = document.createElement('div');
+        wrap.className = 'oauth-d1-nullable-field';
+        const field = document.createElement('div');
+        field.className = 'oauth-d1-nullable-control';
+        field.appendChild(editor.node);
+
+        const label = document.createElement('label');
+        label.className = 'oauth-check-option oauth-d1-null-toggle';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = rawValue == null;
+        const text = document.createElement('span');
+        text.textContent = t('oauth_d1_null');
+        label.append(checkbox, text);
+
+        const setNullState = () => {
+            for (const control of field.querySelectorAll('input, textarea, select, button')) {
+                control.disabled = checkbox.checked;
+            }
+        };
+        checkbox.addEventListener('change', setNullState);
+        setNullState();
+
+        wrap.append(field, label);
+        return { node: wrap, value: () => (checkbox.checked ? null : editor.value()) };
     }
 
     function d1TextEditor(original) {
@@ -5754,8 +5801,7 @@
         const select = document.createElement('select');
         select.className = 'form-select';
         const options = [];
-        if (!original) options.push(['', t('oauth_d1_null')]);
-        else if (!['0', '1'].includes(original)) options.push([original, original]);
+        if (original && !['0', '1'].includes(original)) options.push([original, original]);
         options.push(['1', t('yes')], ['0', t('no')]);
         for (const [value, label] of options) {
             const option = document.createElement('option');
@@ -5784,11 +5830,6 @@
             input.value = d1DateInputValue(new Date(), includesTime);
         });
         actions.appendChild(now);
-        if (!original) {
-            actions.appendChild(smallButton(t('oauth_d1_restore_null'), 'btn btn--sm btn--ghost', () => {
-                input.value = '';
-            }));
-        }
         wrap.appendChild(actions);
 
         const meta = document.createElement('div');

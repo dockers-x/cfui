@@ -38,9 +38,9 @@
             input.autocomplete = 'off';
             input.placeholder = defaultOAuthRelayCallbackURL;
             input.setAttribute('aria-label', t('oauth_relay_callback'));
-            input.setAttribute('aria-describedby', 'oauth-relay-callback-help oauth-relay-source-line oauth-relay-callback-status');
+            input.setAttribute('aria-describedby', 'oauth-relay-callback-help oauth-relay-callback-status');
             input.value = configuredRelay;
-            const sourceLine = relaySourceLine(input.value, configuredRelay);
+            const sourceLine = relaySourceNode(input.value, configuredRelay);
             input.addEventListener('input', () => updateRelaySourceLine(sourceLine, input.value, configuredRelay));
             const primaryActions = document.createElement('span');
             primaryActions.className = 'oauth-relay-primary-actions';
@@ -87,9 +87,8 @@
             assistActions.append(useDefault, selfHost);
             helper.append(helperText, assistActions);
 
-            const statusLine = relayStatusLine();
-            field.append(inputRow, helper, sourceLine);
-            if (statusLine) field.appendChild(statusLine);
+            const feedbackLine = relayFeedbackLine(sourceLine);
+            field.append(inputRow, helper, feedbackLine);
             form.appendChild(field);
             form.addEventListener('submit', (event) => {
                 event.preventDefault();
@@ -98,12 +97,9 @@
             return form;
         }
 
-        function relaySourceLine(relayURL, configuredRelay) {
+        function relaySourceNode(relayURL, configuredRelay) {
             const line = document.createElement('div');
             line.className = 'oauth-relay-source-line';
-            line.id = 'oauth-relay-source-line';
-            line.setAttribute('role', 'status');
-            line.setAttribute('aria-live', 'polite');
             updateRelaySourceLine(line, relayURL, configuredRelay);
             return line;
         }
@@ -135,15 +131,22 @@
             line.append(badge, detail);
         }
 
-        function relayStatusLine() {
-            const check = relayCheckStatusNode();
-            if (!check) return null;
+        function relayFeedbackLine(sourceLine) {
             const line = document.createElement('div');
-            line.className = 'oauth-relay-status-line';
+            line.className = 'oauth-relay-feedback-line';
             line.id = 'oauth-relay-callback-status';
             line.setAttribute('role', 'status');
             line.setAttribute('aria-live', 'polite');
-            line.appendChild(check);
+            line.appendChild(sourceLine);
+
+            const check = relayCheckStatusNode();
+            if (check) {
+                const separator = document.createElement('span');
+                separator.className = 'oauth-relay-feedback-separator';
+                separator.setAttribute('aria-hidden', 'true');
+                separator.textContent = '/';
+                line.append(separator, check);
+            }
             return line;
         }
 

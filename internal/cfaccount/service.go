@@ -679,8 +679,8 @@ type D1TableResponse struct {
 }
 
 type D1RowMutationRequest struct {
-	RowID   string            `json:"rowid"`
-	Changes map[string]string `json:"changes,omitempty"`
+	RowID   string         `json:"rowid"`
+	Changes map[string]any `json:"changes,omitempty"`
 }
 
 type D1MutationResponse struct {
@@ -4689,6 +4689,11 @@ func d1TableColumns(ctx context.Context, client *cloudflare.API, accountID, data
 	return columns, nil
 }
 
+type d1ChangeValue struct {
+	Null bool
+	Text string
+}
+
 func d1UpdateRowStatement(tableName string, columns []D1Column, req D1RowMutationRequest) (string, []string, error) {
 	rowID := strings.TrimSpace(req.RowID)
 	if rowID == "" {
@@ -4700,12 +4705,12 @@ func d1UpdateRowStatement(tableName string, columns []D1Column, req D1RowMutatio
 	if len(req.Changes) > maxD1Parameters-1 {
 		return "", nil, validationError("too many changed columns")
 	}
-	allowed := make(map[string]struct{}, len(columns))
+	allowed := make(map[string]D1Column, len(columns))
 	for _, column := range columns {
-		allowed[column.Name] = struct{}{}
+		allowed[column.Name] = column
 	}
 	keys := make([]string, 0, len(req.Changes))
-	changes := make(map[string]string, len(req.Changes))
+	changes := make(map[string]d1ChangeValue, len(req.Changes))
 	for column, value := range req.Changes {
 		column = strings.TrimSpace(column)
 		if column == "" {
@@ -4714,27 +4719,71 @@ func d1UpdateRowStatement(tableName string, columns []D1Column, req D1RowMutatio
 		if len(column) > maxD1IdentifierLen {
 			return "", nil, validationError("column name is too long")
 		}
-		if _, ok := allowed[column]; !ok {
+		def, ok := allowed[column]
+		if !ok {
 			return "", nil, validationError("column %q is not part of table %q", column, tableName)
-		}
-		if len(value) > maxD1CellValueBytes {
-			return "", nil, validationError("column %q value is too large", column)
 		}
 		if _, exists := changes[column]; exists {
 			return "", nil, validationError("column %q is duplicated", column)
 		}
-		changes[column] = value
+		change, err := normalizeD1ChangeValue(def, value)
+		if err != nil {
+			return "", nil, err
+		}
+		changes[column] = change
 		keys = append(keys, column)
 	}
 	sort.Strings(keys)
 	assignments := make([]string, 0, len(keys))
 	params := make([]string, 0, len(keys)+1)
 	for _, column := range keys {
+		change := changes[column]
+		if change.Null {
+			assignments = append(assignments, fmt.Sprintf("%s = NULL", quoteSQLIdentifier(column)))
+			continue
+		}
 		assignments = append(assignments, fmt.Sprintf("%s = ?", quoteSQLIdentifier(column)))
-		params = append(params, changes[column])
+		params = append(params, change.Text)
 	}
 	params = append(params, rowID)
 	return fmt.Sprintf("UPDATE %s SET %s WHERE rowid = ?", quoteSQLIdentifier(tableName), strings.Join(assignments, ", ")), params, nil
+}
+
+func normalizeD1ChangeValue(column D1Column, value any) (d1ChangeValue, error) {
+	if value == nil {
+		if column.NotNull || column.PrimaryKey {
+			return d1ChangeValue{}, validationError("column %q cannot be set to NULL", column.Name)
+		}
+		return d1ChangeValue{Null: true}, nil
+	}
+
+	var text string
+	switch v := value.(type) {
+	case string:
+		text = v
+	case bool:
+		if v {
+			text = "1"
+		} else {
+			text = "0"
+		}
+	case float64:
+		text = strconv.FormatFloat(v, 'g', -1, 64)
+	case float32:
+		text = strconv.FormatFloat(float64(v), 'g', -1, 32)
+	case int:
+		text = strconv.Itoa(v)
+	case int64:
+		text = strconv.FormatInt(v, 10)
+	case json.Number:
+		text = v.String()
+	default:
+		return d1ChangeValue{}, validationError("column %q value type is unsupported", column.Name)
+	}
+	if len(text) > maxD1CellValueBytes {
+		return d1ChangeValue{}, validationError("column %q value is too large", column.Name)
+	}
+	return d1ChangeValue{Text: text}, nil
 }
 
 func quoteSQLIdentifier(identifier string) string {

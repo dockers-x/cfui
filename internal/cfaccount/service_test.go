@@ -1236,7 +1236,7 @@ func TestD1UpdateRowStatementQuotesIdentifiersAndParameterizesValues(t *testing.
 		{Name: "note"},
 	}, D1RowMutationRequest{
 		RowID: "7",
-		Changes: map[string]string{
+		Changes: map[string]any{
 			`name"col`: `Robert'); DROP TABLE users; --`,
 			"note":     "safe",
 		},
@@ -1255,9 +1255,49 @@ func TestD1UpdateRowStatementQuotesIdentifiersAndParameterizesValues(t *testing.
 
 	if _, _, err := d1UpdateRowStatement("users", []D1Column{{Name: "name"}}, D1RowMutationRequest{
 		RowID:   "1",
-		Changes: map[string]string{"unknown": "value"},
+		Changes: map[string]any{"unknown": "value"},
 	}); err == nil {
 		t.Fatalf("expected unknown column error")
+	}
+}
+
+func TestD1UpdateRowStatementSupportsNullAndTypedJSONValues(t *testing.T) {
+	sql, params, err := d1UpdateRowStatement("users", []D1Column{
+		{Name: "active", Type: "BOOLEAN"},
+		{Name: "nickname", Type: "TEXT"},
+		{Name: "score", Type: "REAL"},
+	}, D1RowMutationRequest{
+		RowID: "9",
+		Changes: map[string]any{
+			"active":   true,
+			"nickname": nil,
+			"score":    float64(12.5),
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	wantSQL := `UPDATE "users" SET "active" = ?, "nickname" = NULL, "score" = ? WHERE rowid = ?`
+	if sql != wantSQL {
+		t.Fatalf("sql = %q, want %q", sql, wantSQL)
+	}
+	wantParams := []string{"1", "12.5", "9"}
+	if strings.Join(params, "\x00") != strings.Join(wantParams, "\x00") {
+		t.Fatalf("params = %#v, want %#v", params, wantParams)
+	}
+
+	if _, _, err := d1UpdateRowStatement("users", []D1Column{{Name: "id", PrimaryKey: true}}, D1RowMutationRequest{
+		RowID:   "1",
+		Changes: map[string]any{"id": nil},
+	}); err == nil {
+		t.Fatalf("expected primary key null update error")
+	}
+
+	if _, _, err := d1UpdateRowStatement("users", []D1Column{{Name: "meta"}}, D1RowMutationRequest{
+		RowID:   "1",
+		Changes: map[string]any{"meta": map[string]any{"nested": true}},
+	}); err == nil {
+		t.Fatalf("expected unsupported object value error")
 	}
 }
 
