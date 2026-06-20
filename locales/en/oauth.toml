@@ -1280,7 +1280,7 @@ other = "Register your Worker /oauth/callback URL in the Cloudflare OAuth client
 other = "Save the same /oauth/callback URL in cfui's relay callback input."
 
 [oauth_worker_self_host_step_allowlist]
-other = "Public cfui domains need CFUI_ALLOWED_CALLBACK_ORIGINS."
+other = "For public cfui domains, set CFUI_ALLOWED_CALLBACK_ORIGINS on the Worker; use cfui origins only, without /oauth/callback, for example https://cfui.*.heiyu.space."
 
 [oauth_worker_script_loading]
 other = "Loading Worker script..."
@@ -1301,13 +1301,13 @@ other = "Optional fallback callback Worker variable"
 other = "Optional dynamic callback relay URL"
 
 [oauth_setup_worker_allowlist_var]
-other = "Dynamic callback origin allowlist"
+other = "Worker variable: dynamic callback origin allowlist"
 
 [oauth_setup_internal_dns_note]
 other = "An internal DNS name for cfui is fine as long as the user's browser can reach it. cfui automatically puts the current browser-facing /oauth/callback URL into OAuth state."
 
 [oauth_setup_dynamic_callback_note]
-other = "For public cfui domains with a shared Worker, configure CFUI_ALLOWED_CALLBACK_ORIGINS on the Worker, or intentionally use * for a multi-user relay. Loopback, private/LAN, .local, .internal, .lan, .home.arpa, and .test callback hosts are allowed by default."
+other = "Only needed for a self-hosted Worker or when one Worker serves public cfui domains. Set origins, not full callback URLs, so do not include /oauth/callback; separate multiple origins with commas. Wildcard example: https://cfui.*.heiyu.space, where each * matches exactly one DNS label. Use * only for an intentionally open multi-user relay. Loopback, private/LAN, .local, .internal, .lan, .home.arpa, and .test callback hosts are allowed by default."
 
 [oauth_setup_client_id_placeholder]
 other = "<your Cloudflare OAuth client ID>"

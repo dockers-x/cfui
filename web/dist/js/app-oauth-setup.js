@@ -405,6 +405,7 @@
 
             const relayURL = status?.config?.relay_callback_url || '';
             const effectiveRelayURL = relayURL || defaultOAuthRelayCallbackURL;
+            const callbackOrigin = window.location.origin;
             const minimumScopeList = minimumScopes.join(' ');
             const fullConsoleScopeList = fullConsoleScopes.join(' ');
             const envSnippet = [
@@ -471,6 +472,8 @@
                             ],
                         }),
                         setupGuideNote(t('oauth_setup_redirect_uri_note')),
+                        setupGuideCodeRow(t('oauth_setup_worker_allowlist_var'), `CFUI_ALLOWED_CALLBACK_ORIGINS=${callbackOrigin}`),
+                        setupGuideNote(t('oauth_setup_dynamic_callback_note')),
                         setupGuideCodeRow(t('oauth_setup_client_url'), t('oauth_setup_client_url_value'), { copy: false }),
                     ]
                 ),

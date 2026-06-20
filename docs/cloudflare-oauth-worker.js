@@ -8,6 +8,11 @@ const OAUTH_QUERY_PARAMS = ["code", "state", "error", "error_description", "erro
 // Optional Worker variables:
 // - CFUI_CALLBACK_URL: fallback target, for example https://cfui.example.internal/oauth/callback.
 // - CFUI_ALLOWED_CALLBACK_ORIGINS: comma-separated origins allowed for cfui_callback_url.
+//   Set origins only, not full /oauth/callback URLs.
+//   Exact origin example: https://cfui.example.com
+//   Wildcard origin examples: https://cfui.*.heiyu.space, https://*.*.example.com
+//   Multiple entries example: https://cfui.*.heiyu.space,https://admin.example.com
+//   Each "*" matches exactly one DNS label and cannot replace the last two labels.
 //   Use "*" only when this Worker intentionally serves multiple cfui domains.
 //   Without this allowlist, dynamic callbacks are limited to loopback, private/LAN,
 //   .local, .internal, .lan, .home.arpa, and .test hosts.
@@ -115,8 +120,8 @@ function base64URLDecode(value) {
 }
 
 function isParamCallbackAllowed(target, env) {
-  for (const origin of allowedCallbackOrigins(env)) {
-    if (origin === "*" || origin === target.origin) {
+  for (const rule of allowedCallbackOrigins(env)) {
+    if (allowedOriginMatches(rule, target)) {
       return true;
     }
   }
@@ -126,26 +131,76 @@ function isParamCallbackAllowed(target, env) {
 function allowedCallbackOrigins(env) {
   return String(env.CFUI_ALLOWED_CALLBACK_ORIGINS || "")
     .split(",")
-    .map((value) => normalizeOrigin(value.trim()))
+    .map((value) => normalizeAllowedOrigin(value.trim()))
     .filter(Boolean);
 }
 
-function normalizeOrigin(value) {
+function normalizeAllowedOrigin(value) {
   if (!value) {
-    return "";
+    return null;
   }
   if (value === "*") {
-    return "*";
+    return { any: true };
   }
   try {
     const url = new URL(value);
     if (url.protocol !== "http:" && url.protocol !== "https:") {
-      return "";
+      return null;
     }
-    return url.origin;
+    if (url.username || url.password) {
+      return null;
+    }
+    const hostname = url.hostname.toLowerCase();
+    if (hostname.includes("*")) {
+      if (!isValidWildcardHostname(hostname)) {
+        return null;
+      }
+      return {
+        protocol: url.protocol,
+        port: url.port,
+        hostname,
+        wildcard: true,
+      };
+    }
+    return { origin: url.origin };
   } catch {
-    return "";
+    return null;
   }
+}
+
+function allowedOriginMatches(rule, target) {
+  if (rule.any) {
+    return true;
+  }
+  if (rule.origin) {
+    return rule.origin === target.origin;
+  }
+  if (!rule.wildcard || rule.protocol !== target.protocol || rule.port !== target.port) {
+    return false;
+  }
+  return wildcardHostnameMatches(rule.hostname, target.hostname.toLowerCase());
+}
+
+function isValidWildcardHostname(hostname) {
+  const labels = hostname.split(".");
+  if (labels.length < 3 || !labels.includes("*")) {
+    return false;
+  }
+  return labels.every((label, index) => {
+    if (label === "*") {
+      return index < labels.length - 2;
+    }
+    return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label);
+  });
+}
+
+function wildcardHostnameMatches(patternHostname, targetHostname) {
+  const patternLabels = patternHostname.split(".");
+  const targetLabels = targetHostname.replace(/^\[|\]$/g, "").split(".");
+  if (patternLabels.length !== targetLabels.length) {
+    return false;
+  }
+  return patternLabels.every((label, index) => label === "*" || label === targetLabels[index]);
 }
 
 function isLocalCallbackHost(hostname) {
