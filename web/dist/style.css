@@ -4865,7 +4865,8 @@ details.disclosure > .body {
 }
 
 .oauth-scope-panel,
-.oauth-permission-panel {
+.oauth-permission-panel,
+.oauth-permission-groups-panel {
     display: grid;
     gap: 10px;
     min-width: 0;
@@ -4967,6 +4968,43 @@ details.disclosure > .body {
 
 .oauth-permission-level {
     min-width: 116px;
+}
+
+.oauth-permission-groups-error {
+    padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--danger, #d9534f) 40%, var(--border));
+    border-radius: var(--r-card);
+    background: color-mix(in srgb, var(--danger, #d9534f) 8%, var(--surface));
+    color: var(--text);
+    font-size: var(--fs-xs);
+    overflow-wrap: anywhere;
+}
+
+.oauth-permission-groups-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.oauth-permission-groups-list {
+    display: grid;
+    gap: 6px;
+}
+
+.oauth-permission-group-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-card);
+    background: var(--surface-2);
+}
+
+.oauth-permission-group-copy {
+    min-width: 0;
 }
 
 .oauth-scope-preview {
@@ -6140,6 +6178,7 @@ details.oauth-form-section > summary {
     .oauth-ingress-rule,
     .oauth-identity-item,
     .oauth-permission-row,
+    .oauth-permission-group-row,
     .oauth-permission-header {
         grid-template-columns: 1fr;
     }

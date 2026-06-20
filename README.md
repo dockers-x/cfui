@@ -241,8 +241,18 @@ You can override them with `CFUI_OAUTH_SCOPES`. The scopes selected when creatin
 For Cloudflare Tunnel creation and local profile linking, add:
 
 ```text
-cloudflare-tunnel.read cloudflare-tunnel.write
+argotunnel.read argotunnel.write
 ```
+
+When a Cloudflare OAuth scope is rejected, compare it with Cloudflare's permission group list:
+
+```bash
+curl -H "Authorization: Bearer <TOKEN>" \
+  "https://api.cloudflare.com/client/v4/user/tokens/permission_groups"
+```
+
+The `permissionGroupKeys` values map to Cloudflare's internal permission keys. For example, Tunnel uses the historical `argotunnel` key, so cfui requests `argotunnel.read` / `argotunnel.write`.
+After signing in, the OAuth scope dialog can also load Cloudflare permission groups through the same API and copy a token-free diagnostic JSON for troubleshooting.
 
 For zone settings actions, add the required scopes for your OAuth app, for example:
 

@@ -365,6 +365,28 @@
         }
     }
 
+    async function loadOAuthPermissionGroups(options = {}) {
+        if (!state.oauth.status?.logged_in || state.oauth.permissionGroupsLoading) return;
+        const force = !!options.force;
+        if (!force && state.oauth.permissionGroups) {
+            renderOAuthScopeDialog(state.oauth.status);
+            return;
+        }
+        state.oauth.permissionGroupsLoading = true;
+        state.oauth.permissionGroupsError = '';
+        renderOAuthScopeDialog(state.oauth.status);
+        try {
+            state.oauth.permissionGroups = await apiGet('/cf/permission-groups');
+            state.oauth.permissionGroupsError = '';
+        } catch (err) {
+            state.oauth.permissionGroups = null;
+            state.oauth.permissionGroupsError = err.message || String(err);
+        } finally {
+            state.oauth.permissionGroupsLoading = false;
+            renderOAuthScopeDialog(state.oauth.status);
+        }
+    }
+
     async function saveOAuthValidationArchive(button) {
         if (!state.oauth.status?.logged_in || state.oauth.validationArchiveSaving) return;
         state.oauth.validationArchiveSaving = true;
@@ -2772,6 +2794,7 @@
         }
         if (status?.logged_in) {
             body.appendChild(scopePillSection(t('oauth_current_scopes'), status.current?.scopes || []));
+            body.appendChild(permissionGroupDiagnosticNode(status));
         }
         body.appendChild(permissionSelectorNode(status));
     }
@@ -2796,6 +2819,174 @@
         }
         section.appendChild(pills);
         return section;
+    }
+
+    function permissionGroupDiagnosticNode(status) {
+        const section = document.createElement('div');
+        section.className = 'oauth-permission-groups-panel';
+
+        const header = document.createElement('div');
+        header.className = 'oauth-permission-header';
+        const copy = document.createElement('div');
+        const title = document.createElement('div');
+        title.className = 'oauth-scope-panel-title';
+        title.textContent = t('oauth_permission_groups_title');
+        const hint = document.createElement('div');
+        hint.className = 'oauth-row-meta';
+        hint.textContent = t('oauth_permission_groups_hint');
+        copy.append(title, hint);
+        const actions = document.createElement('div');
+        actions.className = 'oauth-permission-header-actions';
+        const copyDiagnostic = smallButton(
+            t('oauth_permission_groups_copy'),
+            'btn btn--sm btn--ghost',
+            () => copyOAuthText(permissionGroupDiagnosticText(status)),
+        );
+        copyDiagnostic.title = t('oauth_permission_groups_copy_title');
+        copyDiagnostic.setAttribute('aria-label', t('oauth_permission_groups_copy_title'));
+        copyDiagnostic.disabled = state.oauth.permissionGroupsLoading || (!state.oauth.permissionGroups && !state.oauth.permissionGroupsError);
+        const button = smallButton(
+            state.oauth.permissionGroups ? t('oauth_permission_groups_refresh') : t('oauth_permission_groups_check'),
+            'btn btn--sm btn--ghost',
+            () => loadOAuthPermissionGroups({ force: true }),
+        );
+        button.disabled = !!state.oauth.permissionGroupsLoading || !status?.logged_in;
+        actions.append(copyDiagnostic, button);
+        header.append(copy, actions);
+        section.appendChild(header);
+
+        if (state.oauth.permissionGroupsLoading) {
+            section.appendChild(empty(t('oauth_permission_groups_loading')));
+            return section;
+        }
+        if (state.oauth.permissionGroupsError) {
+            const error = document.createElement('div');
+            error.className = 'oauth-permission-groups-error';
+            error.textContent = t('oauth_permission_groups_error', { message: state.oauth.permissionGroupsError });
+            section.appendChild(error);
+            return section;
+        }
+        if (!state.oauth.permissionGroups) {
+            section.appendChild(empty(t('oauth_permission_groups_empty')));
+            return section;
+        }
+
+        const groups = Array.isArray(state.oauth.permissionGroups.data) ? state.oauth.permissionGroups.data : [];
+        const selectedKeys = selectedPermissionGroupKeys();
+        const relevant = groups.filter((group) => selectedKeys.has(group.key)).slice(0, 12);
+        const tunnelGroups = groups.filter((group) => group.key === 'argotunnel');
+        const summary = document.createElement('div');
+        summary.className = 'oauth-permission-groups-summary';
+        const tunnelState = document.createElement('span');
+        tunnelState.className = 'oauth-badge';
+        tunnelState.textContent = tunnelGroups.length
+            ? t('oauth_permission_groups_tunnel_found', { n: tunnelGroups.length })
+            : t('oauth_permission_groups_tunnel_missing');
+        summary.appendChild(tunnelState);
+        const total = document.createElement('span');
+        total.className = 'oauth-row-meta';
+        total.textContent = t('oauth_permission_groups_total', { n: groups.length });
+        summary.appendChild(total);
+        section.appendChild(summary);
+
+        const list = document.createElement('div');
+        list.className = 'oauth-permission-groups-list';
+        const displayGroups = relevant.length ? relevant : tunnelGroups.slice(0, 6);
+        if (!displayGroups.length) {
+            list.appendChild(empty(t('oauth_permission_groups_no_match')));
+        } else {
+            for (const group of displayGroups) list.appendChild(permissionGroupRowNode(group));
+        }
+        section.appendChild(list);
+        return section;
+    }
+
+    function permissionGroupDiagnosticText(status = state.oauth.status) {
+        const groups = Array.isArray(state.oauth.permissionGroups?.data) ? state.oauth.permissionGroups.data : [];
+        const selectedScopes = selectedOAuthScopes();
+        const selectedKeys = Array.from(selectedPermissionGroupKeys()).sort();
+        const matches = {};
+        for (const key of selectedKeys) {
+            matches[key] = groups
+                .filter((group) => group.key === key)
+                .map((group) => ({
+                    id: group.id,
+                    name: group.name || '',
+                    scopes: Array.isArray(group.scopes) ? group.scopes : [],
+                }));
+        }
+        return JSON.stringify({
+            type: 'cfui_cloudflare_permission_group_diagnostic',
+            version: 1,
+            generated_at: new Date().toISOString(),
+            browser_origin: window.location.origin,
+            token_fields_omitted: ['oauth_access_token', 'oauth_refresh_token'],
+            identity: {
+                label: status?.current?.label || '',
+                expires_at: status?.current?.expires_at || '',
+                scopes: Array.isArray(status?.current?.scopes) ? status.current.scopes : [],
+            },
+            next_login_requested_scopes: selectedScopes,
+            selected_permission_group_keys: selectedKeys,
+            permission_groups_error: state.oauth.permissionGroupsError || '',
+            permission_groups_fetched_at: state.oauth.permissionGroups?.fetched_at || '',
+            permission_groups_count: groups.length,
+            matched_permission_groups: matches,
+            tunnel_permission_groups: groups
+                .filter((group) => group.key === 'argotunnel')
+                .map((group) => ({
+                    id: group.id,
+                    name: group.name || '',
+                    scopes: Array.isArray(group.scopes) ? group.scopes : [],
+                })),
+        }, null, 2);
+    }
+
+    function permissionGroupRowNode(group) {
+        const row = document.createElement('div');
+        row.className = 'oauth-permission-group-row';
+        const key = document.createElement('span');
+        key.className = 'oauth-badge mono';
+        key.textContent = group.key || '-';
+        const copy = document.createElement('div');
+        copy.className = 'oauth-permission-group-copy';
+        const title = document.createElement('div');
+        title.className = 'oauth-permission-title';
+        title.textContent = group.name || group.id || '-';
+        const scopes = document.createElement('div');
+        scopes.className = 'oauth-permission-desc mono';
+        scopes.textContent = Array.isArray(group.scopes) && group.scopes.length ? group.scopes.join(' ') : group.id || '';
+        copy.append(title, scopes);
+        row.append(key, copy);
+        return row;
+    }
+
+    function selectedPermissionGroupKeys() {
+        const keys = new Set();
+        for (const scope of selectedOAuthScopes()) {
+            const key = permissionGroupKeyFromOAuthScope(scope);
+            if (key) keys.add(key);
+        }
+        return keys;
+    }
+
+    function permissionGroupKeyFromOAuthScope(scope) {
+        scope = String(scope || '').toLowerCase();
+        if (scope.startsWith('argotunnel.') || scope.startsWith('cloudflare-tunnel.') || scope.startsWith('cloudflare-one-connector')) return 'argotunnel';
+        if (scope.startsWith('account-settings.')) return 'account';
+        if (scope.startsWith('dns.')) return 'dns';
+        if (scope.startsWith('zone-settings.')) return 'zone_settings';
+        if (scope.startsWith('zone-waf.')) return 'waf';
+        if (scope.startsWith('zone.')) return 'zone';
+        if (scope.startsWith('workers-kv-storage.')) return 'workers_kv';
+        if (scope.startsWith('workers-r2.')) return 'workers_r2';
+        if (scope.startsWith('workers-tail.')) return 'workers_tail';
+        if (scope.startsWith('workers-scripts.')) return 'workers';
+        if (scope.startsWith('d1.')) return 'd1';
+        if (scope.startsWith('snippets.')) return 'snippets';
+        if (scope.startsWith('cache_purge.') || scope.startsWith('cache.')) return 'cache_purge';
+        if (scope.startsWith('analytics.') || scope.startsWith('account-analytics.')) return 'analytics';
+        return '';
     }
 
     function permissionSelectorNode(status) {
@@ -10736,6 +10927,9 @@
         state.oauth.zonesSession = null;
         state.oauth.zonesCapabilities = null;
         state.oauth.zonesError = '';
+        state.oauth.permissionGroups = null;
+        state.oauth.permissionGroupsLoading = false;
+        state.oauth.permissionGroupsError = '';
         resetOverview();
         state.oauth.dnsRecords = [];
         state.oauth.dnsSession = null;

@@ -512,7 +512,7 @@ other = "本地运行未启用"
 other = "本地状态异常"
 
 [oauth_tunnels_readonly]
-other = "当前 OAuth scope 只能读取 Tunnel。添加 cloudflare-tunnel.write 后才能创建并关联本地隧道。"
+other = "当前 OAuth scope 只能读取 Tunnel。添加 argotunnel.write 后才能创建并关联本地隧道。"
 
 [oauth_tunnel_connector_count]
 other = "{n} 个连接器"
@@ -617,7 +617,7 @@ other = "ingress 规则加载失败：{error}"
 other = "还没有公开主机名规则。"
 
 [oauth_tunnel_ingress_readonly]
-other = "当前 OAuth scope 只能读取 Tunnel ingress 规则。添加 cloudflare-tunnel.write 后才能编辑。"
+other = "当前 OAuth scope 只能读取 Tunnel ingress 规则。添加 argotunnel.write 后才能编辑。"
 
 [oauth_tunnel_ingress_create]
 other = "添加主机名"
@@ -1361,7 +1361,7 @@ other = "基础读取：Account + Zone + DNS"
 other = "完整工作台"
 
 [oauth_setup_permissions_categories]
-other = "在 Cloudflare 页面里通常分别位于 Account/Account Settings、DNS & Zones、Developer Platform、Cloudflare One/Zero Trust、Security/WAF、Analytics & Logs 这些分类。"
+other = "在 Cloudflare 页面里通常分别位于 Account/Account Settings、DNS & Zones、Developer Platform、Cloudflare One/Zero Trust、Security/WAF、Analytics & Logs 这些分类；实际 key 可用 /user/tokens/permission_groups 核对，Tunnel 对应 argotunnel。"
 
 [oauth_setup_permissions_write_note]
 other = "带 .write 的 scope 会允许 cfui 修改 Cloudflare 资源；只想浏览时不要勾写权限。"
@@ -1452,6 +1452,45 @@ other = "清理所选 Zone 的全部缓存。"
 
 [oauth_permission_analytics_desc]
 other = "加载 Zone Analytics、Worker 指标和账号用量。"
+
+[oauth_permission_groups_title]
+other = "Cloudflare 权限组诊断"
+
+[oauth_permission_groups_hint]
+other = "登录后可调用 Cloudflare 的权限组 API 核对有效权限名称；它只用于诊断，实际功能开关仍以当前 OAuth scope 为准。"
+
+[oauth_permission_groups_check]
+other = "检查"
+
+[oauth_permission_groups_refresh]
+other = "刷新"
+
+[oauth_permission_groups_copy]
+other = "复制诊断"
+
+[oauth_permission_groups_copy_title]
+other = "复制不含 token 的权限组诊断 JSON"
+
+[oauth_permission_groups_loading]
+other = "正在加载 Cloudflare 权限组..."
+
+[oauth_permission_groups_empty]
+other = "未加载。需要排查 invalid_scope 时再检查即可。"
+
+[oauth_permission_groups_error]
+other = "无法加载权限组：{message}。通常是当前 OAuth 应用没有 API Tokens 读取权限。"
+
+[oauth_permission_groups_tunnel_found]
+other = "Tunnel / argotunnel 已匹配 {n} 个权限组"
+
+[oauth_permission_groups_tunnel_missing]
+other = "未匹配到 Tunnel / argotunnel 权限组"
+
+[oauth_permission_groups_total]
+other = "Cloudflare 返回 {n} 个权限组"
+
+[oauth_permission_groups_no_match]
+other = "没有匹配当前选择 scope 的权限组。"
 
 [oauth_account]
 other = "Cloudflare 账号"

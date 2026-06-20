@@ -235,8 +235,18 @@ account-settings.read zone.read dns.read
 如果要创建 Cloudflare Tunnel 并关联成本地隧道配置，添加：
 
 ```text
-cloudflare-tunnel.read cloudflare-tunnel.write
+argotunnel.read argotunnel.write
 ```
+
+如果 Cloudflare 返回 `invalid_scope`，可以用 Cloudflare 的权限组接口核对实际 key：
+
+```bash
+curl -H "Authorization: Bearer <TOKEN>" \
+  "https://api.cloudflare.com/client/v4/user/tokens/permission_groups"
+```
+
+`permissionGroupKeys` 里的值对应 Cloudflare 内部权限 key。例如 Tunnel 使用历史名称 `argotunnel`，所以 cfui 请求 `argotunnel.read` / `argotunnel.write`。
+登录后，OAuth scope 弹窗也可以通过同一个 API 加载 Cloudflare 权限组，并复制不含 token 的诊断 JSON，方便排查和反馈。
 
 如果要使用 Zone settings 操作，可以为 OAuth app 添加对应 scopes，例如：
 

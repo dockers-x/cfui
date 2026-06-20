@@ -512,7 +512,7 @@ other = "Local running disabled"
 other = "Local state error"
 
 [oauth_tunnels_readonly]
-other = "Current OAuth scopes can read tunnels only. Add cloudflare-tunnel.write to create and link tunnels."
+other = "Current OAuth scopes can read tunnels only. Add argotunnel.write to create and link tunnels."
 
 [oauth_tunnel_connector_count]
 other = "{n} connectors"
@@ -617,7 +617,7 @@ other = "Ingress rules failed to load: {error}"
 other = "No public hostname rules found."
 
 [oauth_tunnel_ingress_readonly]
-other = "Current OAuth scopes can read tunnel ingress rules only. Add cloudflare-tunnel.write to edit them."
+other = "Current OAuth scopes can read tunnel ingress rules only. Add argotunnel.write to edit them."
 
 [oauth_tunnel_ingress_create]
 other = "Add hostname"
@@ -1361,7 +1361,7 @@ other = "Base read: Account + Zone + DNS"
 other = "Full workspace"
 
 [oauth_setup_permissions_categories]
-other = "In the Cloudflare form these are usually under Account/Account Settings, DNS & Zones, Developer Platform, Cloudflare One/Zero Trust, Security/WAF, and Analytics & Logs."
+other = "In the Cloudflare form these are usually under Account/Account Settings, DNS & Zones, Developer Platform, Cloudflare One/Zero Trust, Security/WAF, and Analytics & Logs. Use /user/tokens/permission_groups to verify actual keys; Tunnel maps to argotunnel."
 
 [oauth_setup_permissions_write_note]
 other = "Scopes ending in .write let cfui modify Cloudflare resources; skip write scopes when you only want a read-only console."
@@ -1452,6 +1452,45 @@ other = "Purge all cached files for the selected zone."
 
 [oauth_permission_analytics_desc]
 other = "Load zone analytics, Worker metrics, and account usage."
+
+[oauth_permission_groups_title]
+other = "Cloudflare permission group diagnostics"
+
+[oauth_permission_groups_hint]
+other = "After login, cfui can call Cloudflare's permission group API to verify valid permission names. This is diagnostic only; actual feature access still comes from the current OAuth scopes."
+
+[oauth_permission_groups_check]
+other = "Check"
+
+[oauth_permission_groups_refresh]
+other = "Refresh"
+
+[oauth_permission_groups_copy]
+other = "Copy diagnostic"
+
+[oauth_permission_groups_copy_title]
+other = "Copy token-free permission group diagnostic JSON"
+
+[oauth_permission_groups_loading]
+other = "Loading Cloudflare permission groups..."
+
+[oauth_permission_groups_empty]
+other = "Not loaded. Run this only when diagnosing invalid_scope issues."
+
+[oauth_permission_groups_error]
+other = "Could not load permission groups: {message}. The current OAuth app usually needs API Tokens read permission."
+
+[oauth_permission_groups_tunnel_found]
+other = "Tunnel / argotunnel matched {n} permission groups"
+
+[oauth_permission_groups_tunnel_missing]
+other = "No Tunnel / argotunnel permission group matched"
+
+[oauth_permission_groups_total]
+other = "Cloudflare returned {n} permission groups"
+
+[oauth_permission_groups_no_match]
+other = "No permission groups matched the currently selected scopes."
 
 [oauth_account]
 other = "Cloudflare account"

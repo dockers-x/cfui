@@ -512,7 +512,7 @@ other = "ローカル実行は無効"
 other = "ローカル状態エラー"
 
 [oauth_tunnels_readonly]
-other = "現在の OAuth scope では Tunnel の読み取りのみ可能です。作成してローカルと関連付けるには cloudflare-tunnel.write を追加してください。"
+other = "現在の OAuth scope では Tunnel の読み取りのみ可能です。作成してローカルと関連付けるには argotunnel.write を追加してください。"
 
 [oauth_tunnel_connector_count]
 other = "connector {n} 個"
@@ -617,7 +617,7 @@ other = "ingress ルールの読み込みに失敗しました: {error}"
 other = "公開ホスト名ルールはありません。"
 
 [oauth_tunnel_ingress_readonly]
-other = "現在の OAuth scope では Tunnel ingress ルールの読み取りのみ可能です。編集するには cloudflare-tunnel.write を追加してください。"
+other = "現在の OAuth scope では Tunnel ingress ルールの読み取りのみ可能です。編集するには argotunnel.write を追加してください。"
 
 [oauth_tunnel_ingress_create]
 other = "ホスト名を追加"
@@ -1361,7 +1361,7 @@ other = "基本読み取り: Account + Zone + DNS"
 other = "完全なワークスペース"
 
 [oauth_setup_permissions_categories]
-other = "Cloudflare のフォームでは通常 Account/Account Settings、DNS & Zones、Developer Platform、Cloudflare One/Zero Trust、Security/WAF、Analytics & Logs の分類にあります。"
+other = "Cloudflare のフォームでは通常 Account/Account Settings、DNS & Zones、Developer Platform、Cloudflare One/Zero Trust、Security/WAF、Analytics & Logs の分類にあります。実際の key は /user/tokens/permission_groups で確認できます。Tunnel は argotunnel に対応します。"
 
 [oauth_setup_permissions_write_note]
 other = ".write の scope は cfui が Cloudflare リソースを変更できる権限です。読み取り専用にしたい場合は write scope を選ばないでください。"
@@ -1452,6 +1452,45 @@ other = "選択した Zone のすべての cache を purge します。"
 
 [oauth_permission_analytics_desc]
 other = "Zone Analytics、Worker metrics、アカウント使用量を読み込みます。"
+
+[oauth_permission_groups_title]
+other = "Cloudflare 権限グループ診断"
+
+[oauth_permission_groups_hint]
+other = "ログイン後、cfui は Cloudflare の権限グループ API を呼び出して有効な権限名を確認できます。これは診断専用で、実際の機能可否は現在の OAuth scope に従います。"
+
+[oauth_permission_groups_check]
+other = "確認"
+
+[oauth_permission_groups_refresh]
+other = "更新"
+
+[oauth_permission_groups_copy]
+other = "診断をコピー"
+
+[oauth_permission_groups_copy_title]
+other = "token を含まない権限グループ診断 JSON をコピー"
+
+[oauth_permission_groups_loading]
+other = "Cloudflare 権限グループを読み込んでいます..."
+
+[oauth_permission_groups_empty]
+other = "未読み込みです。invalid_scope の調査時だけ確認してください。"
+
+[oauth_permission_groups_error]
+other = "権限グループを読み込めません: {message}。通常は現在の OAuth アプリに API Tokens 読み取り権限が必要です。"
+
+[oauth_permission_groups_tunnel_found]
+other = "Tunnel / argotunnel に一致する権限グループ: {n} 件"
+
+[oauth_permission_groups_tunnel_missing]
+other = "Tunnel / argotunnel の権限グループに一致しません"
+
+[oauth_permission_groups_total]
+other = "Cloudflare から {n} 件の権限グループが返されました"
+
+[oauth_permission_groups_no_match]
+other = "現在選択している scope に一致する権限グループはありません。"
 
 [oauth_account]
 other = "Cloudflare アカウント"

@@ -315,6 +315,15 @@ func (s *Server) handleCFValidation(w http.ResponseWriter, r *http.Request) {
 	writeCFResponse(w, resp, err)
 }
 
+func (s *Server) handleCFPermissionGroups(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	resp, err := s.ensureCFService().PermissionGroups(r.Context())
+	writeCFResponse(w, resp, err)
+}
+
 func (s *Server) handleCFValidationReports(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:

@@ -97,6 +97,54 @@ func TestMapTunnelIncludesControlPlaneDetails(t *testing.T) {
 	}
 }
 
+func TestPermissionGroupsUsesSDKAndOmitsTokens(t *testing.T) {
+	ctx := context.Background()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/client/v4/user/tokens/permission_groups", func(w http.ResponseWriter, r *http.Request) {
+		assertBearer(t, r)
+		if r.Method != http.MethodGet {
+			t.Fatalf("permission groups method = %s, want GET", r.Method)
+		}
+		writeCFEnvelope(w, `[
+			{"id":"pg-dns-read","name":"DNS Read","scopes":["com.cloudflare.api.account.zone"]},
+			{"id":"pg-tunnel-write","name":"Cloudflare Tunnel Write","scopes":["com.cloudflare.api.account.cloudflare_tunnel"]}
+		]`, nil)
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	svc := NewService(testOAuthServiceWithScopes(t, "account-settings.read"))
+	svc.restEndpoint = server.URL + "/client/v4"
+
+	resp, err := svc.PermissionGroups(ctx)
+	if err != nil {
+		t.Fatalf("PermissionGroups: %v", err)
+	}
+	if resp.Session.ID != "session-1" || resp.FetchedAt.IsZero() {
+		t.Fatalf("unexpected response metadata: %#v", resp)
+	}
+	if len(resp.Data) != 2 {
+		t.Fatalf("permission groups len = %d, want 2: %#v", len(resp.Data), resp.Data)
+	}
+	var tunnelGroup *PermissionGroup
+	for i := range resp.Data {
+		if resp.Data[i].ID == "pg-tunnel-write" {
+			tunnelGroup = &resp.Data[i]
+			break
+		}
+	}
+	if tunnelGroup == nil || tunnelGroup.Key != "argotunnel" {
+		t.Fatalf("expected tunnel permission group to map to argotunnel: %#v", resp.Data)
+	}
+	body, err := json.Marshal(resp)
+	if err != nil {
+		t.Fatalf("marshal response: %v", err)
+	}
+	if strings.Contains(string(body), "access-token") || strings.Contains(string(body), "refresh-token") {
+		t.Fatalf("permission group response leaked OAuth token: %s", string(body))
+	}
+}
+
 func TestMapD1DatabaseIncludesDetailFields(t *testing.T) {
 	created := time.Date(2026, 6, 18, 9, 0, 0, 0, time.UTC)
 	database := mapD1Database(cloudflare.D1Database{

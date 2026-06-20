@@ -249,6 +249,20 @@ type ValidationActionItem struct {
 	Scopes   []string `json:"scopes,omitempty"`
 }
 
+type PermissionGroup struct {
+	ID     string   `json:"id"`
+	Name   string   `json:"name,omitempty"`
+	Scopes []string `json:"scopes,omitempty"`
+	Key    string   `json:"key,omitempty"`
+}
+
+type PermissionGroupsResponse struct {
+	Data         []PermissionGroup        `json:"data"`
+	Session      cfoauth.SessionSummary   `json:"session"`
+	Capabilities cfoauth.CapabilityMatrix `json:"capabilities"`
+	FetchedAt    time.Time                `json:"fetched_at"`
+}
+
 type DNSRecord struct {
 	ID         string     `json:"id"`
 	Type       string     `json:"type"`
@@ -317,6 +331,32 @@ func (s *Service) currentClient(ctx context.Context) (*cloudflare.API, cfoauth.S
 		client.BaseURL = endpoint
 	}
 	return client, session, nil
+}
+
+func (s *Service) PermissionGroups(ctx context.Context) (PermissionGroupsResponse, error) {
+	client, session, err := s.currentClient(ctx)
+	if err != nil {
+		return PermissionGroupsResponse{}, err
+	}
+	groups, err := client.ListAPITokensPermissionGroups(ctx)
+	if err != nil {
+		return PermissionGroupsResponse{}, err
+	}
+	data := make([]PermissionGroup, 0, len(groups))
+	for _, group := range groups {
+		data = append(data, mapPermissionGroup(group))
+	}
+	sort.Slice(data, func(i, j int) bool {
+		left := strings.ToLower(strings.TrimSpace(data[i].Key + " " + data[i].Name + " " + data[i].ID))
+		right := strings.ToLower(strings.TrimSpace(data[j].Key + " " + data[j].Name + " " + data[j].ID))
+		return left < right
+	})
+	return PermissionGroupsResponse{
+		Data:         data,
+		Session:      session,
+		Capabilities: session.Capabilities,
+		FetchedAt:    time.Now().UTC(),
+	}, nil
 }
 
 type Tunnel struct {
@@ -6009,6 +6049,67 @@ func mapKVStorage(data kvStorageGraphQLData) (storageBytes, keyCount int) {
 		keyCount += group.Max.KeyCount
 	}
 	return storageBytes, keyCount
+}
+
+func mapPermissionGroup(group cloudflare.APITokenPermissionGroups) PermissionGroup {
+	scopes := append([]string(nil), group.Scopes...)
+	sort.Slice(scopes, func(i, j int) bool {
+		return strings.ToLower(scopes[i]) < strings.ToLower(scopes[j])
+	})
+	return PermissionGroup{
+		ID:     group.ID,
+		Name:   group.Name,
+		Scopes: scopes,
+		Key:    inferPermissionGroupKey(group.Name, scopes),
+	}
+}
+
+func inferPermissionGroupKey(name string, scopes []string) string {
+	text := strings.ToLower(strings.TrimSpace(name + " " + strings.Join(scopes, " ")))
+	switch {
+	case strings.Contains(text, "argo tunnel"), strings.Contains(text, "cloudflare tunnel"), strings.Contains(text, "cfd_tunnel"):
+		return "argotunnel"
+	case strings.Contains(text, "account settings"):
+		return "account"
+	case strings.Contains(text, "api token"):
+		return "api_tokens"
+	case strings.Contains(text, "workers kv"), strings.Contains(text, "kv storage"), strings.Contains(text, "workers_kv"):
+		return "workers_kv"
+	case strings.Contains(text, "r2"):
+		return "workers_r2"
+	case strings.Contains(text, "d1"):
+		return "d1"
+	case strings.Contains(text, "workers script"), strings.Contains(text, "worker script"):
+		return "workers"
+	case strings.Contains(text, "tail"):
+		return "workers_tail"
+	case strings.Contains(text, "snippet"):
+		return "snippets"
+	case strings.Contains(text, "zone settings"):
+		return "zone_settings"
+	case strings.Contains(text, "cache") && strings.Contains(text, "purge"):
+		return "cache_purge"
+	case strings.Contains(text, "waf"), strings.Contains(text, "firewall"):
+		return "waf"
+	case strings.Contains(text, "analytics"):
+		return "analytics"
+	case strings.Contains(text, "dns"):
+		return "dns"
+	case strings.Contains(text, "zone"):
+		return "zone"
+	case strings.Contains(text, "logs"):
+		return "logs"
+	case strings.Contains(text, "pages"):
+		return "pages"
+	case strings.Contains(text, "access"):
+		return "access"
+	case strings.Contains(text, "stream"):
+		return "stream"
+	case strings.Contains(text, "images"):
+		return "images"
+	default:
+		return ""
+	}
 }
 
 func r2StandardUsage(metrics R2AccountMetrics) (storageBytes, objectCount int, ok bool) {

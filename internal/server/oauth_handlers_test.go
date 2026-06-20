@@ -452,6 +452,57 @@ func TestCFValidationReportArchivePostGeneratesServerSideSnapshot(t *testing.T) 
 	}
 }
 
+func TestCFPermissionGroupsHandlerOmitsTokens(t *testing.T) {
+	api := newFakeOAuthCloudflareServer(t)
+	defer api.Close()
+
+	s := newServerTestServer(t)
+	store := cfoauth.NewStore(s.cfgMgr.Dir())
+	if err := store.SaveSession(context.Background(), cfoauth.Session{
+		ID:           "session-1",
+		Label:        "me@example.com",
+		AccessToken:  "access-token",
+		RefreshToken: "refresh-token",
+		ExpiresAt:    time.Now().UTC().Add(time.Hour),
+		Scope:        "account-settings.read zone.read",
+		Current:      true,
+	}); err != nil {
+		t.Fatalf("SaveSession: %v", err)
+	}
+	oauthSvc := cfoauth.NewService(cfoauth.Config{Configured: true}, store)
+	s.oauthSvc = oauthSvc
+	s.cfSvc = cfaccount.NewServiceWithEndpoints(oauthSvc, cfaccount.EndpointOverrides{
+		REST: api.URL + "/client/v4",
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/cf/permission-groups", nil)
+	rec := httptest.NewRecorder()
+	s.handleCFPermissionGroups(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("permission groups status %d: %s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "access-token") || strings.Contains(rec.Body.String(), "refresh-token") {
+		t.Fatalf("permission groups response leaked OAuth token material: %s", rec.Body.String())
+	}
+	var resp cfaccount.PermissionGroupsResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode permission groups response: %v", err)
+	}
+	if resp.Session.ID != "session-1" || len(resp.Data) != 2 {
+		t.Fatalf("unexpected permission groups response: %#v", resp)
+	}
+	foundTunnel := false
+	for _, group := range resp.Data {
+		if group.Key == "argotunnel" {
+			foundTunnel = true
+			break
+		}
+	}
+	if !foundTunnel {
+		t.Fatalf("expected argotunnel permission group: %#v", resp.Data)
+	}
+}
+
 func TestCFTunnelCreateCanSaveAndActivateLocalProfile(t *testing.T) {
 	api := newFakeOAuthCloudflareServer(t)
 	defer api.Close()
@@ -1391,6 +1442,13 @@ func newFakeOAuthCloudflareServer(t *testing.T) *fakeOAuthCloudflareServer {
 	mux.HandleFunc("/client/v4/accounts/account-1/storage/kv/namespaces", func(w http.ResponseWriter, r *http.Request) {
 		assertFakeBearer(t, api, r)
 		writeServerCFEnvelope(w, `[{"id":"namespace-1"}]`, nil)
+	})
+	mux.HandleFunc("/client/v4/user/tokens/permission_groups", func(w http.ResponseWriter, r *http.Request) {
+		assertFakeBearer(t, api, r)
+		writeServerCFEnvelope(w, `[
+			{"id":"pg-tunnel-read","name":"Cloudflare Tunnel Read","scopes":["com.cloudflare.api.account.cloudflare_tunnel"]},
+			{"id":"pg-dns-read","name":"DNS Read","scopes":["com.cloudflare.api.account.zone"]}
+		]`, nil)
 	})
 	mux.HandleFunc("/client/v4/zones/zone-1/snippets", func(w http.ResponseWriter, r *http.Request) {
 		assertFakeBearer(t, api, r)
