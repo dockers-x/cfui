@@ -334,6 +334,20 @@ func (_c *TunnelProfileCreate) SetNillableEdgeBindAddress(v *string) *TunnelProf
 	return _c
 }
 
+// SetEdge sets the "edge" field.
+func (_c *TunnelProfileCreate) SetEdge(v string) *TunnelProfileCreate {
+	_c.mutation.SetEdge(v)
+	return _c
+}
+
+// SetNillableEdge sets the "edge" field if the given value is not nil.
+func (_c *TunnelProfileCreate) SetNillableEdge(v *string) *TunnelProfileCreate {
+	if v != nil {
+		_c.SetEdge(*v)
+	}
+	return _c
+}
+
 // SetPostQuantum sets the "post_quantum" field.
 func (_c *TunnelProfileCreate) SetPostQuantum(v bool) *TunnelProfileCreate {
 	_c.mutation.SetPostQuantum(v)
@@ -527,6 +541,10 @@ func (_c *TunnelProfileCreate) defaults() {
 		v := tunnelprofile.DefaultEdgeBindAddress
 		_c.mutation.SetEdgeBindAddress(v)
 	}
+	if _, ok := _c.mutation.Edge(); !ok {
+		v := tunnelprofile.DefaultEdge
+		_c.mutation.SetEdge(v)
+	}
 	if _, ok := _c.mutation.PostQuantum(); !ok {
 		v := tunnelprofile.DefaultPostQuantum
 		_c.mutation.SetPostQuantum(v)
@@ -624,6 +642,9 @@ func (_c *TunnelProfileCreate) check() error {
 	}
 	if _, ok := _c.mutation.EdgeBindAddress(); !ok {
 		return &ValidationError{Name: "edge_bind_address", err: errors.New(`ent: missing required field "TunnelProfile.edge_bind_address"`)}
+	}
+	if _, ok := _c.mutation.Edge(); !ok {
+		return &ValidationError{Name: "edge", err: errors.New(`ent: missing required field "TunnelProfile.edge"`)}
 	}
 	if _, ok := _c.mutation.PostQuantum(); !ok {
 		return &ValidationError{Name: "post_quantum", err: errors.New(`ent: missing required field "TunnelProfile.post_quantum"`)}
@@ -757,6 +778,10 @@ func (_c *TunnelProfileCreate) createSpec() (*TunnelProfile, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.EdgeBindAddress(); ok {
 		_spec.SetField(tunnelprofile.FieldEdgeBindAddress, field.TypeString, value)
 		_node.EdgeBindAddress = value
+	}
+	if value, ok := _c.mutation.Edge(); ok {
+		_spec.SetField(tunnelprofile.FieldEdge, field.TypeString, value)
+		_node.Edge = value
 	}
 	if value, ok := _c.mutation.PostQuantum(); ok {
 		_spec.SetField(tunnelprofile.FieldPostQuantum, field.TypeBool, value)

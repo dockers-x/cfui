@@ -134,6 +134,11 @@ func EdgeBindAddress(v string) predicate.AppSetting {
 	return predicate.AppSetting(sql.FieldEQ(FieldEdgeBindAddress, v))
 }
 
+// Edge applies equality check predicate on the "edge" field. It's identical to EdgeEQ.
+func Edge(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldEQ(FieldEdge, v))
+}
+
 // PostQuantum applies equality check predicate on the "post_quantum" field. It's identical to PostQuantumEQ.
 func PostQuantum(v bool) predicate.AppSetting {
 	return predicate.AppSetting(sql.FieldEQ(FieldPostQuantum, v))
@@ -992,6 +997,71 @@ func EdgeBindAddressEqualFold(v string) predicate.AppSetting {
 // EdgeBindAddressContainsFold applies the ContainsFold predicate on the "edge_bind_address" field.
 func EdgeBindAddressContainsFold(v string) predicate.AppSetting {
 	return predicate.AppSetting(sql.FieldContainsFold(FieldEdgeBindAddress, v))
+}
+
+// EdgeEQ applies the EQ predicate on the "edge" field.
+func EdgeEQ(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldEQ(FieldEdge, v))
+}
+
+// EdgeNEQ applies the NEQ predicate on the "edge" field.
+func EdgeNEQ(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldNEQ(FieldEdge, v))
+}
+
+// EdgeIn applies the In predicate on the "edge" field.
+func EdgeIn(vs ...string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldIn(FieldEdge, vs...))
+}
+
+// EdgeNotIn applies the NotIn predicate on the "edge" field.
+func EdgeNotIn(vs ...string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldNotIn(FieldEdge, vs...))
+}
+
+// EdgeGT applies the GT predicate on the "edge" field.
+func EdgeGT(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldGT(FieldEdge, v))
+}
+
+// EdgeGTE applies the GTE predicate on the "edge" field.
+func EdgeGTE(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldGTE(FieldEdge, v))
+}
+
+// EdgeLT applies the LT predicate on the "edge" field.
+func EdgeLT(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldLT(FieldEdge, v))
+}
+
+// EdgeLTE applies the LTE predicate on the "edge" field.
+func EdgeLTE(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldLTE(FieldEdge, v))
+}
+
+// EdgeContains applies the Contains predicate on the "edge" field.
+func EdgeContains(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldContains(FieldEdge, v))
+}
+
+// EdgeHasPrefix applies the HasPrefix predicate on the "edge" field.
+func EdgeHasPrefix(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldHasPrefix(FieldEdge, v))
+}
+
+// EdgeHasSuffix applies the HasSuffix predicate on the "edge" field.
+func EdgeHasSuffix(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldHasSuffix(FieldEdge, v))
+}
+
+// EdgeEqualFold applies the EqualFold predicate on the "edge" field.
+func EdgeEqualFold(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldEqualFold(FieldEdge, v))
+}
+
+// EdgeContainsFold applies the ContainsFold predicate on the "edge" field.
+func EdgeContainsFold(v string) predicate.AppSetting {
+	return predicate.AppSetting(sql.FieldContainsFold(FieldEdge, v))
 }
 
 // PostQuantumEQ applies the EQ predicate on the "post_quantum" field.

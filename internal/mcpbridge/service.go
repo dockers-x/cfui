@@ -256,6 +256,7 @@ type ConfigOutput struct {
 	LogJSON          bool                       `json:"log_json"`
 	EdgeIPVersion    string                     `json:"edge_ip_version"`
 	EdgeBindAddress  string                     `json:"edge_bind_address"`
+	Edge             string                     `json:"edge"`
 	PostQuantum      bool                       `json:"post_quantum"`
 	NoTLSVerify      bool                       `json:"no_tls_verify"`
 	ExtraArgs        string                     `json:"extra_args"`
@@ -280,6 +281,7 @@ func (s *Service) getConfig(ctx context.Context, req *mcp.CallToolRequest, in Em
 		LogJSON:          cfg.LogJSON,
 		EdgeIPVersion:    cfg.EdgeIPVersion,
 		EdgeBindAddress:  cfg.EdgeBindAddress,
+		Edge:             cfg.Edge,
 		PostQuantum:      cfg.PostQuantum,
 		NoTLSVerify:      cfg.NoTLSVerify,
 		ExtraArgs:        cfg.ExtraArgs,
@@ -301,6 +303,7 @@ type UpdateConfigInput struct {
 	MetricsEnable   *bool   `json:"metrics_enable,omitempty"`
 	MetricsPort     *int    `json:"metrics_port,omitempty"`
 	EdgeBindAddress *string `json:"edge_bind_address,omitempty"`
+	Edge            *string `json:"edge,omitempty"`
 	NoTLSVerify     *bool   `json:"no_tls_verify,omitempty"`
 	ExtraArgs       *string `json:"extra_args,omitempty"`
 }
@@ -342,6 +345,9 @@ func (s *Service) updateConfig(ctx context.Context, req *mcp.CallToolRequest, in
 	}
 	if in.EdgeBindAddress != nil {
 		cfg.EdgeBindAddress = strings.TrimSpace(*in.EdgeBindAddress)
+	}
+	if in.Edge != nil {
+		cfg.Edge = strings.TrimSpace(*in.Edge)
 	}
 	if in.NoTLSVerify != nil {
 		cfg.NoTLSVerify = *in.NoTLSVerify

@@ -135,6 +135,7 @@ func (m *Manager) loadStructuredConfig(ctx context.Context) (Config, bool, error
 	cfg.LogJSON = settingsRow.LogJSON
 	cfg.EdgeIPVersion = settingsRow.EdgeIPVersion
 	cfg.EdgeBindAddress = settingsRow.EdgeBindAddress
+	cfg.Edge = settingsRow.Edge
 	cfg.PostQuantum = settingsRow.PostQuantum
 	cfg.NoTLSVerify = settingsRow.NoTLSVerify
 	cfg.ExtraArgs = settingsRow.ExtraArgs
@@ -202,6 +203,7 @@ func (m *Manager) loadStructuredConfig(ctx context.Context) (Config, bool, error
 			LogJSON:                 row.LogJSON,
 			EdgeIPVersion:           row.EdgeIPVersion,
 			EdgeBindAddress:         row.EdgeBindAddress,
+			Edge:                    row.Edge,
 			PostQuantum:             row.PostQuantum,
 			NoTLSVerify:             row.NoTLSVerify,
 			ExtraArgs:               row.ExtraArgs,
@@ -311,6 +313,7 @@ func saveAppSetting(ctx context.Context, tx *ent.Tx, cfg Config) error {
 			SetLogJSON(cfg.LogJSON).
 			SetEdgeIPVersion(cfg.EdgeIPVersion).
 			SetEdgeBindAddress(cfg.EdgeBindAddress).
+			SetEdge(cfg.Edge).
 			SetPostQuantum(cfg.PostQuantum).
 			SetNoTLSVerify(cfg.NoTLSVerify).
 			SetExtraArgs(cfg.ExtraArgs).
@@ -350,6 +353,7 @@ func saveAppSetting(ctx context.Context, tx *ent.Tx, cfg Config) error {
 		SetLogJSON(cfg.LogJSON).
 		SetEdgeIPVersion(cfg.EdgeIPVersion).
 		SetEdgeBindAddress(cfg.EdgeBindAddress).
+		SetEdge(cfg.Edge).
 		SetPostQuantum(cfg.PostQuantum).
 		SetNoTLSVerify(cfg.NoTLSVerify).
 		SetExtraArgs(cfg.ExtraArgs).
@@ -449,6 +453,7 @@ func saveTunnelProfiles(ctx context.Context, tx *ent.Tx, cfg Config) error {
 			SetLogJSON(tunnel.LogJSON).
 			SetEdgeIPVersion(tunnel.EdgeIPVersion).
 			SetEdgeBindAddress(tunnel.EdgeBindAddress).
+			SetEdge(tunnel.Edge).
 			SetPostQuantum(tunnel.PostQuantum).
 			SetNoTLSVerify(tunnel.NoTLSVerify).
 			SetExtraArgs(tunnel.ExtraArgs))

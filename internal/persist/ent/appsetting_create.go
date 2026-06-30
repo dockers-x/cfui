@@ -236,6 +236,20 @@ func (_c *AppSettingCreate) SetNillableEdgeBindAddress(v *string) *AppSettingCre
 	return _c
 }
 
+// SetEdge sets the "edge" field.
+func (_c *AppSettingCreate) SetEdge(v string) *AppSettingCreate {
+	_c.mutation.SetEdge(v)
+	return _c
+}
+
+// SetNillableEdge sets the "edge" field if the given value is not nil.
+func (_c *AppSettingCreate) SetNillableEdge(v *string) *AppSettingCreate {
+	if v != nil {
+		_c.SetEdge(*v)
+	}
+	return _c
+}
+
 // SetPostQuantum sets the "post_quantum" field.
 func (_c *AppSettingCreate) SetPostQuantum(v bool) *AppSettingCreate {
 	_c.mutation.SetPostQuantum(v)
@@ -583,6 +597,10 @@ func (_c *AppSettingCreate) defaults() {
 		v := appsetting.DefaultEdgeBindAddress
 		_c.mutation.SetEdgeBindAddress(v)
 	}
+	if _, ok := _c.mutation.Edge(); !ok {
+		v := appsetting.DefaultEdge
+		_c.mutation.SetEdge(v)
+	}
 	if _, ok := _c.mutation.PostQuantum(); !ok {
 		v := appsetting.DefaultPostQuantum
 		_c.mutation.SetPostQuantum(v)
@@ -711,6 +729,9 @@ func (_c *AppSettingCreate) check() error {
 	}
 	if _, ok := _c.mutation.EdgeBindAddress(); !ok {
 		return &ValidationError{Name: "edge_bind_address", err: errors.New(`ent: missing required field "AppSetting.edge_bind_address"`)}
+	}
+	if _, ok := _c.mutation.Edge(); !ok {
+		return &ValidationError{Name: "edge", err: errors.New(`ent: missing required field "AppSetting.edge"`)}
 	}
 	if _, ok := _c.mutation.PostQuantum(); !ok {
 		return &ValidationError{Name: "post_quantum", err: errors.New(`ent: missing required field "AppSetting.post_quantum"`)}
@@ -855,6 +876,10 @@ func (_c *AppSettingCreate) createSpec() (*AppSetting, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.EdgeBindAddress(); ok {
 		_spec.SetField(appsetting.FieldEdgeBindAddress, field.TypeString, value)
 		_node.EdgeBindAddress = value
+	}
+	if value, ok := _c.mutation.Edge(); ok {
+		_spec.SetField(appsetting.FieldEdge, field.TypeString, value)
+		_node.Edge = value
 	}
 	if value, ok := _c.mutation.PostQuantum(); ok {
 		_spec.SetField(appsetting.FieldPostQuantum, field.TypeBool, value)

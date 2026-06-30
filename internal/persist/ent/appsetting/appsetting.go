@@ -45,6 +45,8 @@ const (
 	FieldEdgeIPVersion = "edge_ip_version"
 	// FieldEdgeBindAddress holds the string denoting the edge_bind_address field in the database.
 	FieldEdgeBindAddress = "edge_bind_address"
+	// FieldEdge holds the string denoting the edge field in the database.
+	FieldEdge = "edge"
 	// FieldPostQuantum holds the string denoting the post_quantum field in the database.
 	FieldPostQuantum = "post_quantum"
 	// FieldNoTLSVerify holds the string denoting the no_tls_verify field in the database.
@@ -104,6 +106,7 @@ var Columns = []string{
 	FieldLogJSON,
 	FieldEdgeIPVersion,
 	FieldEdgeBindAddress,
+	FieldEdge,
 	FieldPostQuantum,
 	FieldNoTLSVerify,
 	FieldExtraArgs,
@@ -167,6 +170,8 @@ var (
 	DefaultEdgeIPVersion string
 	// DefaultEdgeBindAddress holds the default value on creation for the "edge_bind_address" field.
 	DefaultEdgeBindAddress string
+	// DefaultEdge holds the default value on creation for the "edge" field.
+	DefaultEdge string
 	// DefaultPostQuantum holds the default value on creation for the "post_quantum" field.
 	DefaultPostQuantum bool
 	// DefaultNoTLSVerify holds the default value on creation for the "no_tls_verify" field.
@@ -293,6 +298,11 @@ func ByEdgeIPVersion(opts ...sql.OrderTermOption) OrderOption {
 // ByEdgeBindAddress orders the results by the edge_bind_address field.
 func ByEdgeBindAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEdgeBindAddress, opts...).ToFunc()
+}
+
+// ByEdge orders the results by the edge field.
+func ByEdge(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEdge, opts...).ToFunc()
 }
 
 // ByPostQuantum orders the results by the post_quantum field.

@@ -175,6 +175,21 @@ other = "エッジバインド IP アドレス"
 [edge_bind_address_help]
 other = "Cloudflare エッジへの送信接続にバインドするローカル IP アドレス（オプション）"
 
+[edge_ip_version]
+other = "エッジ IP バージョン"
+
+[edge_ip_version_auto]
+other = "自動"
+
+[edge_ip_version_help]
+other = "Cloudflare エッジへの接続に使用する IP バージョン"
+
+[edge]
+other = "エッジアドレス"
+
+[edge_help]
+other = "固定する Cloudflare エッジアドレスを host:port 形式で指定（ポートは通常 7844、IPv6 は角括弧で囲む。例: [2606:4700:a8::1]:7844）。スペースまたはカンマ区切り（オプション）"
+
 [backend_tls_title]
 other = "バックエンド TLS 検証"
 

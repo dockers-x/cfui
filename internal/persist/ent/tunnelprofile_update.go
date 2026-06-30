@@ -371,6 +371,20 @@ func (_u *TunnelProfileUpdate) SetNillableEdgeBindAddress(v *string) *TunnelProf
 	return _u
 }
 
+// SetEdge sets the "edge" field.
+func (_u *TunnelProfileUpdate) SetEdge(v string) *TunnelProfileUpdate {
+	_u.mutation.SetEdge(v)
+	return _u
+}
+
+// SetNillableEdge sets the "edge" field if the given value is not nil.
+func (_u *TunnelProfileUpdate) SetNillableEdge(v *string) *TunnelProfileUpdate {
+	if v != nil {
+		_u.SetEdge(*v)
+	}
+	return _u
+}
+
 // SetPostQuantum sets the "post_quantum" field.
 func (_u *TunnelProfileUpdate) SetPostQuantum(v bool) *TunnelProfileUpdate {
 	_u.mutation.SetPostQuantum(v)
@@ -559,6 +573,9 @@ func (_u *TunnelProfileUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if value, ok := _u.mutation.EdgeBindAddress(); ok {
 		_spec.SetField(tunnelprofile.FieldEdgeBindAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Edge(); ok {
+		_spec.SetField(tunnelprofile.FieldEdge, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.PostQuantum(); ok {
 		_spec.SetField(tunnelprofile.FieldPostQuantum, field.TypeBool, value)
@@ -935,6 +952,20 @@ func (_u *TunnelProfileUpdateOne) SetNillableEdgeBindAddress(v *string) *TunnelP
 	return _u
 }
 
+// SetEdge sets the "edge" field.
+func (_u *TunnelProfileUpdateOne) SetEdge(v string) *TunnelProfileUpdateOne {
+	_u.mutation.SetEdge(v)
+	return _u
+}
+
+// SetNillableEdge sets the "edge" field if the given value is not nil.
+func (_u *TunnelProfileUpdateOne) SetNillableEdge(v *string) *TunnelProfileUpdateOne {
+	if v != nil {
+		_u.SetEdge(*v)
+	}
+	return _u
+}
+
 // SetPostQuantum sets the "post_quantum" field.
 func (_u *TunnelProfileUpdateOne) SetPostQuantum(v bool) *TunnelProfileUpdateOne {
 	_u.mutation.SetPostQuantum(v)
@@ -1153,6 +1184,9 @@ func (_u *TunnelProfileUpdateOne) sqlSave(ctx context.Context) (_node *TunnelPro
 	}
 	if value, ok := _u.mutation.EdgeBindAddress(); ok {
 		_spec.SetField(tunnelprofile.FieldEdgeBindAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Edge(); ok {
+		_spec.SetField(tunnelprofile.FieldEdge, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.PostQuantum(); ok {
 		_spec.SetField(tunnelprofile.FieldPostQuantum, field.TypeBool, value)

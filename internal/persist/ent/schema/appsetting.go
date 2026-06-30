@@ -31,6 +31,7 @@ func (AppSetting) Fields() []ent.Field {
 		field.Bool("log_json").Default(false),
 		field.String("edge_ip_version").Default("auto"),
 		field.String("edge_bind_address").Default(""),
+		field.String("edge").Default(""),
 		field.Bool("post_quantum").Default(false),
 		field.Bool("no_tls_verify").Default(false),
 		field.String("extra_args").Default(""),

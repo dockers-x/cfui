@@ -63,6 +63,8 @@ type TunnelProfile struct {
 	EdgeIPVersion string `json:"edge_ip_version,omitempty"`
 	// EdgeBindAddress holds the value of the "edge_bind_address" field.
 	EdgeBindAddress string `json:"edge_bind_address,omitempty"`
+	// Edge holds the value of the "edge" field.
+	Edge string `json:"edge,omitempty"`
 	// PostQuantum holds the value of the "post_quantum" field.
 	PostQuantum bool `json:"post_quantum,omitempty"`
 	// NoTLSVerify holds the value of the "no_tls_verify" field.
@@ -85,7 +87,7 @@ func (*TunnelProfile) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case tunnelprofile.FieldID, tunnelprofile.FieldSortOrder, tunnelprofile.FieldRetries, tunnelprofile.FieldMetricsPort:
 			values[i] = new(sql.NullInt64)
-		case tunnelprofile.FieldKey, tunnelprofile.FieldName, tunnelprofile.FieldToken, tunnelprofile.FieldAccountID, tunnelprofile.FieldTunnelID, tunnelprofile.FieldCustomTag, tunnelprofile.FieldSoftwareName, tunnelprofile.FieldProtocol, tunnelprofile.FieldGracePeriod, tunnelprofile.FieldRegion, tunnelprofile.FieldLogLevel, tunnelprofile.FieldLogFile, tunnelprofile.FieldEdgeIPVersion, tunnelprofile.FieldEdgeBindAddress, tunnelprofile.FieldExtraArgs:
+		case tunnelprofile.FieldKey, tunnelprofile.FieldName, tunnelprofile.FieldToken, tunnelprofile.FieldAccountID, tunnelprofile.FieldTunnelID, tunnelprofile.FieldCustomTag, tunnelprofile.FieldSoftwareName, tunnelprofile.FieldProtocol, tunnelprofile.FieldGracePeriod, tunnelprofile.FieldRegion, tunnelprofile.FieldLogLevel, tunnelprofile.FieldLogFile, tunnelprofile.FieldEdgeIPVersion, tunnelprofile.FieldEdgeBindAddress, tunnelprofile.FieldEdge, tunnelprofile.FieldExtraArgs:
 			values[i] = new(sql.NullString)
 		case tunnelprofile.FieldCreatedAt, tunnelprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -248,6 +250,12 @@ func (_m *TunnelProfile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.EdgeBindAddress = value.String
 			}
+		case tunnelprofile.FieldEdge:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field edge", values[i])
+			} else if value.Valid {
+				_m.Edge = value.String
+			}
 		case tunnelprofile.FieldPostQuantum:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field post_quantum", values[i])
@@ -381,6 +389,9 @@ func (_m *TunnelProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("edge_bind_address=")
 	builder.WriteString(_m.EdgeBindAddress)
+	builder.WriteString(", ")
+	builder.WriteString("edge=")
+	builder.WriteString(_m.Edge)
 	builder.WriteString(", ")
 	builder.WriteString("post_quantum=")
 	builder.WriteString(fmt.Sprintf("%v", _m.PostQuantum))

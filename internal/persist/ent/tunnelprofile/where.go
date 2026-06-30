@@ -169,6 +169,11 @@ func EdgeBindAddress(v string) predicate.TunnelProfile {
 	return predicate.TunnelProfile(sql.FieldEQ(FieldEdgeBindAddress, v))
 }
 
+// Edge applies equality check predicate on the "edge" field. It's identical to EdgeEQ.
+func Edge(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldEQ(FieldEdge, v))
+}
+
 // PostQuantum applies equality check predicate on the "post_quantum" field. It's identical to PostQuantumEQ.
 func PostQuantum(v bool) predicate.TunnelProfile {
 	return predicate.TunnelProfile(sql.FieldEQ(FieldPostQuantum, v))
@@ -1282,6 +1287,71 @@ func EdgeBindAddressEqualFold(v string) predicate.TunnelProfile {
 // EdgeBindAddressContainsFold applies the ContainsFold predicate on the "edge_bind_address" field.
 func EdgeBindAddressContainsFold(v string) predicate.TunnelProfile {
 	return predicate.TunnelProfile(sql.FieldContainsFold(FieldEdgeBindAddress, v))
+}
+
+// EdgeEQ applies the EQ predicate on the "edge" field.
+func EdgeEQ(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldEQ(FieldEdge, v))
+}
+
+// EdgeNEQ applies the NEQ predicate on the "edge" field.
+func EdgeNEQ(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldNEQ(FieldEdge, v))
+}
+
+// EdgeIn applies the In predicate on the "edge" field.
+func EdgeIn(vs ...string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldIn(FieldEdge, vs...))
+}
+
+// EdgeNotIn applies the NotIn predicate on the "edge" field.
+func EdgeNotIn(vs ...string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldNotIn(FieldEdge, vs...))
+}
+
+// EdgeGT applies the GT predicate on the "edge" field.
+func EdgeGT(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldGT(FieldEdge, v))
+}
+
+// EdgeGTE applies the GTE predicate on the "edge" field.
+func EdgeGTE(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldGTE(FieldEdge, v))
+}
+
+// EdgeLT applies the LT predicate on the "edge" field.
+func EdgeLT(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldLT(FieldEdge, v))
+}
+
+// EdgeLTE applies the LTE predicate on the "edge" field.
+func EdgeLTE(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldLTE(FieldEdge, v))
+}
+
+// EdgeContains applies the Contains predicate on the "edge" field.
+func EdgeContains(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldContains(FieldEdge, v))
+}
+
+// EdgeHasPrefix applies the HasPrefix predicate on the "edge" field.
+func EdgeHasPrefix(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldHasPrefix(FieldEdge, v))
+}
+
+// EdgeHasSuffix applies the HasSuffix predicate on the "edge" field.
+func EdgeHasSuffix(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldHasSuffix(FieldEdge, v))
+}
+
+// EdgeEqualFold applies the EqualFold predicate on the "edge" field.
+func EdgeEqualFold(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldEqualFold(FieldEdge, v))
+}
+
+// EdgeContainsFold applies the ContainsFold predicate on the "edge" field.
+func EdgeContainsFold(v string) predicate.TunnelProfile {
+	return predicate.TunnelProfile(sql.FieldContainsFold(FieldEdge, v))
 }
 
 // PostQuantumEQ applies the EQ predicate on the "post_quantum" field.

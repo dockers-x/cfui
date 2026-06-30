@@ -66,6 +66,7 @@ func OptionsFromProfile(p config.TunnelProfileConfig) cloudflared.Options {
 		LogJSON:         p.LogJSON,
 		EdgeIPVersion:   p.EdgeIPVersion,
 		EdgeBindAddress: p.EdgeBindAddress,
+		Edge:            p.Edge,
 		PostQuantum:     p.PostQuantum,
 		NoTLSVerify:     p.NoTLSVerify,
 		ExtraArgs:       p.ExtraArgs,

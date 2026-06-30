@@ -12,6 +12,7 @@
             cfg.token || '', cfg.protocol || 'auto', cfg.region || '',
             cfg.custom_tag || '', cfg.software_name || '',
             cfg.grace_period || '30s', String(cfg.retries ?? 5),
+            cfg.edge_ip_version || 'auto', cfg.edge || '',
             cfg.edge_bind_address || '', String(cfg.no_tls_verify || false),
         ].join('\x1f');
     }
@@ -49,6 +50,8 @@
             retries: parseInt($('retries-input').value, 10) || 0,
             metrics_enable: $('metrics-enable-toggle').checked,
             metrics_port: parseInt($('metrics-port-input').value, 10) || 60123,
+            edge_ip_version: $('edge-ip-version-select').value || 'auto',
+            edge: $('edge-input').value.trim(),
             edge_bind_address: $('edge-bind-address-input').value.trim(),
             no_tls_verify: $('no-tls-verify-toggle').checked,
         };
@@ -69,6 +72,8 @@
         $('retries-input').value = source.retries ?? 5;
         $('metrics-enable-toggle').checked = !!source.metrics_enable;
         $('metrics-port-input').value = source.metrics_port || 60123;
+        $('edge-ip-version-select').value = source.edge_ip_version || 'auto';
+        $('edge-input').value = source.edge || '';
         $('edge-bind-address-input').value = source.edge_bind_address || '';
         $('no-tls-verify-toggle').checked = !!source.no_tls_verify;
         updateMetricsVisibility();
@@ -89,6 +94,8 @@
             retries: numberOr(cfg.retries, 5),
             metrics_enable: !!cfg.metrics_enable,
             metrics_port: numberOr(cfg.metrics_port, 60123),
+            edge_ip_version: cfg.edge_ip_version || 'auto',
+            edge: cfg.edge || '',
             edge_bind_address: cfg.edge_bind_address || '',
             no_tls_verify: !!cfg.no_tls_verify,
         };

@@ -38,6 +38,8 @@ func TestBuildArgsFull(t *testing.T) {
 		"cloudflared", "tunnel",
 		"--config", "/tmp/cfg.yaml",
 		"--no-autoupdate",
+		"--edge-ip-version", "4",
+		"--edge-bind-address", "192.0.2.1",
 		"run", "--token", "tok",
 		"--protocol", "http2",
 		"--grace-period", "10s",
@@ -47,8 +49,6 @@ func TestBuildArgsFull(t *testing.T) {
 		"--loglevel", "debug",
 		"--logfile", "/tmp/t.log",
 		"--log-format", "json",
-		"--edge-ip-version", "4",
-		"--edge-bind-address", "192.0.2.1",
 		"--post-quantum",
 		"--no-tls-verify",
 		"--ha-connections", "8", "--tag", "a b",
@@ -56,6 +56,73 @@ func TestBuildArgsFull(t *testing.T) {
 	if !reflect.DeepEqual(args, want) {
 		t.Fatalf("BuildArgs = %v, want %v", args, want)
 	}
+}
+
+// edgeFlagsMustPrecedeRun guards the cloudflared CLI contract: --edge and
+// --edge-ip-version are tunnel-command options. Placed after "run" the
+// connector dies with "flag provided but not defined", so they must appear
+// before the "run" token.
+func TestBuildArgsEdgeFlagsPrecedeRun(t *testing.T) {
+	opts := Options{
+		Token:         "tok",
+		EdgeIPVersion: "6",
+		Edge:          "2606:4700:a8::1 2606:4700:a8::2,2606:4700:a8::3",
+	}
+	args := BuildArgs(opts, "http2", "")
+
+	runIdx := indexOf(args, "run")
+	if runIdx < 0 {
+		t.Fatalf("no run token in %v", args)
+	}
+	for _, flag := range []string{"--edge-ip-version", "--edge"} {
+		idx := indexOf(args, flag)
+		if idx < 0 {
+			t.Fatalf("%s missing from %v", flag, args)
+		}
+		if idx > runIdx {
+			t.Fatalf("%s at %d must precede run at %d: %v", flag, idx, runIdx, args)
+		}
+	}
+
+	// Each edge address must be emitted as its own repeated --edge flag.
+	var edges []string
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == "--edge" {
+			edges = append(edges, args[i+1])
+		}
+	}
+	wantEdges := []string{"2606:4700:a8::1", "2606:4700:a8::2", "2606:4700:a8::3"}
+	if !reflect.DeepEqual(edges, wantEdges) {
+		t.Fatalf("edges = %v, want %v", edges, wantEdges)
+	}
+}
+
+func TestSplitEdges(t *testing.T) {
+	cases := []struct {
+		in   string
+		want []string
+	}{
+		{"", nil},
+		{"   ", nil},
+		{"a", []string{"a"}},
+		{"a b\tc", []string{"a", "b", "c"}},
+		{"a, b ,c", []string{"a", "b", "c"}},
+		{"a\nb", []string{"a", "b"}},
+	}
+	for _, tc := range cases {
+		if got := splitEdges(tc.in); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("splitEdges(%q) = %v, want %v", tc.in, got, tc.want)
+		}
+	}
+}
+
+func indexOf(s []string, v string) int {
+	for i, x := range s {
+		if x == v {
+			return i
+		}
+	}
+	return -1
 }
 
 func TestBuildArgsDefaultsOmitted(t *testing.T) {

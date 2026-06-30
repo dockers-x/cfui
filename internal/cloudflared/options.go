@@ -24,6 +24,7 @@ type Options struct {
 	LogJSON         bool
 	EdgeIPVersion   string // auto, 4, 6
 	EdgeBindAddress string
+	Edge            string // space/comma separated edge addresses to pin (host:port)
 	PostQuantum     bool
 	NoTLSVerify     bool
 	ExtraArgs       string
@@ -55,6 +56,20 @@ func BuildArgs(o Options, protocol, configFile string) []string {
 	// Disable auto-update to prevent panics in embedded usage (the updater
 	// expects non-nil parameters that only exist in the real CLI).
 	args = append(args, "--no-autoupdate")
+
+	// Edge selection flags are tunnel-command options, not run options, so
+	// they must precede "run". cloudflared rejects them after "run" with
+	// "flag provided but not defined", which crash-loops the connector.
+	if o.EdgeIPVersion != "" && o.EdgeIPVersion != "auto" {
+		args = append(args, "--edge-ip-version", o.EdgeIPVersion)
+	}
+	if o.EdgeBindAddress != "" {
+		args = append(args, "--edge-bind-address", o.EdgeBindAddress)
+	}
+	for _, e := range splitEdges(o.Edge) {
+		args = append(args, "--edge", e)
+	}
+
 	args = append(args, "run", "--token", o.Token)
 
 	if protocol != "" && protocol != "auto" {
@@ -81,12 +96,6 @@ func BuildArgs(o Options, protocol, configFile string) []string {
 	if o.LogJSON {
 		args = append(args, "--log-format", "json")
 	}
-	if o.EdgeIPVersion != "" && o.EdgeIPVersion != "auto" {
-		args = append(args, "--edge-ip-version", o.EdgeIPVersion)
-	}
-	if o.EdgeBindAddress != "" {
-		args = append(args, "--edge-bind-address", o.EdgeBindAddress)
-	}
 	if o.PostQuantum {
 		args = append(args, "--post-quantum")
 	}
@@ -97,6 +106,18 @@ func BuildArgs(o Options, protocol, configFile string) []string {
 		args = append(args, ParseExtraArgs(o.ExtraArgs)...)
 	}
 	return args
+}
+
+// splitEdges splits a user-provided edge list on whitespace and commas,
+// dropping empty fields, so a single profile string can pin multiple edges.
+func splitEdges(edge string) []string {
+	if strings.TrimSpace(edge) == "" {
+		return nil
+	}
+	fields := strings.FieldsFunc(edge, func(r rune) bool {
+		return r == ',' || r == ' ' || r == '\t' || r == '\n' || r == '\r'
+	})
+	return fields
 }
 
 // ParseExtraArgs splits a space-separated argument string, honoring double

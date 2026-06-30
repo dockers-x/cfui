@@ -175,6 +175,21 @@ other = "边缘绑定 IP 地址"
 [edge_bind_address_help]
 other = "用于连接到 Cloudflare 边缘的本地 IP 地址（可选）"
 
+[edge_ip_version]
+other = "边缘 IP 版本"
+
+[edge_ip_version_auto]
+other = "自动"
+
+[edge_ip_version_help]
+other = "连接 Cloudflare 边缘所使用的 IP 版本"
+
+[edge]
+other = "边缘地址"
+
+[edge_help]
+other = "指定要锁定的 Cloudflare 边缘地址，格式为 host:port（端口通常为 7844；IPv6 需加方括号，如 [2606:4700:a8::1]:7844），以空格或逗号分隔（可选）"
+
 [backend_tls_title]
 other = "后端 TLS 验证"
 

@@ -175,6 +175,21 @@ other = "Edge Bind IP Address"
 [edge_bind_address_help]
 other = "Local IP address to bind for outgoing connections to Cloudflare edge (optional)"
 
+[edge_ip_version]
+other = "Edge IP Version"
+
+[edge_ip_version_auto]
+other = "Auto"
+
+[edge_ip_version_help]
+other = "IP version used to connect to the Cloudflare edge"
+
+[edge]
+other = "Edge Addresses"
+
+[edge_help]
+other = "Pin specific Cloudflare edge addresses in host:port form (port is usually 7844; bracket IPv6, e.g. [2606:4700:a8::1]:7844), separated by spaces or commas (optional)"
+
 [backend_tls_title]
 other = "Backend TLS Verification"
 

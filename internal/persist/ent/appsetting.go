@@ -49,6 +49,8 @@ type AppSetting struct {
 	EdgeIPVersion string `json:"edge_ip_version,omitempty"`
 	// EdgeBindAddress holds the value of the "edge_bind_address" field.
 	EdgeBindAddress string `json:"edge_bind_address,omitempty"`
+	// Edge holds the value of the "edge" field.
+	Edge string `json:"edge,omitempty"`
 	// PostQuantum holds the value of the "post_quantum" field.
 	PostQuantum bool `json:"post_quantum,omitempty"`
 	// NoTLSVerify holds the value of the "no_tls_verify" field.
@@ -97,7 +99,7 @@ func (*AppSetting) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case appsetting.FieldID, appsetting.FieldRetries, appsetting.FieldMetricsPort, appsetting.FieldS3WebdavDedicatedPort:
 			values[i] = new(sql.NullInt64)
-		case appsetting.FieldKey, appsetting.FieldCustomTag, appsetting.FieldSoftwareName, appsetting.FieldProtocol, appsetting.FieldGracePeriod, appsetting.FieldRegion, appsetting.FieldLogLevel, appsetting.FieldLogFile, appsetting.FieldEdgeIPVersion, appsetting.FieldEdgeBindAddress, appsetting.FieldExtraArgs, appsetting.FieldActiveTunnelKey, appsetting.FieldOauthClientID, appsetting.FieldOauthRelayCallbackURL, appsetting.FieldS3WebdavActiveKey, appsetting.FieldS3WebdavAccessMode, appsetting.FieldS3WebdavDedicatedBindHost, appsetting.FieldS3WebdavDedicatedDomainMode, appsetting.FieldS3WebdavDedicatedCustomDomain, appsetting.FieldS3WebdavDedicatedTunnelHostname:
+		case appsetting.FieldKey, appsetting.FieldCustomTag, appsetting.FieldSoftwareName, appsetting.FieldProtocol, appsetting.FieldGracePeriod, appsetting.FieldRegion, appsetting.FieldLogLevel, appsetting.FieldLogFile, appsetting.FieldEdgeIPVersion, appsetting.FieldEdgeBindAddress, appsetting.FieldEdge, appsetting.FieldExtraArgs, appsetting.FieldActiveTunnelKey, appsetting.FieldOauthClientID, appsetting.FieldOauthRelayCallbackURL, appsetting.FieldS3WebdavActiveKey, appsetting.FieldS3WebdavAccessMode, appsetting.FieldS3WebdavDedicatedBindHost, appsetting.FieldS3WebdavDedicatedDomainMode, appsetting.FieldS3WebdavDedicatedCustomDomain, appsetting.FieldS3WebdavDedicatedTunnelHostname:
 			values[i] = new(sql.NullString)
 		case appsetting.FieldCreatedAt, appsetting.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -217,6 +219,12 @@ func (_m *AppSetting) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field edge_bind_address", values[i])
 			} else if value.Valid {
 				_m.EdgeBindAddress = value.String
+			}
+		case appsetting.FieldEdge:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field edge", values[i])
+			} else if value.Valid {
+				_m.Edge = value.String
 			}
 		case appsetting.FieldPostQuantum:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -409,6 +417,9 @@ func (_m *AppSetting) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("edge_bind_address=")
 	builder.WriteString(_m.EdgeBindAddress)
+	builder.WriteString(", ")
+	builder.WriteString("edge=")
+	builder.WriteString(_m.Edge)
 	builder.WriteString(", ")
 	builder.WriteString("post_quantum=")
 	builder.WriteString(fmt.Sprintf("%v", _m.PostQuantum))

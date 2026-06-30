@@ -73,6 +73,7 @@ type AppSettingMutation struct {
 	log_json                            *bool
 	edge_ip_version                     *string
 	edge_bind_address                   *string
+	edge                                *string
 	post_quantum                        *bool
 	no_tls_verify                       *bool
 	extra_args                          *string
@@ -812,6 +813,42 @@ func (m *AppSettingMutation) ResetEdgeBindAddress() {
 	m.edge_bind_address = nil
 }
 
+// SetEdge sets the "edge" field.
+func (m *AppSettingMutation) SetEdge(s string) {
+	m.edge = &s
+}
+
+// Edge returns the value of the "edge" field in the mutation.
+func (m *AppSettingMutation) Edge() (r string, exists bool) {
+	v := m.edge
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEdge returns the old "edge" field's value of the AppSetting entity.
+// If the AppSetting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AppSettingMutation) OldEdge(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEdge is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEdge requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEdge: %w", err)
+	}
+	return oldValue.Edge, nil
+}
+
+// ResetEdgeField resets all changes to the "edge" field.
+func (m *AppSettingMutation) ResetEdgeField() {
+	m.edge = nil
+}
+
 // SetPostQuantum sets the "post_quantum" field.
 func (m *AppSettingMutation) SetPostQuantum(b bool) {
 	m.post_quantum = &b
@@ -1514,7 +1551,7 @@ func (m *AppSettingMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AppSettingMutation) Fields() []string {
-	fields := make([]string, 0, 34)
+	fields := make([]string, 0, 35)
 	if m.key != nil {
 		fields = append(fields, appsetting.FieldKey)
 	}
@@ -1562,6 +1599,9 @@ func (m *AppSettingMutation) Fields() []string {
 	}
 	if m.edge_bind_address != nil {
 		fields = append(fields, appsetting.FieldEdgeBindAddress)
+	}
+	if m.edge != nil {
+		fields = append(fields, appsetting.FieldEdge)
 	}
 	if m.post_quantum != nil {
 		fields = append(fields, appsetting.FieldPostQuantum)
@@ -1657,6 +1697,8 @@ func (m *AppSettingMutation) Field(name string) (ent.Value, bool) {
 		return m.EdgeIPVersion()
 	case appsetting.FieldEdgeBindAddress:
 		return m.EdgeBindAddress()
+	case appsetting.FieldEdge:
+		return m.Edge()
 	case appsetting.FieldPostQuantum:
 		return m.PostQuantum()
 	case appsetting.FieldNoTLSVerify:
@@ -1734,6 +1776,8 @@ func (m *AppSettingMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldEdgeIPVersion(ctx)
 	case appsetting.FieldEdgeBindAddress:
 		return m.OldEdgeBindAddress(ctx)
+	case appsetting.FieldEdge:
+		return m.OldEdge(ctx)
 	case appsetting.FieldPostQuantum:
 		return m.OldPostQuantum(ctx)
 	case appsetting.FieldNoTLSVerify:
@@ -1890,6 +1934,13 @@ func (m *AppSettingMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEdgeBindAddress(v)
+		return nil
+	case appsetting.FieldEdge:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEdge(v)
 		return nil
 	case appsetting.FieldPostQuantum:
 		v, ok := value.(bool)
@@ -2152,6 +2203,9 @@ func (m *AppSettingMutation) ResetField(name string) error {
 		return nil
 	case appsetting.FieldEdgeBindAddress:
 		m.ResetEdgeBindAddress()
+		return nil
+	case appsetting.FieldEdge:
+		m.ResetEdgeField()
 		return nil
 	case appsetting.FieldPostQuantum:
 		m.ResetPostQuantum()
@@ -9674,6 +9728,7 @@ type TunnelProfileMutation struct {
 	log_json                  *bool
 	edge_ip_version           *string
 	edge_bind_address         *string
+	edge                      *string
 	post_quantum              *bool
 	no_tls_verify             *bool
 	extra_args                *string
@@ -10671,6 +10726,42 @@ func (m *TunnelProfileMutation) ResetEdgeBindAddress() {
 	m.edge_bind_address = nil
 }
 
+// SetEdge sets the "edge" field.
+func (m *TunnelProfileMutation) SetEdge(s string) {
+	m.edge = &s
+}
+
+// Edge returns the value of the "edge" field in the mutation.
+func (m *TunnelProfileMutation) Edge() (r string, exists bool) {
+	v := m.edge
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEdge returns the old "edge" field's value of the TunnelProfile entity.
+// If the TunnelProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelProfileMutation) OldEdge(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEdge is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEdge requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEdge: %w", err)
+	}
+	return oldValue.Edge, nil
+}
+
+// ResetEdgeField resets all changes to the "edge" field.
+func (m *TunnelProfileMutation) ResetEdgeField() {
+	m.edge = nil
+}
+
 // SetPostQuantum sets the "post_quantum" field.
 func (m *TunnelProfileMutation) SetPostQuantum(b bool) {
 	m.post_quantum = &b
@@ -10885,7 +10976,7 @@ func (m *TunnelProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TunnelProfileMutation) Fields() []string {
-	fields := make([]string, 0, 28)
+	fields := make([]string, 0, 29)
 	if m.key != nil {
 		fields = append(fields, tunnelprofile.FieldKey)
 	}
@@ -10954,6 +11045,9 @@ func (m *TunnelProfileMutation) Fields() []string {
 	}
 	if m.edge_bind_address != nil {
 		fields = append(fields, tunnelprofile.FieldEdgeBindAddress)
+	}
+	if m.edge != nil {
+		fields = append(fields, tunnelprofile.FieldEdge)
 	}
 	if m.post_quantum != nil {
 		fields = append(fields, tunnelprofile.FieldPostQuantum)
@@ -11024,6 +11118,8 @@ func (m *TunnelProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.EdgeIPVersion()
 	case tunnelprofile.FieldEdgeBindAddress:
 		return m.EdgeBindAddress()
+	case tunnelprofile.FieldEdge:
+		return m.Edge()
 	case tunnelprofile.FieldPostQuantum:
 		return m.PostQuantum()
 	case tunnelprofile.FieldNoTLSVerify:
@@ -11089,6 +11185,8 @@ func (m *TunnelProfileMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldEdgeIPVersion(ctx)
 	case tunnelprofile.FieldEdgeBindAddress:
 		return m.OldEdgeBindAddress(ctx)
+	case tunnelprofile.FieldEdge:
+		return m.OldEdge(ctx)
 	case tunnelprofile.FieldPostQuantum:
 		return m.OldPostQuantum(ctx)
 	case tunnelprofile.FieldNoTLSVerify:
@@ -11268,6 +11366,13 @@ func (m *TunnelProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEdgeBindAddress(v)
+		return nil
+	case tunnelprofile.FieldEdge:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEdge(v)
 		return nil
 	case tunnelprofile.FieldPostQuantum:
 		v, ok := value.(bool)
@@ -11460,6 +11565,9 @@ func (m *TunnelProfileMutation) ResetField(name string) error {
 		return nil
 	case tunnelprofile.FieldEdgeBindAddress:
 		m.ResetEdgeBindAddress()
+		return nil
+	case tunnelprofile.FieldEdge:
+		m.ResetEdgeField()
 		return nil
 	case tunnelprofile.FieldPostQuantum:
 		m.ResetPostQuantum()

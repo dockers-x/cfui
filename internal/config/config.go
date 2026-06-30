@@ -59,6 +59,7 @@ type Config struct {
 	LogJSON         bool   `json:"log_json"`          // Output logs in JSON format (available since 2025.6.1)
 	EdgeIPVersion   string `json:"edge_ip_version"`   // auto, 4, 6
 	EdgeBindAddress string `json:"edge_bind_address"` // IP address to bind for outgoing connections to Cloudflare edge
+	Edge            string `json:"edge"`              // space/comma separated edge addresses to pin (host:port)
 	PostQuantum     bool   `json:"post_quantum"`      // Enable PQC for QUIC
 	NoTLSVerify     bool   `json:"no_tls_verify"`     // Disable TLS verification for backend services
 
@@ -147,6 +148,7 @@ type TunnelProfileConfig struct {
 	LogJSON                 bool   `json:"log_json"`
 	EdgeIPVersion           string `json:"edge_ip_version"`
 	EdgeBindAddress         string `json:"edge_bind_address"`
+	Edge                    string `json:"edge"`
 	PostQuantum             bool   `json:"post_quantum"`
 	NoTLSVerify             bool   `json:"no_tls_verify"`
 	ExtraArgs               string `json:"extra_args"`
@@ -256,6 +258,7 @@ func DefaultConfig() Config {
 		LogJSON:         false,
 		EdgeIPVersion:   "auto",
 		EdgeBindAddress: "",
+		Edge:            "",
 		PostQuantum:     false,
 		NoTLSVerify:     false, // Verify TLS by default for security
 		ExtraArgs:       "",
@@ -662,6 +665,7 @@ func topLevelTunnelFieldsChanged(next, current Config) bool {
 		next.LogJSON != current.LogJSON ||
 		next.EdgeIPVersion != current.EdgeIPVersion ||
 		next.EdgeBindAddress != current.EdgeBindAddress ||
+		next.Edge != current.Edge ||
 		next.PostQuantum != current.PostQuantum ||
 		next.NoTLSVerify != current.NoTLSVerify ||
 		next.ExtraArgs != current.ExtraArgs
@@ -738,6 +742,7 @@ func normalizeTunnelProfile(tunnel TunnelProfileConfig, index int) TunnelProfile
 	tunnel.Region = strings.TrimSpace(tunnel.Region)
 	tunnel.LogFile = strings.TrimSpace(tunnel.LogFile)
 	tunnel.EdgeBindAddress = strings.TrimSpace(tunnel.EdgeBindAddress)
+	tunnel.Edge = strings.TrimSpace(tunnel.Edge)
 	tunnel.ExtraArgs = strings.TrimSpace(tunnel.ExtraArgs)
 	return tunnel
 }
@@ -793,6 +798,7 @@ func tunnelProfileFromTopLevel(cfg Config, base TunnelProfileConfig, index int) 
 	tunnel.LogJSON = cfg.LogJSON
 	tunnel.EdgeIPVersion = cfg.EdgeIPVersion
 	tunnel.EdgeBindAddress = cfg.EdgeBindAddress
+	tunnel.Edge = cfg.Edge
 	tunnel.PostQuantum = cfg.PostQuantum
 	tunnel.NoTLSVerify = cfg.NoTLSVerify
 	tunnel.ExtraArgs = cfg.ExtraArgs
@@ -846,6 +852,7 @@ func applyActiveTunnelToTopLevel(cfg Config) Config {
 	cfg.LogJSON = tunnel.LogJSON
 	cfg.EdgeIPVersion = tunnel.EdgeIPVersion
 	cfg.EdgeBindAddress = tunnel.EdgeBindAddress
+	cfg.Edge = tunnel.Edge
 	cfg.PostQuantum = tunnel.PostQuantum
 	cfg.NoTLSVerify = tunnel.NoTLSVerify
 	cfg.ExtraArgs = tunnel.ExtraArgs

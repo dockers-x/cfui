@@ -266,6 +266,20 @@ func (_u *AppSettingUpdate) SetNillableEdgeBindAddress(v *string) *AppSettingUpd
 	return _u
 }
 
+// SetEdge sets the "edge" field.
+func (_u *AppSettingUpdate) SetEdge(v string) *AppSettingUpdate {
+	_u.mutation.SetEdge(v)
+	return _u
+}
+
+// SetNillableEdge sets the "edge" field if the given value is not nil.
+func (_u *AppSettingUpdate) SetNillableEdge(v *string) *AppSettingUpdate {
+	if v != nil {
+		_u.SetEdge(*v)
+	}
+	return _u
+}
+
 // SetPostQuantum sets the "post_quantum" field.
 func (_u *AppSettingUpdate) SetPostQuantum(v bool) *AppSettingUpdate {
 	_u.mutation.SetPostQuantum(v)
@@ -620,6 +634,9 @@ func (_u *AppSettingUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.EdgeBindAddress(); ok {
 		_spec.SetField(appsetting.FieldEdgeBindAddress, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Edge(); ok {
+		_spec.SetField(appsetting.FieldEdge, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.PostQuantum(); ok {
 		_spec.SetField(appsetting.FieldPostQuantum, field.TypeBool, value)
 	}
@@ -928,6 +945,20 @@ func (_u *AppSettingUpdateOne) SetEdgeBindAddress(v string) *AppSettingUpdateOne
 func (_u *AppSettingUpdateOne) SetNillableEdgeBindAddress(v *string) *AppSettingUpdateOne {
 	if v != nil {
 		_u.SetEdgeBindAddress(*v)
+	}
+	return _u
+}
+
+// SetEdge sets the "edge" field.
+func (_u *AppSettingUpdateOne) SetEdge(v string) *AppSettingUpdateOne {
+	_u.mutation.SetEdge(v)
+	return _u
+}
+
+// SetNillableEdge sets the "edge" field if the given value is not nil.
+func (_u *AppSettingUpdateOne) SetNillableEdge(v *string) *AppSettingUpdateOne {
+	if v != nil {
+		_u.SetEdge(*v)
 	}
 	return _u
 }
@@ -1315,6 +1346,9 @@ func (_u *AppSettingUpdateOne) sqlSave(ctx context.Context) (_node *AppSetting, 
 	}
 	if value, ok := _u.mutation.EdgeBindAddress(); ok {
 		_spec.SetField(appsetting.FieldEdgeBindAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Edge(); ok {
+		_spec.SetField(appsetting.FieldEdge, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.PostQuantum(); ok {
 		_spec.SetField(appsetting.FieldPostQuantum, field.TypeBool, value)
