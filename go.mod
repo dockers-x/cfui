@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.105.2
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/cloudflare/cloudflare-go v0.117.0
-	github.com/cloudflare/cloudflared v0.0.0-20260713102814-2601f87b5728
+	github.com/cloudflare/cloudflared v0.0.0-20260722163246-3a2b45c2a511
 	github.com/fclairamb/afero-s3 v0.5.0
 	github.com/lib-x/aferodav v0.2.0
 	github.com/lib-x/entsqlite v0.2.3
