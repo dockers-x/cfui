@@ -1166,7 +1166,10 @@ other = "Creating…"
 other = "Set up the Remote Tunnel Manager with your Cloudflare API token before using DDNS."
 
 [delete_ddns_record_message]
-other = "Delete this DDNS record? The DNS entry will be removed from Cloudflare."
+other = "Remove this record from DDNS management?"
+
+[delete_ddns_record_cloudflare]
+other = "Delete the DNS record from Cloudflare"
 
 [delete_ddns_record_title]
 other = "Delete DDNS record?"

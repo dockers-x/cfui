@@ -78,6 +78,52 @@ func TestMCPClientListsToolsWithToken(t *testing.T) {
 	}
 }
 
+func TestDeleteDDNSRecordCanKeepCloudflareRecord(t *testing.T) {
+	svc := newTestService(t)
+	cfg := svc.cfgMgr.Get()
+	cfg.DDNS.Enabled = true
+	cfg.DDNS.Records = []config.DDNSRecord{{
+		Name: "home.example.com", ZoneID: "zone-1", ZoneName: "example.com",
+		Type: "A", Value: "{IPV4}", Comment: "cfui", TTL: 1,
+	}}
+	if err := svc.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	keepRemote := false
+	_, out, err := svc.deleteDDNSRecord(context.Background(), nil, DeleteDDNSRecordInput{
+		Index:        0,
+		DeleteRemote: &keepRemote,
+	})
+	if err != nil {
+		t.Fatalf("deleteDDNSRecord: %v", err)
+	}
+	if len(out.Records) != 0 {
+		t.Fatalf("DDNS config still contains deleted record: %#v", out.Records)
+	}
+}
+
+func TestDeleteDDNSRecordDefaultsToDeletingCloudflareRecord(t *testing.T) {
+	svc := newTestService(t)
+	cfg := svc.cfgMgr.Get()
+	cfg.DDNS.Enabled = true
+	cfg.DDNS.Records = []config.DDNSRecord{{
+		Name: "home.example.com", ZoneID: "zone-1", ZoneName: "example.com",
+		Type: "A", Value: "{IPV4}", Comment: "cfui", TTL: 1,
+	}}
+	if err := svc.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	_, _, err := svc.deleteDDNSRecord(context.Background(), nil, DeleteDDNSRecordInput{Index: 0})
+	if err == nil {
+		t.Fatal("expected default remote deletion to require Cloudflare credentials")
+	}
+	if got := svc.cfgMgr.Get().DDNS.Records; len(got) != 1 {
+		t.Fatalf("failed remote deletion changed DDNS records: %#v", got)
+	}
+}
+
 type bearerTransport struct {
 	token string
 }

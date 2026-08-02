@@ -1166,7 +1166,10 @@ other = "作成中…"
 other = "まず Remote Tunnel Manager で Cloudflare API 認証情報を設定してください。"
 
 [delete_ddns_record_message]
-other = "この DDNS レコードを削除しますか？Cloudflare から DNS エントリが削除されます。"
+other = "このレコードを DDNS 管理から削除しますか？"
+
+[delete_ddns_record_cloudflare]
+other = "Cloudflare 上の DNS レコードも削除する"
 
 [delete_ddns_record_title]
 other = "DDNS レコードを削除しますか？"

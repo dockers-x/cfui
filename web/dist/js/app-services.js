@@ -751,9 +751,20 @@
             body.append(title, detail);
             const actions = document.createElement('div'); actions.className = 'actions';
             const editBtn = document.createElement('button'); editBtn.type = 'button'; editBtn.className = 'btn btn--sm'; editBtn.textContent = t('edit'); editBtn.addEventListener('click', () => openDDNSRecordDialog(i, rec));
-            const delBtn = document.createElement('button'); delBtn.type = 'button'; delBtn.className = 'btn btn--sm btn--ghost'; delBtn.textContent = t('delete'); delBtn.addEventListener('click', () => { const { confirm } = window.cfui; confirm({ title: t('delete_ddns_record_title'), message: t('delete_ddns_record_message', { name: rec.name || '' }), okText: t('delete') }).then((ok) => { if (ok) deleteDDNSRecord(i); }); });
+            const delBtn = document.createElement('button'); delBtn.type = 'button'; delBtn.className = 'btn btn--sm btn--ghost'; delBtn.textContent = t('delete'); delBtn.addEventListener('click', () => confirmDeleteDDNSRecord(i, rec));
             actions.append(editBtn, delBtn); row.append(body, actions); list.appendChild(row);
         });
+    }
+
+    async function confirmDeleteDDNSRecord(index, rec) {
+        const result = await window.cfui.confirmWithOption({
+            title: t('delete_ddns_record_title'),
+            message: t('delete_ddns_record_message', { name: rec.name || '' }),
+            optionLabel: t('delete_ddns_record_cloudflare'),
+            optionChecked: true,
+            okText: t('delete'),
+        });
+        if (result.confirmed) await deleteDDNSRecord(index, result.optionChecked);
     }
 
     function ddnsRecordSubdomain(rec) {
@@ -830,7 +841,7 @@
         finally { setBusy(btn, false); }
     }
 
-    async function deleteDDNSRecord(index) { try { const data = await apiSend(`/ddns/records/${index}`, 'DELETE'); state.ddns.config = data; renderDDNSConfig(data); toast.ok(t('ddns_record_deleted')); } catch (err) { toast.err(t('ddns_record_delete_failed') + ': ' + err.message); } }
+    async function deleteDDNSRecord(index, deleteRemote) { try { const params = new URLSearchParams({ delete_remote: String(!!deleteRemote) }); const data = await apiSend(`/ddns/records/${index}?${params.toString()}`, 'DELETE'); state.ddns.config = data; renderDDNSConfig(data); toast.ok(t('ddns_record_deleted')); } catch (err) { toast.err(t('ddns_record_delete_failed') + ': ' + err.message); } }
 
     async function loadDDNSZones() {
         if (state.ddns.zonesLoaded) { renderDDNSZones(); return; }

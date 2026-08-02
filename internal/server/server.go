@@ -1810,7 +1810,16 @@ func (s *Server) handleDDNSRecord(w http.ResponseWriter, r *http.Request) {
 		s.ddnsSvc.Restart()
 		writeJSON(w, s.ddnsSvc.GetConfig())
 	case http.MethodDelete:
-		if err := s.ddnsSvc.DeleteRecord(r.Context(), index); err != nil {
+		deleteRemote := true
+		if raw := strings.TrimSpace(r.URL.Query().Get("delete_remote")); raw != "" {
+			var parseErr error
+			deleteRemote, parseErr = strconv.ParseBool(raw)
+			if parseErr != nil {
+				writeAPIError(w, http.StatusBadRequest, errors.New("delete_remote must be true or false"))
+				return
+			}
+		}
+		if err := s.ddnsSvc.DeleteRecord(r.Context(), index, deleteRemote); err != nil {
 			writeAPIError(w, http.StatusInternalServerError, err)
 			return
 		}

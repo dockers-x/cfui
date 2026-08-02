@@ -1166,7 +1166,10 @@ other = "正在创建…"
 other = "请先在远程隧道管理器中配置 Cloudflare API 凭据，再使用 DDNS。"
 
 [delete_ddns_record_message]
-other = "删除此 DDNS 记录？此操作会从 Cloudflare 移除对应 DNS 记录。"
+other = "从 DDNS 管理中删除此记录？"
+
+[delete_ddns_record_cloudflare]
+other = "是否删除 Cloudflare 上的 DNS 记录"
 
 [delete_ddns_record_title]
 other = "删除 DDNS 记录？"

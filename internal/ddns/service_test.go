@@ -67,7 +67,7 @@ func TestDeleteRecordDeletesCloudflareRecordBeforeRemovingConfig(t *testing.T) {
 	svc := NewService(cfgMgr)
 	svc.newDNSClient = func() (dnsRecordClient, error) { return client, nil }
 
-	if err := svc.DeleteRecord(context.Background(), 0); err != nil {
+	if err := svc.DeleteRecord(context.Background(), 0, true); err != nil {
 		t.Fatalf("DeleteRecord: %v", err)
 	}
 
@@ -76,6 +76,40 @@ func TestDeleteRecordDeletesCloudflareRecordBeforeRemovingConfig(t *testing.T) {
 	}
 	if client.deletedZoneID != record.ZoneID || client.deletedRecordID != "dns-record-1" {
 		t.Fatalf("unexpected Cloudflare deletion: zone=%q record=%q", client.deletedZoneID, client.deletedRecordID)
+	}
+	if got := cfgMgr.Get().DDNS.Records; len(got) != 0 {
+		t.Fatalf("DDNS config still contains deleted record: %#v", got)
+	}
+}
+
+func TestDeleteRecordCanKeepCloudflareRecord(t *testing.T) {
+	cfgMgr, err := config.NewManager(t.TempDir())
+	if err != nil {
+		t.Fatalf("NewManager: %v", err)
+	}
+
+	record := config.DDNSRecord{
+		Name: "home.example.com", ZoneID: "zone-1", ZoneName: "example.com",
+		Type: "A", Value: "{IPV4}", Comment: "cfui", TTL: 1,
+	}
+	cfg := cfgMgr.Get()
+	cfg.DDNS.Records = []config.DDNSRecord{record}
+	if err := cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	client := &fakeDNSClient{records: []cloudflare.DNSRecord{{
+		ID: "dns-record-1", Type: record.Type, Name: record.Name,
+	}}}
+	svc := NewService(cfgMgr)
+	svc.newDNSClient = func() (dnsRecordClient, error) { return client, nil }
+
+	if err := svc.DeleteRecord(context.Background(), 0, false); err != nil {
+		t.Fatalf("DeleteRecord: %v", err)
+	}
+
+	if client.listedZoneID != "" || client.deletedRecordID != "" {
+		t.Fatalf("Cloudflare API called while keeping remote record: listed zone=%q deleted record=%q", client.listedZoneID, client.deletedRecordID)
 	}
 	if got := cfgMgr.Get().DDNS.Records; len(got) != 0 {
 		t.Fatalf("DDNS config still contains deleted record: %#v", got)
@@ -172,7 +206,7 @@ func TestDeleteRecordStopsActiveSyncBeforeDeletingCloudflareRecord(t *testing.T)
 		t.Fatal("background sync did not start")
 	}
 
-	if err := svc.DeleteRecord(context.Background(), 0); err != nil {
+	if err := svc.DeleteRecord(context.Background(), 0, true); err != nil {
 		t.Fatalf("DeleteRecord: %v", err)
 	}
 	if client.deletedRecordID != "dns-record-1" {

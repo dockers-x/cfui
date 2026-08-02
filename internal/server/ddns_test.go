@@ -1,6 +1,7 @@
 package server
 
 import (
+	"cfui/internal/config"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -127,5 +128,37 @@ func TestDDNSRecordsDefaultComment(t *testing.T) {
 	cfg := s.cfgMgr.Get()
 	if len(cfg.DDNS.Records) != 1 || cfg.DDNS.Records[0].Comment != "cfui" {
 		t.Fatalf("expected default comment, got %#v", cfg.DDNS.Records)
+	}
+}
+
+func TestDDNSRecordDeleteCanKeepCloudflareRecord(t *testing.T) {
+	s := newServerTestServer(t)
+	cfg := s.cfgMgr.Get()
+	cfg.DDNS.Records = []config.DDNSRecord{{
+		Name: "home.example.com", ZoneID: "zone-1", ZoneName: "example.com",
+		Type: "A", Value: "{IPV4}", Comment: "cfui", TTL: 1,
+	}}
+	if err := s.cfgMgr.Save(cfg); err != nil {
+		t.Fatalf("Save config: %v", err)
+	}
+
+	invalidReq := httptest.NewRequest(http.MethodDelete, "/api/ddns/records/0?delete_remote=invalid", nil)
+	invalidRec := httptest.NewRecorder()
+	s.handleDDNSRecord(invalidRec, invalidReq)
+	if invalidRec.Code != http.StatusBadRequest {
+		t.Fatalf("invalid delete_remote status %d: %s", invalidRec.Code, invalidRec.Body.String())
+	}
+	if got := s.cfgMgr.Get().DDNS.Records; len(got) != 1 {
+		t.Fatalf("invalid request changed DDNS records: %#v", got)
+	}
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/ddns/records/0?delete_remote=false", nil)
+	deleteRec := httptest.NewRecorder()
+	s.handleDDNSRecord(deleteRec, deleteReq)
+	if deleteRec.Code != http.StatusOK {
+		t.Fatalf("delete record status %d: %s", deleteRec.Code, deleteRec.Body.String())
+	}
+	if got := s.cfgMgr.Get().DDNS.Records; len(got) != 0 {
+		t.Fatalf("DDNS config still contains deleted record: %#v", got)
 	}
 }

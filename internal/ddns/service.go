@@ -537,10 +537,10 @@ func (s *Service) syncDNSRecord(ctx context.Context, client dnsRecordClient, rec
 	return nil
 }
 
-// DeleteRecord removes a managed DNS record from Cloudflare before removing
-// it from the persisted DDNS configuration. A missing remote record is treated
-// as an idempotent success.
-func (s *Service) DeleteRecord(ctx context.Context, index int) error {
+// DeleteRecord removes a managed DNS record from the persisted DDNS
+// configuration and, when requested, from Cloudflare first. A missing remote
+// record is treated as an idempotent success.
+func (s *Service) DeleteRecord(ctx context.Context, index int, deleteRemote bool) error {
 	cfg := s.cfgMgr.Get()
 	if index < 0 || index >= len(cfg.DDNS.Records) {
 		return errors.New("record not found")
@@ -553,21 +553,23 @@ func (s *Service) DeleteRecord(ctx context.Context, index int) error {
 	s.Stop()
 	defer s.Start()
 
-	client, err := s.newDNSClient()
-	if err != nil {
-		return fmt.Errorf("failed to create API client: %w", err)
-	}
-	rc := cloudflare.ZoneIdentifier(rec.ZoneID)
-	existing, _, err := client.ListDNSRecords(ctx, rc, cloudflare.ListDNSRecordsParams{
-		Type: rec.Type,
-		Name: rec.Name,
-	})
-	if err != nil {
-		return fmt.Errorf("list failed: %w", err)
-	}
-	if len(existing) > 0 {
-		if err := client.DeleteDNSRecord(ctx, rc, existing[0].ID); err != nil {
-			return fmt.Errorf("delete failed: %w", err)
+	if deleteRemote {
+		client, err := s.newDNSClient()
+		if err != nil {
+			return fmt.Errorf("failed to create API client: %w", err)
+		}
+		rc := cloudflare.ZoneIdentifier(rec.ZoneID)
+		existing, _, err := client.ListDNSRecords(ctx, rc, cloudflare.ListDNSRecordsParams{
+			Type: rec.Type,
+			Name: rec.Name,
+		})
+		if err != nil {
+			return fmt.Errorf("list failed: %w", err)
+		}
+		if len(existing) > 0 {
+			if err := client.DeleteDNSRecord(ctx, rc, existing[0].ID); err != nil {
+				return fmt.Errorf("delete failed: %w", err)
+			}
 		}
 	}
 

@@ -201,7 +201,7 @@ func (s *Service) newMCPServer() *mcp.Server {
 	}, s.addDDNSRecord)
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "cfui_delete_ddns_record",
-		Description: "Delete a DDNS record by zero-based index from Cloudflare and the saved list.",
+		Description: "Delete a DDNS record by zero-based index from the saved list and optionally from Cloudflare (default: true).",
 	}, s.deleteDDNSRecord)
 
 	return server
@@ -562,14 +562,19 @@ func (s *Service) addDDNSRecord(ctx context.Context, req *mcp.CallToolRequest, i
 }
 
 type DeleteDDNSRecordInput struct {
-	Index int `json:"index" jsonschema:"zero-based DDNS record index"`
+	Index        int   `json:"index" jsonschema:"zero-based DDNS record index"`
+	DeleteRemote *bool `json:"delete_remote,omitempty" jsonschema:"whether to delete the DNS record from Cloudflare; defaults to true"`
 }
 
 func (s *Service) deleteDDNSRecord(ctx context.Context, req *mcp.CallToolRequest, in DeleteDDNSRecordInput) (*mcp.CallToolResult, ddns.ConfigResponse, error) {
 	if err := s.requireDDNSEnabled(); err != nil {
 		return nil, ddns.ConfigResponse{}, err
 	}
-	if err := s.ddnsSvc.DeleteRecord(ctx, in.Index); err != nil {
+	deleteRemote := true
+	if in.DeleteRemote != nil {
+		deleteRemote = *in.DeleteRemote
+	}
+	if err := s.ddnsSvc.DeleteRecord(ctx, in.Index, deleteRemote); err != nil {
 		return nil, ddns.ConfigResponse{}, err
 	}
 	return nil, s.ddnsSvc.GetConfig(), nil

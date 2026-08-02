@@ -142,15 +142,40 @@
         return hadOpenDialog;
     }
 
-    function confirm({ title, message, okText, okClass = 'btn--danger' }) {
+    function prepareConfirm({ title, message, okText, okClass = 'btn--danger' }) {
+        const dialog = $('confirm-dialog');
+        if (!dialog) return null;
+        $('confirm-title').textContent = title || t('confirm_title');
+        $('confirm-message').textContent = message || '';
+        $('confirm-ok').className = `btn ${okClass}`;
+        $('confirm-ok-text').textContent = okText || t('confirm');
+        const optionBody = $('confirm-option-body');
+        if (optionBody) optionBody.hidden = true;
+        return dialog;
+    }
+
+    function confirm(options) {
         return new Promise((resolve) => {
-            const dialog = $('confirm-dialog');
+            const dialog = prepareConfirm(options);
             if (!dialog) return resolve(false);
-            $('confirm-title').textContent = title || t('confirm_title');
-            $('confirm-message').textContent = message || '';
-            $('confirm-ok').className = `btn ${okClass}`;
-            $('confirm-ok-text').textContent = okText || t('confirm');
             state.confirmResolver = resolve;
+            openDialog(dialog, { stack: true });
+        });
+    }
+
+    function confirmWithOption({ optionLabel, optionChecked = true, ...options }) {
+        return new Promise((resolve) => {
+            const dialog = prepareConfirm(options);
+            if (!dialog) return resolve({ confirmed: false, optionChecked });
+            const optionBody = $('confirm-option-body');
+            const option = $('confirm-option');
+            if (optionBody) optionBody.hidden = false;
+            if (option) option.checked = !!optionChecked;
+            $('confirm-option-label').textContent = optionLabel || '';
+            state.confirmResolver = (confirmed) => resolve({
+                confirmed,
+                optionChecked: option ? option.checked : !!optionChecked,
+            });
             openDialog(dialog, { stack: true });
         });
     }
@@ -366,6 +391,7 @@
     ns.closeDialog = closeDialog;
     ns.closeAllDialogs = closeAllDialogs;
     ns.confirm = confirm;
+    ns.confirmWithOption = confirmWithOption;
     ns.activateTab = activateTab;
     ns.restoreLastTab = restoreLastTab;
     ns.setWorkspace = setWorkspace;
