@@ -201,7 +201,7 @@ func (s *Service) newMCPServer() *mcp.Server {
 	}, s.addDDNSRecord)
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "cfui_delete_ddns_record",
-		Description: "Delete a DDNS record by zero-based index from the saved list.",
+		Description: "Delete a DDNS record by zero-based index from Cloudflare and the saved list.",
 	}, s.deleteDDNSRecord)
 
 	return server
@@ -569,22 +569,8 @@ func (s *Service) deleteDDNSRecord(ctx context.Context, req *mcp.CallToolRequest
 	if err := s.requireDDNSEnabled(); err != nil {
 		return nil, ddns.ConfigResponse{}, err
 	}
-	cur := s.ddnsSvc.GetConfig()
-	if in.Index < 0 || in.Index >= len(cur.Records) {
-		return nil, ddns.ConfigResponse{}, fmt.Errorf("record index out of range")
-	}
-	cur.Records = append(cur.Records[:in.Index], cur.Records[in.Index+1:]...)
-	saveReq := ddns.SaveRequest{
-		Enabled:      cur.Enabled,
-		IPSources:    cur.IPSources,
-		Records:      cur.Records,
-		IntervalMins: cur.IntervalMins,
-		OnlyOnChange: cur.OnlyOnChange,
-		MaxRetries:   cur.MaxRetries,
-	}
-	if err := s.ddnsSvc.SaveConfig(saveReq); err != nil {
+	if err := s.ddnsSvc.DeleteRecord(ctx, in.Index); err != nil {
 		return nil, ddns.ConfigResponse{}, err
 	}
-	s.ddnsSvc.Restart()
 	return nil, s.ddnsSvc.GetConfig(), nil
 }

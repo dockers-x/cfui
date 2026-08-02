@@ -1810,12 +1810,10 @@ func (s *Server) handleDDNSRecord(w http.ResponseWriter, r *http.Request) {
 		s.ddnsSvc.Restart()
 		writeJSON(w, s.ddnsSvc.GetConfig())
 	case http.MethodDelete:
-		cfg.DDNS.Records = append(cfg.DDNS.Records[:index], cfg.DDNS.Records[index+1:]...)
-		if err := s.cfgMgr.Save(cfg); err != nil {
+		if err := s.ddnsSvc.DeleteRecord(r.Context(), index); err != nil {
 			writeAPIError(w, http.StatusInternalServerError, err)
 			return
 		}
-		s.ddnsSvc.Restart()
 		writeJSON(w, s.ddnsSvc.GetConfig())
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

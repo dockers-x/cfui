@@ -4,6 +4,7 @@ import (
 	"cfui/internal/config"
 	"cfui/internal/logger"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -21,9 +22,17 @@ const (
 	ipSourceRetryMaxDelay  = 10 * time.Second
 )
 
+type dnsRecordClient interface {
+	ListDNSRecords(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.ListDNSRecordsParams) ([]cloudflare.DNSRecord, *cloudflare.ResultInfo, error)
+	CreateDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.CreateDNSRecordParams) (cloudflare.DNSRecord, error)
+	UpdateDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.UpdateDNSRecordParams) (cloudflare.DNSRecord, error)
+	DeleteDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, recordID string) error
+}
+
 // Service manages periodic IP detection and DNS record synchronization.
 type Service struct {
-	cfgMgr *config.Manager
+	cfgMgr       *config.Manager
+	newDNSClient func() (dnsRecordClient, error)
 
 	lifecycleMu sync.Mutex
 	mu          sync.Mutex
@@ -103,11 +112,15 @@ type ZoneResponse struct {
 }
 
 func NewService(cfgMgr *config.Manager) *Service {
-	return &Service{
+	service := &Service{
 		cfgMgr:  cfgMgr,
 		results: make([]SyncResult, 0, 100),
 		stopCh:  make(chan struct{}),
 	}
+	service.newDNSClient = func() (dnsRecordClient, error) {
+		return service.newCFClient()
+	}
+	return service
 }
 
 // Start begins the background DDNS loop if enabled.
@@ -429,7 +442,7 @@ func hasFixedValueRecords(records []config.DDNSRecord) bool {
 }
 
 func (s *Service) syncAllRecords(ctx context.Context, records []config.DDNSRecord, v4, v6 string) {
-	client, err := s.newCFClient()
+	client, err := s.newDNSClient()
 	if err != nil {
 		s.mu.Lock()
 		s.lastError = "failed to create API client: " + err.Error()
@@ -473,7 +486,7 @@ func (s *Service) syncAllRecords(ctx context.Context, records []config.DDNSRecor
 	}
 }
 
-func (s *Service) syncDNSRecord(ctx context.Context, client *cloudflare.API, rec config.DDNSRecord, ip string) error {
+func (s *Service) syncDNSRecord(ctx context.Context, client dnsRecordClient, rec config.DDNSRecord, ip string) error {
 	rc := cloudflare.ZoneIdentifier(rec.ZoneID)
 
 	// Look for existing record
@@ -520,6 +533,47 @@ func (s *Service) syncDNSRecord(ctx context.Context, client *cloudflare.API, rec
 		if err != nil {
 			return fmt.Errorf("create failed: %w", err)
 		}
+	}
+	return nil
+}
+
+// DeleteRecord removes a managed DNS record from Cloudflare before removing
+// it from the persisted DDNS configuration. A missing remote record is treated
+// as an idempotent success.
+func (s *Service) DeleteRecord(ctx context.Context, index int) error {
+	cfg := s.cfgMgr.Get()
+	if index < 0 || index >= len(cfg.DDNS.Records) {
+		return errors.New("record not found")
+	}
+	rec := cfg.DDNS.Records[index]
+
+	// An in-flight sync may otherwise recreate the record after Cloudflare has
+	// deleted it. Resume the service on every return path so transient API
+	// failures do not leave DDNS stopped.
+	s.Stop()
+	defer s.Start()
+
+	client, err := s.newDNSClient()
+	if err != nil {
+		return fmt.Errorf("failed to create API client: %w", err)
+	}
+	rc := cloudflare.ZoneIdentifier(rec.ZoneID)
+	existing, _, err := client.ListDNSRecords(ctx, rc, cloudflare.ListDNSRecordsParams{
+		Type: rec.Type,
+		Name: rec.Name,
+	})
+	if err != nil {
+		return fmt.Errorf("list failed: %w", err)
+	}
+	if len(existing) > 0 {
+		if err := client.DeleteDNSRecord(ctx, rc, existing[0].ID); err != nil {
+			return fmt.Errorf("delete failed: %w", err)
+		}
+	}
+
+	cfg.DDNS.Records = append(cfg.DDNS.Records[:index], cfg.DDNS.Records[index+1:]...)
+	if err := s.cfgMgr.Save(cfg); err != nil {
+		return err
 	}
 	return nil
 }
