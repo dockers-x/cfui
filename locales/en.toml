@@ -2181,3 +2181,186 @@ other = "Proxied"
 
 [dns_only]
 other = "DNS only"
+
+[feature_local_auth_name]
+other = "Local access protection"
+
+[feature_local_auth_desc]
+other = "Optionally require a username and password before opening the management API."
+
+[local_auth_enabled]
+other = "On"
+
+[local_auth_disabled]
+other = "Off"
+
+[local_auth_enable]
+other = "Enable"
+
+[local_auth_manage]
+other = "Manage"
+
+[local_auth_login_title]
+other = "Sign in to cfui"
+
+[local_auth_login_subtitle]
+other = "Local access protection is enabled for this installation."
+
+[local_auth_username]
+other = "Username"
+
+[local_auth_password]
+other = "Password"
+
+[local_auth_sign_in]
+other = "Sign in"
+
+[local_auth_signing_in]
+other = "Signing in…"
+
+[local_auth_setup_title]
+other = "Enable local access protection"
+
+[local_auth_setup_subtitle]
+other = "Existing users remain unaffected until you enable this option."
+
+[local_auth_password_help]
+other = "Use at least 8 characters."
+
+[local_auth_confirm_password]
+other = "Confirm password"
+
+[local_auth_password_mismatch]
+other = "The passwords do not match."
+
+[local_auth_enabled_message]
+other = "Local access protection enabled"
+
+[local_auth_manage_title]
+other = "Manage local access protection"
+
+[local_auth_signed_in_as]
+other = "Signed in as"
+
+[local_auth_change_password]
+other = "Change password"
+
+[local_auth_change_password_desc]
+other = "Changing the password signs out every other session."
+
+[local_auth_current_password]
+other = "Current password"
+
+[local_auth_new_password]
+other = "New password"
+
+[local_auth_update_password]
+other = "Update password"
+
+[local_auth_password_changed]
+other = "Password updated and other sessions signed out"
+
+[local_auth_other_sessions]
+other = "Other sessions"
+
+[local_auth_other_sessions_desc]
+other = "Keep this browser signed in and revoke every other local session."
+
+[local_auth_revoke_others]
+other = "Revoke others"
+
+[local_auth_revoking]
+other = "Revoking…"
+
+[local_auth_sessions_revoked]
+other = "Other sessions revoked"
+
+[local_auth_disable_title]
+other = "Disable protection"
+
+[local_auth_disable_desc]
+other = "Management APIs become accessible again without signing in."
+
+[local_auth_disable]
+other = "Disable"
+
+[local_auth_disabling]
+other = "Disabling…"
+
+[local_auth_disabled_message]
+other = "Local access protection disabled"
+
+[local_auth_sign_out]
+other = "Sign out"
+
+[status_starting]
+other = "Starting"
+
+[status_stopping]
+other = "Stopping"
+
+[status_reconnecting]
+other = "Waiting to reconnect"
+
+[status_reconnecting_detail]
+other = "Retry {n} · next at {time}"
+
+[rule_check_all]
+other = "Check all"
+
+[rule_check]
+other = "Check"
+
+[rule_checking]
+other = "Checking…"
+
+[rule_check_complete]
+other = "Rule checks complete"
+
+[rule_check_failed]
+other = "Rule check failed"
+
+[rule_check_summary]
+other = "Checked {checked}/{total} · DNS healthy {dns} · origins reachable {origin} · issues {issues}"
+
+[rule_origin]
+other = "Origin"
+
+[rule_dns_untested]
+other = "Not checked"
+
+[rule_dns_ok]
+other = "Healthy"
+
+[rule_dns_missing]
+other = "Missing"
+
+[rule_dns_conflict]
+other = "Conflict"
+
+[rule_dns_error]
+other = "Check failed"
+
+[rule_origin_untested]
+other = "Not checked"
+
+[rule_origin_ok]
+other = "Reachable"
+
+[rule_origin_timeout]
+other = "Timed out"
+
+[rule_origin_tls_error]
+other = "TLS error"
+
+[rule_origin_dns_error]
+other = "DNS error"
+
+[rule_origin_refused]
+other = "Connection refused"
+
+[rule_origin_skipped]
+other = "Not applicable"
+
+[rule_origin_error]
+other = "Check failed"

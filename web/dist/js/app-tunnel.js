@@ -294,6 +294,8 @@
         } else if (localProfiles.length > 1) {
             const pillState = running > 0 ? 'ok' : (anyError ? 'error' : 'warn');
             setStatusPill(pillState, t('tunnels_running_ratio', { n: running, m: localProfiles.length }));
+        } else if (['starting', 'stopping', 'reconnecting'].includes(state.status)) {
+            setStatusPill('loading', tunnelStatusText(selectedStatus));
         } else if (state.isRunning) {
             setStatusPill('ok', t('status_running') + protoText);
         } else if (state.status === 'error') {
@@ -475,6 +477,9 @@
         const protocol = document.createElement('span');
         protocol.className = 'tunnel-profile-item__protocol';
         protocol.hidden = true;
+        const runtime = document.createElement('span');
+        runtime.className = 'tunnel-profile-item__runtime';
+        copy.append(runtime);
         summary.append(led, copy, protocol);
 
         item.append(summary);
@@ -505,7 +510,10 @@
             if (summary) summary.setAttribute('aria-pressed', String(isSelected));
             let stateName = 'stopped';
             let statusText = t('status_stopped');
-            if (st.running) {
+            if (st.status === 'starting' || st.status === 'stopping' || st.status === 'reconnecting') {
+                stateName = st.status;
+                statusText = tunnelStatusText(st);
+            } else if (st.running) {
                 stateName = 'running';
                 statusText = t('status_running');
             } else if (st.status === 'error') {
@@ -514,7 +522,10 @@
             }
             item.dataset.state = stateName;
 
-            const protoText = st.running && st.protocol && st.protocol !== 'auto'
+            const runtime = item.querySelector('.tunnel-profile-item__runtime');
+            if (runtime) runtime.textContent = statusText;
+
+            const protoText = st.status !== 'stopped' && st.protocol && st.protocol !== 'auto'
                 ? st.protocol.toUpperCase()
                 : '';
             const protocol = item.querySelector('.tunnel-profile-item__protocol');
@@ -541,13 +552,28 @@
         if (!actionBtn || actionBtn.getAttribute('aria-busy') === 'true') return;
         const key = selected?.key || selectedTunnelKey();
         const st = (state.tunnelStatuses || {})[key] || {};
-        const action = st.running ? 'stop' : 'start';
+        const active = st.running || ['starting', 'stopping', 'reconnecting'].includes(st.status);
+        const action = active ? 'stop' : 'start';
         actionBtn.dataset.action = action;
         actionBtn.dataset.key = key;
-        actionBtn.classList.toggle('btn--primary', !st.running);
-        actionBtn.classList.toggle('btn--danger', st.running);
+        actionBtn.classList.toggle('btn--primary', !active);
+        actionBtn.classList.toggle('btn--danger', active);
         const text = actionBtn.querySelector('.text');
-        if (text) text.textContent = t(st.running ? 'stop_this_tunnel' : 'start_this_tunnel');
+        if (text) text.textContent = t(active ? 'stop_this_tunnel' : 'start_this_tunnel');
+    }
+
+    function tunnelStatusText(st = {}) {
+        const key = {
+            starting: 'status_starting', stopping: 'status_stopping', reconnecting: 'status_reconnecting',
+            running: 'status_running', error: 'status_error', stopped: 'status_stopped',
+        }[st.status] || 'status_stopped';
+        let text = t(key);
+        if (st.status === 'reconnecting') {
+            const retry = Number(st.retry_count || 0);
+            const when = st.next_retry_at ? new Date(st.next_retry_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+            text = t('status_reconnecting_detail', { n: retry, time: when });
+        }
+        return text;
     }
 
     async function onTunnelProfileChange(keyOverride) {

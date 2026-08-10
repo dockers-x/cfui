@@ -140,6 +140,13 @@ func (r readinessResult) failureSummary() string {
 }
 
 func (i *Instance) monitorReadiness(ctx context.Context, readyURL string) {
+	i.mu.Lock()
+	generation := i.generation
+	i.mu.Unlock()
+	i.monitorReadinessForRun(ctx, readyURL, generation)
+}
+
+func (i *Instance) monitorReadinessForRun(ctx context.Context, readyURL string, generation uint64) {
 	client := &http.Client{Timeout: readinessProbeTimeout}
 	ticker := time.NewTicker(readinessProbeInterval)
 	defer ticker.Stop()
@@ -165,6 +172,7 @@ func (i *Instance) monitorReadiness(ctx context.Context, readyURL string) {
 			}
 			readySeen = true
 			failures = 0
+			i.markRunning(generation)
 			continue
 		}
 
@@ -180,7 +188,7 @@ func (i *Instance) monitorReadiness(ctx context.Context, readyURL string) {
 		}
 
 		err := fmt.Errorf("cloudflared readiness failed after %d consecutive checks: %s", failures, result.failureSummary())
-		if i.requestReadinessRestart(err) {
+		if i.requestReadinessRestartForRun(err, generation) {
 			logWarnf("Tunnel %q readiness watchdog requested restart", i.name)
 		}
 		return
@@ -195,7 +203,14 @@ func (i *Instance) hasRestartRequest() bool {
 
 func (i *Instance) requestReadinessRestart(err error) bool {
 	i.mu.Lock()
-	if !i.running || i.cancel == nil {
+	generation := i.generation
+	i.mu.Unlock()
+	return i.requestReadinessRestartForRun(err, generation)
+}
+
+func (i *Instance) requestReadinessRestartForRun(err error, generation uint64) bool {
+	i.mu.Lock()
+	if i.generation != generation || !i.running || i.cancel == nil {
 		i.mu.Unlock()
 		return false
 	}
@@ -203,6 +218,7 @@ func (i *Instance) requestReadinessRestart(err error) bool {
 		i.lastError = err
 	}
 	i.restartRequested = true
+	i.phase = "reconnecting"
 	cancel := i.cancel
 	i.mu.Unlock()
 

@@ -318,7 +318,11 @@
         /* Dialog keyboard (Escape + Tab-trap) */
         document.addEventListener('keydown', (e) => {
             if (!state.activeDialog) return;
-            if (e.key === 'Escape') { e.preventDefault(); closeDialog(state.activeDialog); return; }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                if (state.activeDialog.dataset.modalStatic !== 'true') closeDialog(state.activeDialog);
+                return;
+            }
             if (e.key !== 'Tab') return;
             const focusable = $$('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
                 state.activeDialog).filter((el) => el.offsetParent !== null);
@@ -338,7 +342,7 @@
             }
             const close = e.target.closest('[data-close-dialog]');
             if (close) { e.preventDefault(); const dlg = close.closest('.modal-backdrop'); if (dlg) closeDialog(dlg); return; }
-            if (e.target.classList?.contains('modal-backdrop') && e.target.id !== 'lang-menu') closeDialog(e.target);
+            if (e.target.classList?.contains('modal-backdrop') && e.target.id !== 'lang-menu' && e.target.dataset.modalStatic !== 'true') closeDialog(e.target);
         });
 
         /* Confirm OK */

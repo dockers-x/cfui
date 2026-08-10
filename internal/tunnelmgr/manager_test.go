@@ -27,6 +27,8 @@ type fakeCFClient struct {
 	apiTokenErr     error
 	listZonesErr    error
 	tunnelConfigErr error
+	dnsMu           sync.Mutex
+	dnsListCalls    int
 }
 
 func (f *fakeCFClient) GetTunnel(ctx context.Context, rc *cloudflare.ResourceContainer, tunnelID string) (cloudflare.Tunnel, error) {
@@ -91,13 +93,20 @@ func (f *fakeCFClient) GetAPIToken(ctx context.Context, tokenID string) (cloudfl
 }
 
 func (f *fakeCFClient) ListDNSRecords(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.ListDNSRecordsParams) ([]cloudflare.DNSRecord, *cloudflare.ResultInfo, error) {
+	f.dnsMu.Lock()
+	f.dnsListCalls++
+	f.dnsMu.Unlock()
 	var matching []cloudflare.DNSRecord
 	for _, r := range f.dnsRecords {
-		if r.Type == params.Type && r.Name == params.Name {
-			matching = append(matching, r)
+		if params.Type != "" && r.Type != params.Type {
+			continue
 		}
+		if params.Name != "" && r.Name != params.Name {
+			continue
+		}
+		matching = append(matching, r)
 	}
-	return matching, &cloudflare.ResultInfo{}, nil
+	return matching, &cloudflare.ResultInfo{Page: 1, TotalPages: 1}, nil
 }
 
 func (f *fakeCFClient) CreateDNSRecord(ctx context.Context, rc *cloudflare.ResourceContainer, params cloudflare.CreateDNSRecordParams) (cloudflare.DNSRecord, error) {

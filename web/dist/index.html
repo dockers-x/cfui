@@ -579,13 +579,17 @@
                         </details>
 
                         <div id="manager-config-panel" hidden>
-                            <div class="section-head">
+                            <div class="section-head manager-rules-head">
                                 <div>
                                     <div class="section-title" data-i18n="ingress_rules">Public hostnames</div>
                                     <div class="config-meta" id="manager-config-meta"></div>
                                 </div>
-                                <button id="manager-add-entry-btn" type="button" class="btn btn--primary btn--sm" data-i18n="add_rule">Add Rule</button>
+                                <div class="btn-row btn-row--compact manager-rule-actions">
+                                    <button id="manager-check-all" type="button" class="btn btn--sm"><span class="spinner" aria-hidden="true"></span><span class="text" data-i18n="rule_check_all">Check all</span></button>
+                                    <button id="manager-add-entry-btn" type="button" class="btn btn--primary btn--sm" data-i18n="add_rule">Add Rule</button>
+                                </div>
                             </div>
+                            <div id="manager-check-summary" class="rule-check-summary" role="status" aria-live="polite"></div>
                             <div id="manager-rules-list" class="rules"></div>
                         </div>
                     </div>
@@ -1264,7 +1268,7 @@
                                 <div class="section-subtitle" data-i18n="feature_manager_desc">Manage Cloudflare-hosted ingress rules via API.</div>
                             </div>
                             <label class="toggle">
-                                <input type="checkbox" id="feature-manager-toggle">
+                                <input type="checkbox" id="feature-manager-toggle" aria-label="Remote Tunnel Manager" data-i18n-attr="aria-label|feature_manager_name">
                                 <span class="track"></span>
                             </label>
                         </div>
@@ -1274,7 +1278,7 @@
                                 <div class="section-subtitle" data-i18n="feature_ddns_desc">Automatically update DNS records when your public IP changes. Requires Remote Manager.</div>
                             </div>
                             <label class="toggle">
-                                <input type="checkbox" id="feature-ddns-toggle">
+                                <input type="checkbox" id="feature-ddns-toggle" aria-label="DDNS" data-i18n-attr="aria-label|feature_ddns_name">
                                 <span class="track"></span>
                             </label>
                         </div>
@@ -1284,7 +1288,7 @@
                                 <div class="section-subtitle" data-i18n="feature_mcp_desc">Let AI clients operate cfui through the Model Context Protocol.</div>
                             </div>
                             <label class="toggle">
-                                <input type="checkbox" id="feature-mcp-toggle">
+                                <input type="checkbox" id="feature-mcp-toggle" aria-label="MCP Access" data-i18n-attr="aria-label|feature_mcp_name">
                                 <span class="track"></span>
                             </label>
                         </div>
@@ -1295,9 +1299,19 @@
                                 <div class="feature-reason" id="feature-s3-reason"></div>
                             </div>
                             <label class="toggle">
-                                <input type="checkbox" id="feature-s3-toggle">
+                                <input type="checkbox" id="feature-s3-toggle" aria-label="S3 WebDAV" data-i18n-attr="aria-label|feature_s3_name">
                                 <span class="track"></span>
                             </label>
+                        </div>
+                        <div class="feature-row" data-feature="local_auth">
+                            <div>
+                                <div class="section-title" data-i18n="feature_local_auth_name">Local access protection</div>
+                                <div class="section-subtitle" data-i18n="feature_local_auth_desc">Optionally require a username and password before opening the management API.</div>
+                            </div>
+                            <div class="feature-action">
+                                <span id="feature-local-auth-status" class="pill" data-state="disabled" role="status" aria-live="polite"><span class="dot"></span><span class="text" data-i18n="local_auth_disabled">Off</span></span>
+                                <button type="button" id="feature-local-auth-open" class="btn btn--sm" data-i18n="local_auth_enable">Enable</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1678,6 +1692,84 @@
         </div>
     </div>
 
+    <!-- Local access login dialog -->
+    <div id="local-auth-login-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="local-auth-login-title" data-modal-static="true" hidden>
+        <div class="modal modal--auth">
+            <div class="modal-head">
+                <div>
+                    <h2 id="local-auth-login-title" data-i18n="local_auth_login_title">Sign in to cfui</h2>
+                    <p class="subtitle" data-i18n="local_auth_login_subtitle">Local access protection is enabled for this installation.</p>
+                </div>
+            </div>
+            <form id="local-auth-login-form" class="modal-body auth-form" novalidate>
+                <div class="form-field">
+                    <label for="local-auth-login-username" data-i18n="local_auth_username">Username</label>
+                    <input id="local-auth-login-username" type="text" autocomplete="username" required maxlength="64">
+                </div>
+                <div class="form-field">
+                    <label for="local-auth-login-password" data-i18n="local_auth_password">Password</label>
+                    <input id="local-auth-login-password" type="password" autocomplete="current-password" required maxlength="256">
+                </div>
+                <p id="local-auth-login-error" class="form-error" role="alert" aria-live="polite" hidden></p>
+            </form>
+            <div class="modal-foot">
+                <button type="submit" form="local-auth-login-form" id="local-auth-login-submit" class="btn btn--primary btn--block">
+                    <span class="spinner" aria-hidden="true"></span><span class="text" data-i18n="local_auth_sign_in">Sign in</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enable local access protection -->
+    <div id="local-auth-setup-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="local-auth-setup-title" hidden>
+        <div class="modal modal--auth">
+            <div class="modal-head">
+                <div>
+                    <h2 id="local-auth-setup-title" data-i18n="local_auth_setup_title">Enable local access protection</h2>
+                    <p class="subtitle" data-i18n="local_auth_setup_subtitle">Existing users remain unaffected until you enable this option.</p>
+                </div>
+                <button type="button" class="icon-btn" data-close-dialog aria-label="Close dialog" title="Close dialog" data-i18n-attr="aria-label|dialog_close;title|dialog_close"><span aria-hidden="true">×</span></button>
+            </div>
+            <form id="local-auth-setup-form" class="modal-body auth-form" novalidate>
+                <div class="form-field"><label for="local-auth-setup-username" data-i18n="local_auth_username">Username</label><input id="local-auth-setup-username" type="text" autocomplete="username" required maxlength="64"></div>
+                <div class="form-field"><label for="local-auth-setup-password" data-i18n="local_auth_password">Password</label><input id="local-auth-setup-password" type="password" autocomplete="new-password" required minlength="8" maxlength="256"><p class="help-text" data-i18n="local_auth_password_help">Use at least 8 characters.</p></div>
+                <div class="form-field"><label for="local-auth-setup-confirm" data-i18n="local_auth_confirm_password">Confirm password</label><input id="local-auth-setup-confirm" type="password" autocomplete="new-password" required minlength="8" maxlength="256"></div>
+                <p id="local-auth-setup-error" class="form-error" role="alert" aria-live="polite" hidden></p>
+            </form>
+            <div class="modal-foot"><button type="button" class="btn btn--ghost" data-close-dialog data-i18n="cancel">Cancel</button><button type="submit" form="local-auth-setup-form" id="local-auth-setup-submit" class="btn btn--primary"><span class="spinner" aria-hidden="true"></span><span class="text" data-i18n="local_auth_enable">Enable</span></button></div>
+        </div>
+    </div>
+
+    <!-- Manage local access protection -->
+    <div id="local-auth-manage-dialog" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="local-auth-manage-title" hidden>
+        <div class="modal modal--auth-manage">
+            <div class="modal-head">
+                <div><h2 id="local-auth-manage-title" data-i18n="local_auth_manage_title">Manage local access protection</h2><p class="subtitle"><span data-i18n="local_auth_signed_in_as">Signed in as</span> <strong id="local-auth-manage-username"></strong></p></div>
+                <button type="button" class="icon-btn" data-close-dialog aria-label="Close dialog" title="Close dialog" data-i18n-attr="aria-label|dialog_close;title|dialog_close"><span aria-hidden="true">×</span></button>
+            </div>
+            <div class="modal-body auth-manage-grid">
+                <form id="local-auth-password-form" class="auth-section" novalidate>
+                    <div><div class="section-title" data-i18n="local_auth_change_password">Change password</div><p class="section-subtitle" data-i18n="local_auth_change_password_desc">Changing the password signs out every other session.</p></div>
+                    <div class="form-field"><label for="local-auth-current-password" data-i18n="local_auth_current_password">Current password</label><input id="local-auth-current-password" type="password" autocomplete="current-password" required maxlength="256"></div>
+                    <div class="form-row"><div class="form-field"><label for="local-auth-new-password" data-i18n="local_auth_new_password">New password</label><input id="local-auth-new-password" type="password" autocomplete="new-password" required minlength="8" maxlength="256"></div><div class="form-field"><label for="local-auth-new-password-confirm" data-i18n="local_auth_confirm_password">Confirm password</label><input id="local-auth-new-password-confirm" type="password" autocomplete="new-password" required minlength="8" maxlength="256"></div></div>
+                    <p id="local-auth-password-error" class="form-error" role="alert" aria-live="polite" hidden></p>
+                    <button type="submit" id="local-auth-password-submit" class="btn"><span class="spinner" aria-hidden="true"></span><span class="text" data-i18n="local_auth_update_password">Update password</span></button>
+                </form>
+                <form id="local-auth-revoke-form" class="auth-section" novalidate>
+                    <div><div class="section-title" data-i18n="local_auth_other_sessions">Other sessions</div><p class="section-subtitle" data-i18n="local_auth_other_sessions_desc">Keep this browser signed in and revoke every other local session.</p></div>
+                    <div class="auth-inline-action"><div class="form-field"><label for="local-auth-revoke-password" data-i18n="local_auth_password">Password</label><input id="local-auth-revoke-password" type="password" autocomplete="current-password" required maxlength="256"></div><button type="submit" id="local-auth-revoke-submit" class="btn"><span class="spinner" aria-hidden="true"></span><span class="text" data-i18n="local_auth_revoke_others">Revoke others</span></button></div>
+                    <p id="local-auth-revoke-error" class="form-error" role="alert" aria-live="polite" hidden></p>
+                </form>
+                <form id="local-auth-disable-form" class="auth-section auth-section--danger" novalidate>
+                    <div><div class="section-title" data-i18n="local_auth_disable_title">Disable protection</div><p class="section-subtitle" data-i18n="local_auth_disable_desc">Management APIs become accessible again without signing in.</p></div>
+                    <div class="auth-inline-action"><div class="form-field"><label for="local-auth-disable-password" data-i18n="local_auth_password">Password</label><input id="local-auth-disable-password" type="password" autocomplete="current-password" required maxlength="256"></div><button type="submit" id="local-auth-disable-submit" class="btn btn--danger"><span class="spinner" aria-hidden="true"></span><span class="text" data-i18n="local_auth_disable">Disable</span></button></div>
+                    <p id="local-auth-disable-error" class="form-error" role="alert" aria-live="polite" hidden></p>
+                </form>
+            </div>
+            <div class="modal-foot"><button type="button" id="local-auth-logout" class="btn btn--ghost" data-i18n="local_auth_sign_out">Sign out</button><button type="button" class="btn btn--primary" data-close-dialog data-i18n="close">Close</button></div>
+        </div>
+    </div>
+
     <!-- Confirm dialog (reusable) -->
     <div id="confirm-dialog" class="modal-backdrop" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message" hidden>
         <div class="modal" style="max-width: 440px;">
@@ -1728,6 +1820,7 @@
 
     <script src="/js/app-core.js"></script>
     <script src="/js/app-ui.js"></script>
+    <script src="/js/app-auth.js"></script>
     <script src="/js/app-tunnel.js"></script>
     <script src="/js/app-logs.js"></script>
     <script src="/js/app-services.js"></script>

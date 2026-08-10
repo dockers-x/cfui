@@ -991,12 +991,19 @@ func (s *Server) handleCFWorkerTail(w http.ResponseWriter, r *http.Request, scri
 
 	heartbeat := time.NewTicker(30 * time.Second)
 	defer heartbeat.Stop()
+	authTicker := time.NewTicker(localAuthStreamRecheckInterval)
+	defer authTicker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-s.shutdownC:
 			return
+		case <-authTicker.C:
+			authorized, err := s.localAuthStreamAuthorized(r)
+			if err != nil || !authorized {
+				return
+			}
 		case msg, ok := <-messages:
 			if !ok {
 				select {

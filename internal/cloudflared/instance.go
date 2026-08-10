@@ -29,8 +29,14 @@ type OptionsProvider func() (Options, error)
 
 // Status is a point-in-time snapshot of an instance.
 type Status struct {
-	Running   bool
-	LastError error
+	Running bool
+	// Phase is one of stopped, starting, running, stopping, reconnecting, or
+	// error. It lets API clients distinguish transitional states from a stable
+	// stopped tunnel.
+	Phase       string
+	LastError   error
+	RetryCount  int
+	NextRetryAt *time.Time
 	// Protocol is the transport currently selected by the fallback logic
 	// (quic, http2, or auto before the first start).
 	Protocol string
@@ -49,15 +55,18 @@ type Instance struct {
 	cancel      context.CancelFunc
 	done        chan struct{} // closed when the current run's goroutine exits
 	running     bool
+	phase       string
 	lastError   error
 	configFile  string
 	stopTimeout time.Duration
+	generation  uint64
 	// restartRequested is set when cfui cancels a run to recover a tunnel that
 	// is still running locally but no longer has active edge connections.
 	restartRequested bool
 
 	restartCount   int
 	lastRestart    time.Time
+	nextRetryAt    time.Time
 	restartBackoff *backoff.Backoff
 
 	// Protocol fallback management (for auto mode).
@@ -77,6 +86,7 @@ func NewInstance(name string, optsFn OptionsProvider) *Instance {
 		protocolFailures: make(map[string]int),
 		restartBackoff:   NewRestartBackoff(),
 		currentProtocol:  "auto",
+		phase:            "stopped",
 	}
 }
 
@@ -88,52 +98,79 @@ func (i *Instance) Name() string {
 // Start launches the tunnel. It returns ErrAlreadyRunning when called twice
 // without an intervening stop or exit.
 func (i *Instance) Start() (err error) {
+	return i.start(nil, nil)
+}
+
+// start reserves and launches a lifecycle. Auto-restart callers pass the
+// generation and context of the run they are replacing so a concurrent Stop
+// can invalidate the restart before it reserves a new lifecycle.
+func (i *Instance) start(expectedGeneration *uint64, expectedCtx context.Context) (err error) {
+	var generation uint64
 	// Outermost panic guard: a failure inside the embedded library during
 	// launch must not take down the whole control panel.
 	defer func() {
 		if rec := recover(); rec != nil {
 			logErrorf("Panic during tunnel %q start (recovered): %v", i.name, rec)
 			err = fmt.Errorf("start panic: %v", rec)
+			i.setTerminalErrorFor(generation, err)
 		}
 	}()
 
-	opts, err := i.optsFn()
-	if err != nil {
-		logErrorf("Cannot start tunnel %q: %v", i.name, err)
-		return err
-	}
-	if err := opts.Validate(); err != nil {
-		logErrorf("Cannot start tunnel %q: %v", i.name, err)
-		return err
-	}
-	if err := EnsureInit(opts.SoftwareName); err != nil {
-		return err
-	}
-
+	// Reserve this lifecycle before reading configuration. Otherwise an
+	// invalid duplicate start could overwrite the state owned by a live run.
 	i.mu.Lock()
-	if i.running {
+	if expectedGeneration != nil &&
+		(i.generation != *expectedGeneration || i.phase != "reconnecting" || expectedCtx == nil || expectedCtx.Err() != nil) {
+		i.mu.Unlock()
+		return context.Canceled
+	}
+	if i.running || i.phase == "starting" {
 		i.mu.Unlock()
 		logWarnf("Attempted to start tunnel %q that is already running", i.name)
 		return ErrAlreadyRunning
 	}
-
-	// Cancel any leftover context (e.g. a pending auto-restart timer) after
-	// publishing the new state so cancellation callbacks never run under i.mu.
 	oldCancel := i.cancel
-
+	i.generation++
+	generation = i.generation
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	i.ctx, i.cancel, i.done = ctx, cancel, done
-	i.running = true
+	i.phase = "starting"
 	i.lastError = nil
+	i.nextRetryAt = time.Time{}
 	i.restartRequested = false
 	i.mu.Unlock()
-
-	logInfof("Starting cloudflared tunnel %q", i.name)
-	go i.runTunnel(ctx, opts, done)
 	if oldCancel != nil {
 		oldCancel()
 	}
+
+	opts, err := i.optsFn()
+	if err != nil {
+		logErrorf("Cannot start tunnel %q: %v", i.name, err)
+		i.setTerminalErrorFor(generation, err)
+		return err
+	}
+	if err := opts.Validate(); err != nil {
+		logErrorf("Cannot start tunnel %q: %v", i.name, err)
+		i.setTerminalErrorFor(generation, err)
+		return err
+	}
+	if err := EnsureInit(opts.SoftwareName); err != nil {
+		i.setTerminalErrorFor(generation, err)
+		return err
+	}
+
+	i.mu.Lock()
+	if i.generation != generation || i.phase != "starting" || ctx.Err() != nil {
+		i.mu.Unlock()
+		cancel()
+		return context.Canceled
+	}
+	i.running = true
+	i.mu.Unlock()
+
+	logInfof("Starting cloudflared tunnel %q", i.name)
+	go i.runTunnel(ctx, opts, done, generation)
 
 	return nil
 }
@@ -146,8 +183,15 @@ func (i *Instance) Stop() error {
 	i.mu.Lock()
 	if !i.running {
 		cancel := i.cancel
+		if cancel != nil {
+			i.generation++
+		}
+		i.ctx = nil
 		i.cancel = nil
+		i.done = nil
 		i.restartRequested = false
+		i.phase = "stopped"
+		i.nextRetryAt = time.Time{}
 		i.mu.Unlock()
 		if cancel != nil {
 			cancel()
@@ -159,6 +203,7 @@ func (i *Instance) Stop() error {
 	}
 
 	logInfof("Initiating shutdown of tunnel %q", i.name)
+	i.phase = "stopping"
 	cancel := i.cancel
 	i.cancel = nil
 	i.restartRequested = false
@@ -178,13 +223,17 @@ func (i *Instance) Stop() error {
 		return nil
 	case <-timer.C:
 		logWarnf("Tunnel %q stop timeout exceeded (%v)", i.name, timeout)
-		// The run goroutine is stuck inside the library; reflect reality in
-		// the state and reclaim what we can.
+		// The embedded run may still own connections and its temporary config.
+		// Keep it non-startable until the goroutine actually exits; reporting a
+		// stopped instance here could launch a second run for the same profile.
+		timeoutErr := fmt.Errorf("timeout waiting for tunnel %q to stop", i.name)
 		i.mu.Lock()
-		i.running = false
+		if i.done == done && i.running {
+			i.phase = "stopping"
+			i.lastError = timeoutErr
+		}
 		i.mu.Unlock()
-		i.cleanupConfigFile()
-		return fmt.Errorf("timeout waiting for tunnel %q to stop", i.name)
+		return timeoutErr
 	}
 }
 
@@ -192,11 +241,58 @@ func (i *Instance) Stop() error {
 func (i *Instance) Status() Status {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	return Status{
-		Running:   i.running,
-		LastError: i.lastError,
-		Protocol:  i.currentProtocol,
+	status := Status{
+		Running:    i.running,
+		Phase:      i.phase,
+		LastError:  i.lastError,
+		RetryCount: i.restartCount,
+		Protocol:   i.currentProtocol,
 	}
+	if status.Phase == "" {
+		if status.Running {
+			status.Phase = "running"
+		} else {
+			status.Phase = "stopped"
+		}
+	}
+	if !i.nextRetryAt.IsZero() {
+		next := i.nextRetryAt
+		status.NextRetryAt = &next
+	}
+	return status
+}
+
+func (i *Instance) setTerminalErrorFor(generation uint64, err error) {
+	if err == nil {
+		return
+	}
+	i.mu.Lock()
+	if generation == 0 || generation != i.generation {
+		i.mu.Unlock()
+		return
+	}
+	cancel := i.cancel
+	i.ctx = nil
+	i.cancel = nil
+	i.done = nil
+	i.running = false
+	i.phase = "error"
+	i.lastError = err
+	i.nextRetryAt = time.Time{}
+	i.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
+
+func (i *Instance) markRunning(generation uint64) {
+	i.mu.Lock()
+	if i.generation == generation && i.running && (i.phase == "starting" || i.phase == "running") {
+		i.phase = "running"
+		i.lastError = nil
+		i.nextRetryAt = time.Time{}
+	}
+	i.mu.Unlock()
 }
 
 // selectProtocol determines which protocol to use based on configuration and
@@ -273,23 +369,41 @@ func (i *Instance) recordProtocolFailure(err error) {
 	}
 }
 
-func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct{}) {
+func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct{}, generation uint64) {
 	restartAllowed := true
+	var configFile string
 	defer close(done)
 	defer func() {
 		if rec := recover(); rec != nil {
 			logErrorf("Recovered from panic in tunnel %q: %v", i.name, rec)
 			i.mu.Lock()
-			i.lastError = fmt.Errorf("tunnel panic: %v", rec)
+			if i.generation == generation {
+				i.lastError = fmt.Errorf("tunnel panic: %v", rec)
+			}
 			i.mu.Unlock()
 		}
 
-		i.cleanupConfigFile()
+		i.cleanupConfigFile(generation, configFile)
 
 		i.mu.Lock()
+		if i.generation != generation {
+			i.mu.Unlock()
+			return
+		}
 		restartRequested := i.restartRequested
 		i.restartRequested = false
 		i.running = false
+		if !shouldRestartAfterExit(ctx, restartAllowed, restartRequested) {
+			if ctx.Err() != nil {
+				i.phase = "stopped"
+				i.lastError = nil
+			} else if i.lastError == nil {
+				i.phase = "stopped"
+			} else {
+				i.phase = "error"
+			}
+			i.nextRetryAt = time.Time{}
+		}
 		restartCtx := ctx
 		if restartRequested {
 			var restartCancel context.CancelFunc
@@ -301,7 +415,7 @@ func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct
 
 		if shouldRestartAfterExit(ctx, restartAllowed, restartRequested) {
 			logWarnf("Tunnel %q exited unexpectedly, checking auto-restart policy", i.name)
-			i.maybeAutoRestart(restartCtx)
+			i.maybeAutoRestartForRun(restartCtx, generation)
 		}
 	}()
 
@@ -316,7 +430,6 @@ func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct
 		},
 	}
 
-	var configFile string
 	if opts.CustomTag != "" {
 		file, err := createTempConfig(opts.CustomTag)
 		if err != nil {
@@ -324,7 +437,9 @@ func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct
 		} else {
 			configFile = file
 			i.mu.Lock()
-			i.configFile = file
+			if i.generation == generation {
+				i.configFile = file
+			}
 			i.mu.Unlock()
 			logInfof("Tunnel %q using custom identifier tag: %s", i.name, opts.CustomTag)
 		}
@@ -348,7 +463,9 @@ func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct
 	// schedule pulses that strip it (and any stale ones) again.
 	scheduleSignalReclaim()
 	if readinessURL != "" {
-		go i.monitorReadiness(ctx, readinessURL)
+		go i.monitorReadinessForRun(ctx, readinessURL, generation)
+	} else {
+		i.markRunning(generation)
 	}
 
 	err := app.RunContext(ctx, args)
@@ -401,12 +518,16 @@ func createTempConfig(customTag string) (string, error) {
 }
 
 // cleanupConfigFile removes the temporary config file if one exists.
-func (i *Instance) cleanupConfigFile() {
+func (i *Instance) cleanupConfigFile(generation uint64, configFile string) {
 	i.mu.Lock()
-	configFile := i.configFile
-	i.configFile = ""
+	if i.generation == generation && i.configFile == configFile {
+		i.configFile = ""
+	}
 	i.mu.Unlock()
+	removeConfigFile(configFile)
+}
 
+func removeConfigFile(configFile string) {
 	if configFile == "" {
 		return
 	}

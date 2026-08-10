@@ -7,6 +7,7 @@ import (
 	"cfui/internal/cloudflared"
 	"cfui/internal/config"
 	"cfui/internal/ddns"
+	"cfui/internal/localauth"
 	"cfui/internal/logger"
 	"cfui/internal/mcpbridge"
 	"cfui/internal/pool"
@@ -35,10 +36,12 @@ import (
 
 // StatusResponse represents the tunnel status response
 type StatusResponse struct {
-	Running  bool   `json:"running"`
-	Status   string `json:"status"`
-	Protocol string `json:"protocol"`
-	Error    string `json:"error,omitempty"`
+	Running     bool       `json:"running"`
+	Status      string     `json:"status"`
+	Protocol    string     `json:"protocol"`
+	RetryCount  int        `json:"retry_count"`
+	NextRetryAt *time.Time `json:"next_retry_at,omitempty"`
+	Error       string     `json:"error,omitempty"`
 }
 
 // Reset resets the StatusResponse to its zero state
@@ -46,6 +49,8 @@ func (r *StatusResponse) Reset() {
 	r.Running = false
 	r.Status = ""
 	r.Protocol = ""
+	r.RetryCount = 0
+	r.NextRetryAt = nil
 	r.Error = ""
 }
 
@@ -100,19 +105,22 @@ var (
 )
 
 type Server struct {
-	cfgMgr    *config.Manager
-	runner    *service.Runner
-	tunnelMgr *tunnelmgr.Manager
-	mcpSvc    *mcpbridge.Service
-	ddnsSvc   *ddns.Service
-	s3Svc     *s3dav.Service
-	s3WebDAV  *s3DedicatedServer
-	runMode   config.RunMode
-	oauthSvc  *cfoauth.Service
-	cfSvc     *cfaccount.Service
-	r2Uploads *r2UploadManager
-	assets    embed.FS
-	locales   fs.FS
+	cfgMgr           *config.Manager
+	runner           *service.Runner
+	tunnelMgr        *tunnelmgr.Manager
+	mcpSvc           *mcpbridge.Service
+	ddnsSvc          *ddns.Service
+	s3Svc            *s3dav.Service
+	s3WebDAV         *s3DedicatedServer
+	runMode          config.RunMode
+	oauthSvc         *cfoauth.Service
+	cfSvc            *cfaccount.Service
+	r2Uploads        *r2UploadManager
+	localAuth        *localauth.Store
+	authLimit        *loginLimiter
+	authConfirmLimit *loginLimiter
+	assets           embed.FS
+	locales          fs.FS
 
 	backupHooks configBackupRuntimeHooks
 
@@ -133,20 +141,23 @@ func NewServerWithMode(cfgMgr *config.Manager, runner *service.Runner, assets em
 	s3Svc := s3dav.NewService(cfgMgr)
 	oauthSvc := newOAuthService(cfgMgr)
 	return &Server{
-		cfgMgr:    cfgMgr,
-		runner:    runner,
-		tunnelMgr: tunnelMgr,
-		mcpSvc:    mcpbridge.NewService(cfgMgr, runner, tunnelMgr, tokenStore, ddnsSvc),
-		ddnsSvc:   ddnsSvc,
-		s3Svc:     s3Svc,
-		s3WebDAV:  newS3DedicatedServer(),
-		runMode:   runMode,
-		oauthSvc:  oauthSvc,
-		cfSvc:     cfaccount.NewService(oauthSvc),
-		r2Uploads: newR2UploadManager(),
-		assets:    assets,
-		locales:   locales,
-		shutdownC: make(chan struct{}),
+		cfgMgr:           cfgMgr,
+		runner:           runner,
+		tunnelMgr:        tunnelMgr,
+		mcpSvc:           mcpbridge.NewService(cfgMgr, runner, tunnelMgr, tokenStore, ddnsSvc),
+		ddnsSvc:          ddnsSvc,
+		s3Svc:            s3Svc,
+		s3WebDAV:         newS3DedicatedServer(),
+		runMode:          runMode,
+		oauthSvc:         oauthSvc,
+		cfSvc:            cfaccount.NewService(oauthSvc),
+		r2Uploads:        newR2UploadManager(),
+		localAuth:        localauth.NewStore(cfgMgr.Dir()),
+		authLimit:        newLoginLimiter(5, 5*time.Minute),
+		authConfirmLimit: newLoginLimiter(5, 5*time.Minute),
+		assets:           assets,
+		locales:          locales,
+		shutdownC:        make(chan struct{}),
 	}
 }
 
@@ -215,6 +226,13 @@ func (s *Server) GetHandler() http.Handler {
 
 	// API Endpoints
 	mux.HandleFunc("/api/config", s.handleConfig)
+	mux.HandleFunc("/api/auth/status", s.handleLocalAuthStatus)
+	mux.HandleFunc("/api/auth/setup", s.handleLocalAuthSetup)
+	mux.HandleFunc("/api/auth/login", s.handleLocalAuthLogin)
+	mux.HandleFunc("/api/auth/logout", s.handleLocalAuthLogout)
+	mux.HandleFunc("/api/auth/password", s.handleLocalAuthPassword)
+	mux.HandleFunc("/api/auth/sessions/revoke-others", s.handleLocalAuthRevokeOthers)
+	mux.HandleFunc("/api/auth/disable", s.handleLocalAuthDisable)
 	mux.HandleFunc("/api/config-backup/export", s.handleConfigBackupExport)
 	mux.HandleFunc("/api/config-backup/inspect", s.handleConfigBackupInspect)
 	mux.HandleFunc("/api/config-backup/import", s.handleConfigBackupImport)
@@ -229,6 +247,7 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("/api/tunnel-manager/settings", s.handleTunnelManagerSettings)
 	mux.HandleFunc("/api/tunnel-manager/tunnel", s.handleTunnelManagerTunnel)
 	mux.HandleFunc("/api/tunnel-manager/config", s.handleTunnelManagerConfig)
+	mux.HandleFunc("/api/tunnel-manager/checks", s.handleTunnelManagerChecks)
 	mux.HandleFunc("/api/tunnel-manager/zones", s.handleTunnelManagerZones)
 	mux.HandleFunc("/api/tunnel-manager/entries/reorder", s.handleTunnelManagerEntriesReorder)
 	mux.HandleFunc("/api/tunnel-manager/entries", s.handleTunnelManagerEntries)
@@ -345,7 +364,7 @@ func (s *Server) GetHandler() http.Handler {
 	mux.Handle("/", s.staticHandler(fsys))
 
 	// Apply middleware chain: logging -> panic recovery -> handler
-	return ChainMiddleware(mux, LoggingMiddleware, PanicRecoveryMiddleware)
+	return ChainMiddleware(mux, LoggingMiddleware, PanicRecoveryMiddleware, s.localAuthMiddleware)
 }
 
 func serveEmbeddedIndex(fsys fs.FS) http.HandlerFunc {
@@ -973,6 +992,25 @@ func (s *Server) handleTunnelManagerConfig(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, cfg)
 }
 
+func (s *Server) handleTunnelManagerChecks(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req tunnelmgr.RuleCheckRequest
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
+	if err := decodeStrictJSON(r.Body, &req); err != nil {
+		writeAPIError(w, http.StatusBadRequest, err)
+		return
+	}
+	resp, err := s.tunnelMgr.CheckRulesFor(r.Context(), r.URL.Query().Get("tunnel_key"), req)
+	if err != nil {
+		writeTunnelManagerError(w, err)
+		return
+	}
+	writeJSON(w, resp)
+}
+
 func (s *Server) handleTunnelManagerEntries(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -1138,15 +1176,22 @@ func (s *Server) tunnelsResponse(cfg config.Config) TunnelsResponse {
 }
 
 func statusResponseFrom(st cloudflared.Status) StatusResponse {
-	resp := StatusResponse{Running: st.Running, Protocol: st.Protocol}
-	if st.Running {
-		resp.Status = "running"
-	} else {
-		resp.Status = "stopped"
+	resp := StatusResponse{
+		Running:     st.Running,
+		Status:      st.Phase,
+		Protocol:    st.Protocol,
+		RetryCount:  st.RetryCount,
+		NextRetryAt: st.NextRetryAt,
+	}
+	if resp.Status == "" {
+		if st.Running {
+			resp.Status = "running"
+		} else {
+			resp.Status = "stopped"
+		}
 	}
 	if st.LastError != nil {
 		resp.Error = st.LastError.Error()
-		resp.Status = "error"
 	}
 	return resp
 }
@@ -1301,22 +1346,15 @@ func (s *Server) writeRunnerStatus(w http.ResponseWriter) {
 		writeJSON(w, StatusResponse{Running: false, Status: "unavailable"})
 		return
 	}
-	running, err, protocol := s.runner.Status()
-	status := "stopped"
-	if running {
-		status = "running"
-	}
+	st, _ := s.runner.ProfileStatus("")
 
 	resp := statusResponsePool.Get()
 	defer statusResponsePool.Put(resp)
 
-	resp.Running = running
-	resp.Status = status
-	resp.Protocol = protocol
-	if err != nil {
-		resp.Error = err.Error()
-		resp.Status = "error"
-		logger.Sugar.Warnf("Tunnel status error: %v", err)
+	converted := statusResponseFrom(st)
+	*resp = converted
+	if st.LastError != nil {
+		logger.Sugar.Warnf("Tunnel status error: %v", st.LastError)
 	}
 
 	if encodeErr := json.NewEncoder(w).Encode(resp); encodeErr != nil {
@@ -1532,6 +1570,8 @@ func (s *Server) handleLogStream(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	heartbeatTicker := time.NewTicker(30 * time.Second)
 	defer heartbeatTicker.Stop()
+	authTicker := time.NewTicker(localAuthStreamRecheckInterval)
+	defer authTicker.Stop()
 
 	for {
 		select {
@@ -1543,6 +1583,12 @@ func (s *Server) handleLogStream(w http.ResponseWriter, r *http.Request) {
 			// does not wait for its full timeout.
 			logger.Sugar.Infof("Log stream closed for shutdown: %s", r.RemoteAddr)
 			return
+		case <-authTicker.C:
+			authorized, err := s.localAuthStreamAuthorized(r)
+			if err != nil || !authorized {
+				logger.Sugar.Infof("Log stream authorization expired: %s", r.RemoteAddr)
+				return
+			}
 		case <-heartbeatTicker.C:
 			// Send SSE comment as heartbeat to detect dead connections
 			_, err := w.Write([]byte(": heartbeat\n\n"))

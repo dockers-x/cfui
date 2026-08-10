@@ -56,22 +56,47 @@ func shouldRestartAfterExit(ctx context.Context, restartAllowed, restartRequeste
 // exponential backoff when auto-restart is enabled. ctx belongs to the run
 // that just ended; cancelling it (Stop) aborts the pending restart.
 func (i *Instance) maybeAutoRestart(ctx context.Context) {
+	i.mu.Lock()
+	generation := i.generation
+	i.mu.Unlock()
+	i.maybeAutoRestartForRun(ctx, generation)
+}
+
+func (i *Instance) maybeAutoRestartForRun(ctx context.Context, generation uint64) {
 	if err := ctx.Err(); err != nil {
 		logDebugf("Tunnel %q auto-restart canceled: %v", i.name, err)
+		i.finishCanceledRestart(generation)
 		return
 	}
 
 	opts, err := i.optsFn()
 	if err != nil {
 		logWarnf("Tunnel %q auto-restart skipped: %v", i.name, err)
+		i.setTerminalErrorFor(generation, err)
 		return
 	}
 	if !opts.AutoRestart {
 		logInfof("Tunnel %q: auto-restart is disabled, tunnel will not restart", i.name)
+		i.mu.Lock()
+		if i.generation != generation {
+			i.mu.Unlock()
+			return
+		}
+		if i.lastError != nil {
+			i.phase = "error"
+		} else {
+			i.phase = "stopped"
+		}
+		i.nextRetryAt = time.Time{}
+		i.mu.Unlock()
 		return
 	}
 
 	i.mu.Lock()
+	if i.generation != generation {
+		i.mu.Unlock()
+		return
+	}
 	if i.restartBackoff == nil {
 		i.restartBackoff = NewRestartBackoff()
 	}
@@ -85,6 +110,8 @@ func (i *Instance) maybeAutoRestart(ctx context.Context) {
 
 	if i.restartCount >= maxRestartAttempts {
 		logWarnf("Tunnel %q: maximum restart attempts reached (%d), stopping auto-restart", i.name, i.restartCount)
+		i.phase = "error"
+		i.nextRetryAt = time.Time{}
 		i.mu.Unlock()
 		return
 	}
@@ -92,6 +119,8 @@ func (i *Instance) maybeAutoRestart(ctx context.Context) {
 	delay := i.restartBackoff.Duration()
 	i.restartCount++
 	i.lastRestart = time.Now()
+	i.nextRetryAt = i.lastRestart.Add(delay)
+	i.phase = "reconnecting"
 	attemptNum := i.restartCount
 	i.mu.Unlock()
 
@@ -102,15 +131,26 @@ func (i *Instance) maybeAutoRestart(ctx context.Context) {
 	select {
 	case <-ctx.Done():
 		logInfof("Tunnel %q auto-restart canceled before attempt %d: %v", i.name, attemptNum, ctx.Err())
+		i.finishCanceledRestart(generation)
 		return
 	case <-timer.C:
 	}
 
 	if err := ctx.Err(); err != nil {
 		logInfof("Tunnel %q auto-restart canceled before attempt %d: %v", i.name, attemptNum, err)
+		i.finishCanceledRestart(generation)
 		return
 	}
-	if err := i.Start(); err != nil {
+	if err := i.start(&generation, ctx); err != nil && err != context.Canceled {
 		logErrorf("Failed to restart tunnel %q: %v", i.name, err)
 	}
+}
+
+func (i *Instance) finishCanceledRestart(generation uint64) {
+	i.mu.Lock()
+	if i.generation == generation && i.phase == "reconnecting" {
+		i.phase = "stopped"
+		i.nextRetryAt = time.Time{}
+	}
+	i.mu.Unlock()
 }

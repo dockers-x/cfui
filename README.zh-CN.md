@@ -25,6 +25,7 @@ Web UI 已内置在二进制文件中。配置保存在数据目录下的本地 
   - 通过 Account ID 和 Tunnel ID 加载已有 Tunnel。API 凭据共用，Account ID 和 Tunnel ID 可以按 tunnel 配置分别保存。
   - 可以通过 Cloudflare API 读取 Tunnel 名称，并在本地配置仍是自动生成名称时自动写回。
   - 添加、编辑和删除 public hostname 规则，支持 hostname、path、服务类型、服务地址、Host Header、Origin Server Name 和 TLS 校验选项。
+  - 检测每条 public hostname 的 Cloudflare DNS 指向和源站连通性，并显示单条结果及精简的成功/异常统计。
   - 能在可解析时从所选 Tunnel token 自动带出 Account ID 和 Tunnel ID。
   - 在执行 Cloudflare 管理操作前，可以校验 API 权限。
 
@@ -58,6 +59,12 @@ Web UI 已内置在二进制文件中。配置保存在数据目录下的本地 
   - 远程 Tunnel 管理、DDNS、MCP、S3 WebDAV 都是可选功能。
   - 未启用的功能不会显示对应 Tab。
   - DDNS 依赖远程 Tunnel 管理，因为它复用同一套 Cloudflare API 凭据。
+
+- **可选的本地访问保护**
+  - 新旧安装默认都不要求 cfui 账户，只有在功能页显式启用后才开始保护。
+  - 为本地管理 API 增加账户密码登录，并在现有 UI 中提供修改密码、撤销其他会话、退出和关闭保护入口。
+  - 账户、密码哈希和会话只保存在本地 SQLite 数据库；密码使用 Argon2id，数据库不保存原始 Session Token。
+  - 不增加认证环境变量。MCP 和 WebDAV 继续使用各自独立的认证设置。
 
 - **配置备份与恢复**
   - 在功能页按模块导出或导入本地配置。
@@ -166,6 +173,12 @@ http://localhost:14333
 5. 从 UI 启动该 tunnel 配置；需要运行其他配置时重复操作即可。
 
 本地隧道运行不需要 Cloudflare API 凭据。只有远程 Tunnel 管理、DDNS 和可选的 R2 bucket 管理需要 API 凭据。
+
+## 本地访问保护
+
+本地访问保护默认关闭，因此历史用户升级后不需要迁移账户，也不会改变原有启动流程。需要启用时，进入 **功能 → 本地访问保护**，设置账户和密码，之后通过 cfui 自定义弹窗登录。
+
+如果要把新的 cfui 实例暴露到不可信网络，应先完成保护设置。保护关闭期间，任何能访问 cfui 的人本来就能调用管理 API，也可能成为第一个启用保护的人。本功能不增加设置向导，也不提供环境变量账户密码入口。
 
 ## Tunnel 配置
 

@@ -5,9 +5,11 @@ import (
 	"cfui/internal/cloudflared"
 	"cfui/internal/config"
 	"cfui/internal/configbackup"
+	"cfui/internal/localauth"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -81,6 +83,20 @@ func TestConfigBackupRejectsCrossSiteRequests(t *testing.T) {
 	}
 }
 
+func TestConfigBackupAcceptsForwardedExternalOrigin(t *testing.T) {
+	s := newServerTestServer(t)
+	req := httptest.NewRequest(http.MethodPost, "/api/config-backup/export", strings.NewReader(`{"sections":["application"]}`))
+	req.Host = "127.0.0.1:14333"
+	req.Header.Set("Origin", "https://cfui.example")
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Header.Set("X-Forwarded-Host", "cfui.example")
+	rec := httptest.NewRecorder()
+	s.handleConfigBackupExport(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("forwarded same-origin export status = %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestConfigBackupExportOmitsSecretsByDefaultAndEncryptsWhenRequested(t *testing.T) {
 	s := newServerTestServer(t)
 	cfg := s.cfgMgr.Get()
@@ -115,6 +131,32 @@ func TestConfigBackupExportOmitsSecretsByDefaultAndEncryptsWhenRequested(t *test
 	decoded, err := configbackup.Decode(encryptedRec.Body.Bytes(), "optional-password")
 	if err != nil || !decoded.Encrypted || decoded.Payload.Sensitive == nil {
 		t.Fatalf("decode encrypted export: decoded=%#v err=%v", decoded, err)
+	}
+}
+
+func TestConfigBackupNeverIncludesLocalAuthenticationData(t *testing.T) {
+	s := newServerTestServer(t)
+	s.localAuth = localauth.NewStore(s.cfgMgr.Dir())
+	const username = "backup-auth-admin"
+	const password = "backup-auth-password"
+	if err := s.localAuth.Setup(t.Context(), username, password); err != nil {
+		t.Fatal(err)
+	}
+	token, err := s.localAuth.CreateSession(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/config-backup/export", strings.NewReader(`{"sections":["tunnels","application"],"include_sensitive":true,"confirm_plaintext_sensitive":true}`))
+	rec := httptest.NewRecorder()
+	s.handleConfigBackupExport(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("export status %d: %s", rec.Code, rec.Body.String())
+	}
+	for _, secret := range []string{username, password, token, "argon2id", "local_auth_sessions", "local_auth_settings"} {
+		if strings.Contains(rec.Body.String(), secret) {
+			t.Fatalf("config backup leaked local authentication data %q", secret)
+		}
 	}
 }
 
@@ -372,6 +414,40 @@ func TestConfigBackupImportRequestsRemovedStopsAndReportsRunningChanges(t *testi
 	}
 }
 
+func TestConfigBackupImportRechecksSessionBeforeSaving(t *testing.T) {
+	s := newServerTestServer(t)
+	s.localAuth = localauth.NewStore(t.TempDir())
+	if err := s.localAuth.Setup(t.Context(), "admin", "correct password"); err != nil {
+		t.Fatal(err)
+	}
+	token, err := s.localAuth.CreateSession(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := s.cfgMgr.Get()
+	backup := encodeConfigBackup(t, cfg, []configbackup.Section{configbackup.SectionApplication}, false, "")
+	req := multipartBackupRequest(t, "/api/config-backup/import", backup, "", []configbackup.Section{configbackup.SectionApplication})
+	req.AddCookie(&http.Cookie{Name: localAuthCookieName, Value: token})
+	req.Body = &callbackReadCloser{
+		ReadCloser: req.Body,
+		callback: func() {
+			if err := s.localAuth.DeleteSession(context.Background(), token); err != nil {
+				t.Errorf("DeleteSession: %v", err)
+			}
+		},
+	}
+	saved := false
+	s.backupHooks.saveConfig = func(config.Config) error { saved = true; return nil }
+	rec := httptest.NewRecorder()
+	s.localAuthMiddleware(http.HandlerFunc(s.handleConfigBackupImport)).ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("import status = %d, want %d: %s", rec.Code, http.StatusUnauthorized, rec.Body.String())
+	}
+	if saved {
+		t.Fatal("configuration was saved after the request session was revoked")
+	}
+}
+
 func encodeConfigBackup(t *testing.T, cfg config.Config, sections []configbackup.Section, sensitive bool, password string) []byte {
 	t.Helper()
 	payload, err := configbackup.Build(cfg, configbackup.ExportOptions{Sections: sections, IncludeSensitive: sensitive}, "test", time.Date(2026, 7, 14, 12, 0, 0, 0, time.UTC))
@@ -416,6 +492,20 @@ func multipartBackupRequest(t *testing.T, target string, file []byte, password s
 	req := httptest.NewRequest(http.MethodPost, target, &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	return req
+}
+
+type callbackReadCloser struct {
+	io.ReadCloser
+	callback func()
+	called   bool
+}
+
+func (r *callbackReadCloser) Read(p []byte) (int, error) {
+	if !r.called {
+		r.called = true
+		r.callback()
+	}
+	return r.ReadCloser.Read(p)
 }
 
 func assertBackupErrorCode(t *testing.T, rec *httptest.ResponseRecorder, status int, code string) {

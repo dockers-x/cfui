@@ -932,12 +932,16 @@ func normalizeHostname(value string) string {
 }
 
 func findZoneForHostname(hostname string, zones []cloudflare.Zone) *cloudflare.Zone {
+	var matched *cloudflare.Zone
+	matchedLength := -1
 	for i := range zones {
-		if strings.HasSuffix(hostname, "."+zones[i].Name) || hostname == zones[i].Name {
-			return &zones[i]
+		zoneName := normalizeHostname(zones[i].Name)
+		if zoneName != "" && (strings.HasSuffix(hostname, "."+zoneName) || hostname == zoneName) && len(zoneName) > matchedLength {
+			matched = &zones[i]
+			matchedLength = len(zoneName)
 		}
 	}
-	return nil
+	return matched
 }
 
 func (m *Manager) client() (config.TunnelManagementConfig, cloudflareClient, error) {

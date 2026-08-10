@@ -25,6 +25,7 @@ The web UI is built into the binary. Configuration is stored in a local SQLite d
   - Load an existing tunnel by Account ID and Tunnel ID. API credentials are shared, while Account ID and Tunnel ID can be stored per tunnel profile.
   - Read the Cloudflare Tunnel name through the Cloudflare API and apply it to a profile when the local profile is still using an auto-generated name.
   - Add, edit, and delete public hostname rules with hostname, path, service type, service URL, host header, origin server name, and TLS verification options.
+  - Check each public hostname's Cloudflare DNS mapping and origin connectivity, with per-rule results and compact success/issue statistics.
   - Decode Account ID and Tunnel ID from the selected tunnel token when possible.
   - Verify Cloudflare API permissions before using Cloudflare-managed operations.
 
@@ -58,6 +59,12 @@ The web UI is built into the binary. Configuration is stored in a local SQLite d
   - Remote Tunnel Manager, DDNS, MCP, and S3 WebDAV are optional tabs.
   - Disabled features stay hidden in the UI.
   - DDNS depends on Remote Tunnel Manager because it reuses the same Cloudflare API credentials.
+
+- **Optional local access protection**
+  - Existing and new installations remain accessible without a cfui account until protection is explicitly enabled from the Features page.
+  - Adds username/password sign-in for the local management API, plus password rotation, session revocation, sign-out, and disable controls in the existing UI.
+  - Credentials and sessions are stored only in the local SQLite database; passwords use Argon2id and raw session tokens are not stored.
+  - There are no authentication environment variables. MCP and WebDAV keep their own independent authentication controls.
 
 - **Configuration backup and restore**
   - Export or import selected local configuration sections from the Features tab.
@@ -166,6 +173,12 @@ http://localhost:14333
 5. Start the tunnel profile from the UI. Repeat for any other profiles you want to run.
 
 The local tunnel runner does not require Cloudflare API credentials. API credentials are only needed for Remote Tunnel Manager, DDNS, and optional R2 bucket management.
+
+## Local Access Protection
+
+Local access protection is optional and disabled by default, so upgrading does not require migrating historical users or changing the existing startup flow. To enable it, open **Features → Local access protection**, choose a username and password, and sign in through the custom cfui dialog.
+
+Enable protection before exposing a new cfui instance to an untrusted network. While protection is disabled, anyone who can reach cfui already has access to its management API and can be the first person to enable protection. No setup wizard or environment-variable credential path is added.
 
 ## Tunnel Profiles
 

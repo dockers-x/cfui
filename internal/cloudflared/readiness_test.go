@@ -119,6 +119,9 @@ func TestRequestReadinessRestartCancelsOutsideLock(t *testing.T) {
 	if !inst.hasRestartRequest() {
 		t.Fatal("restart request flag was not set")
 	}
+	if st.Phase != "reconnecting" {
+		t.Fatalf("phase = %q, want reconnecting", st.Phase)
+	}
 }
 
 func TestReadinessWatchdogRequestsRestartAfterConsecutiveFailures(t *testing.T) {
@@ -173,5 +176,21 @@ func TestReadinessWatchdogRequestsRestartAfterConsecutiveFailures(t *testing.T) 
 	}
 	if st := inst.Status(); st.LastError == nil {
 		t.Fatal("watchdog did not record a readiness error")
+	}
+}
+
+func TestReadinessSuccessCannotOverwriteStoppingPhase(t *testing.T) {
+	inst := NewInstance("test", func() (Options, error) { return Options{Token: "tok"}, nil })
+	inst.mu.Lock()
+	inst.running = true
+	inst.phase = "stopping"
+	inst.generation = 7
+	inst.lastError = errors.New("stop in progress")
+	inst.mu.Unlock()
+
+	inst.markRunning(7)
+	status := inst.Status()
+	if status.Phase != "stopping" || status.LastError == nil {
+		t.Fatalf("readiness overwrote stopping state: %#v", status)
 	}
 }

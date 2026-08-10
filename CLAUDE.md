@@ -101,6 +101,12 @@ make version
 - Middleware for panic recovery and request logging (polling endpoints log at debug level)
 - `PrepareShutdown` closes long-lived SSE log streams so HTTP shutdown doesn't stall
 
+**internal/localauth/**: Optional SQLite-backed local management access guard.
+- Disabled by default; no historical-user migration or startup wizard is required
+- Stores Argon2id password hashes and SHA-256 session-token digests in `data.db`
+- Login, password rotation, session revocation, disable, and session creation serialize through the Store mutation lock
+- Authentication is configured only through the UI/database; there are no local-auth environment variables
+
 **internal/logger/** (logger.go): Structured logging with rotation.
 - Uses `go.uber.org/zap` for structured logging
 - Implements file rotation via `lumberjack`
@@ -129,12 +135,14 @@ make version
 - Max 10 restart attempts; counter resets after 5 minutes of uptime
 - Non-retryable errors (auth, config, invalid token) skip auto-restart
 - Options (including the auto-restart flag) are re-read from config before each restart attempt
+- Restart attempts are generation-bound so a concurrent explicit Stop invalidates stale timers
 
 **Graceful Shutdown**:
 - 30-second timeout for tunnel shutdown
 - Context cancellation propagates to cloudflared
 - Temporary config files cleaned up via defer
 - Stop endpoint responds immediately, then stops async to prevent connection errors
+- A timed-out embedded run remains `stopping` and non-startable until its goroutine actually exits
 
 **Thread Safety**:
 - Config manager uses `sync.RWMutex` for concurrent access
@@ -160,6 +168,10 @@ make version
 - `POST /api/tunnels/{key}/activate-local` - Make profile the default legacy/mirror profile
 - `GET /api/tunnels/{key}/status` - Per-tunnel live status
 - `POST /api/tunnels/{key}/control` - Start/stop one tunnel instance
+- `POST /api/tunnel-manager/checks` - Check selected public-hostname DNS mapping and origin connectivity
+- `GET /api/auth/status` - Read optional local access-protection state
+- `POST /api/auth/setup|login|logout|password|disable` - Manage local authentication lifecycle
+- `POST /api/auth/sessions/revoke-others` - Revoke all local sessions except the current one
 - `GET /api/i18n/{lang}` - Get translations (en, zh, ja)
 
 ## Configuration File Structure
@@ -239,6 +251,8 @@ Located at `{DATA_DIR}/config.json`:
 - Per-instance Stop must rely on context cancellation only — never send on the shared graceful-shutdown channel (cloudflared closes it on SIGTERM; sending would panic)
 - Process signals (SIGTERM/SIGINT) must be subscribed only via `cloudflared.OwnProcessSignals`: every tunnel run installs an upstream signal watcher that closes the shared shutdown channel, so with >1 run per process lifetime one OS signal double-closes it and crashes the process. Reclaim pulses `signal.Reset` all subscribers after each run launch — a direct `signal.Notify` anywhere else gets silently dropped
 - Always clean up temporary config files in defer blocks
+- Do not make a Stop timeout startable; the embedded library may still own live connections
+- Auto-restart must reserve a new lifecycle only while its originating generation is still current
 - Be aware that panics are recovered and may trigger auto-restart
 
 **When modifying config.go**:
@@ -250,6 +264,8 @@ Located at `{DATA_DIR}/config.json`:
 - Stop action must respond immediately before shutdown (prevents connection errors)
 - Use middleware for panic recovery and logging
 - Return JSON for API endpoints, serve static files for web UI
+- Local authentication is optional and defaults off; management API mutations use same-origin checks when enabled
+- Long-lived streams and slow configuration imports must re-check Session authorization after the initial middleware decision
 
 **Web UI**:
 - Frontend assets are embedded at build time from `web/dist/`

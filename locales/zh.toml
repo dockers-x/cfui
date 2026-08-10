@@ -2181,3 +2181,186 @@ other = "已代理"
 
 [dns_only]
 other = "仅 DNS"
+
+[feature_local_auth_name]
+other = "本地访问保护"
+
+[feature_local_auth_desc]
+other = "可选地要求先输入账户和密码，再访问管理 API。"
+
+[local_auth_enabled]
+other = "已开启"
+
+[local_auth_disabled]
+other = "未开启"
+
+[local_auth_enable]
+other = "开启"
+
+[local_auth_manage]
+other = "管理"
+
+[local_auth_login_title]
+other = "登录 cfui"
+
+[local_auth_login_subtitle]
+other = "此实例已开启本地访问保护。"
+
+[local_auth_username]
+other = "账户"
+
+[local_auth_password]
+other = "密码"
+
+[local_auth_sign_in]
+other = "登录"
+
+[local_auth_signing_in]
+other = "正在登录…"
+
+[local_auth_setup_title]
+other = "开启本地访问保护"
+
+[local_auth_setup_subtitle]
+other = "在你主动开启之前，历史用户的访问方式不会改变。"
+
+[local_auth_password_help]
+other = "至少使用 8 个字符。"
+
+[local_auth_confirm_password]
+other = "确认密码"
+
+[local_auth_password_mismatch]
+other = "两次输入的密码不一致。"
+
+[local_auth_enabled_message]
+other = "已开启本地访问保护"
+
+[local_auth_manage_title]
+other = "管理本地访问保护"
+
+[local_auth_signed_in_as]
+other = "当前账户"
+
+[local_auth_change_password]
+other = "修改密码"
+
+[local_auth_change_password_desc]
+other = "修改后会注销其他所有会话。"
+
+[local_auth_current_password]
+other = "当前密码"
+
+[local_auth_new_password]
+other = "新密码"
+
+[local_auth_update_password]
+other = "更新密码"
+
+[local_auth_password_changed]
+other = "密码已更新，其他会话已注销"
+
+[local_auth_other_sessions]
+other = "其他会话"
+
+[local_auth_other_sessions_desc]
+other = "保留当前浏览器的登录状态，并注销其他本地会话。"
+
+[local_auth_revoke_others]
+other = "注销其他会话"
+
+[local_auth_revoking]
+other = "正在注销…"
+
+[local_auth_sessions_revoked]
+other = "其他会话已注销"
+
+[local_auth_disable_title]
+other = "关闭访问保护"
+
+[local_auth_disable_desc]
+other = "关闭后，无需登录即可再次访问管理 API。"
+
+[local_auth_disable]
+other = "关闭保护"
+
+[local_auth_disabling]
+other = "正在关闭…"
+
+[local_auth_disabled_message]
+other = "已关闭本地访问保护"
+
+[local_auth_sign_out]
+other = "退出登录"
+
+[status_starting]
+other = "启动中"
+
+[status_stopping]
+other = "停止中"
+
+[status_reconnecting]
+other = "等待重连"
+
+[status_reconnecting_detail]
+other = "第 {n} 次重试 · 下次 {time}"
+
+[rule_check_all]
+other = "检测全部"
+
+[rule_check]
+other = "检测"
+
+[rule_checking]
+other = "检测中…"
+
+[rule_check_complete]
+other = "规则检测完成"
+
+[rule_check_failed]
+other = "规则检测失败"
+
+[rule_check_summary]
+other = "已检测 {checked}/{total} · DNS 正常 {dns} · Origin 可达 {origin} · 异常 {issues}"
+
+[rule_origin]
+other = "Origin"
+
+[rule_dns_untested]
+other = "未检测"
+
+[rule_dns_ok]
+other = "正常"
+
+[rule_dns_missing]
+other = "缺失"
+
+[rule_dns_conflict]
+other = "冲突"
+
+[rule_dns_error]
+other = "检测失败"
+
+[rule_origin_untested]
+other = "未检测"
+
+[rule_origin_ok]
+other = "正常"
+
+[rule_origin_timeout]
+other = "超时"
+
+[rule_origin_tls_error]
+other = "TLS 错误"
+
+[rule_origin_dns_error]
+other = "DNS 错误"
+
+[rule_origin_refused]
+other = "连接被拒绝"
+
+[rule_origin_skipped]
+other = "无需检测"
+
+[rule_origin_error]
+other = "检测失败"

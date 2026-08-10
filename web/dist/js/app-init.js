@@ -10,7 +10,7 @@
             canLoadTunnelManagerZones, loadTunnelManagerConfig,
             fetchMCPStatus, refreshDDNS, fetchS3Settings,
             fetchOAuthStatus, loadOAuthOverview,
-            wireUI, wireTunnel, wireLogs, wireServices, wireBackup, wireS3, wireOAuth,
+            wireUI, wireLocalAuth, initializeLocalAuth, wireTunnel, wireLogs, wireServices, wireBackup, wireS3, wireOAuth,
             disconnectLogStream, closeOAuthLiveStreams, toast } = window.cfui;
 
     let statusTimer = null;
@@ -60,6 +60,7 @@
     async function init() {
         initTheme();
         wireUI();
+        wireLocalAuth();
         wireTunnel();
         wireLogs();
         wireServices();
@@ -67,6 +68,7 @@
         wireS3();
         wireOAuth?.();
         await loadLanguage(state.currentLang);
+        await initializeLocalAuth();
         updateMetricsVisibility();
         addLog({ key: 'system_ready' }, 'system');
         await fetchVersion();

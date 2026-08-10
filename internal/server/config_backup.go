@@ -186,6 +186,15 @@ func (s *Server) handleConfigBackupImport(w http.ResponseWriter, r *http.Request
 	}
 	hooks := s.configBackupRuntime()
 	runningBefore := runningTunnelSet(hooks.profileStatus, before.Tunnels)
+	authorized, err := s.localAuthStreamAuthorized(r)
+	if err != nil {
+		writeAPIError(w, http.StatusServiceUnavailable, errors.New("local authentication is unavailable"))
+		return
+	}
+	if !authorized {
+		writeAPIError(w, http.StatusUnauthorized, errors.New("authentication required"))
+		return
+	}
 	if err := hooks.saveConfig(result.Config); err != nil {
 		writeConfigBackupError(w, http.StatusInternalServerError, "save_failed")
 		return
@@ -410,11 +419,18 @@ func requireConfigBackupSameOrigin(w http.ResponseWriter, r *http.Request) bool 
 	parsed, err := url.Parse(origin)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" ||
 		!strings.EqualFold(parsed.Scheme, configBackupRequestScheme(r)) ||
-		!strings.EqualFold(parsed.Host, strings.TrimSpace(r.Host)) {
+		!strings.EqualFold(parsed.Host, requestExternalHost(r)) {
 		writeConfigBackupError(w, http.StatusForbidden, "cross_site_request")
 		return false
 	}
 	return true
+}
+
+func requestExternalHost(r *http.Request) string {
+	if forwarded := firstForwardedHeaderValue(r.Header.Get("X-Forwarded-Host")); forwarded != "" {
+		return forwarded
+	}
+	return strings.TrimSpace(r.Host)
 }
 
 func configBackupRequestScheme(r *http.Request) string {

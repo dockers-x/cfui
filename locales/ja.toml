@@ -2181,3 +2181,186 @@ other = "Proxied"
 
 [dns_only]
 other = "DNS only"
+
+[feature_local_auth_name]
+other = "ローカルアクセス保護"
+
+[feature_local_auth_desc]
+other = "管理 API を開く前に、任意でユーザー名とパスワードを要求します。"
+
+[local_auth_enabled]
+other = "オン"
+
+[local_auth_disabled]
+other = "オフ"
+
+[local_auth_enable]
+other = "有効にする"
+
+[local_auth_manage]
+other = "管理"
+
+[local_auth_login_title]
+other = "cfui にサインイン"
+
+[local_auth_login_subtitle]
+other = "このインストールではローカルアクセス保護が有効です。"
+
+[local_auth_username]
+other = "ユーザー名"
+
+[local_auth_password]
+other = "パスワード"
+
+[local_auth_sign_in]
+other = "サインイン"
+
+[local_auth_signing_in]
+other = "サインイン中…"
+
+[local_auth_setup_title]
+other = "ローカルアクセス保護を有効にする"
+
+[local_auth_setup_subtitle]
+other = "この設定を有効にするまで、既存ユーザーの利用方法は変わりません。"
+
+[local_auth_password_help]
+other = "8 文字以上を使用してください。"
+
+[local_auth_confirm_password]
+other = "パスワードの確認"
+
+[local_auth_password_mismatch]
+other = "パスワードが一致しません。"
+
+[local_auth_enabled_message]
+other = "ローカルアクセス保護を有効にしました"
+
+[local_auth_manage_title]
+other = "ローカルアクセス保護を管理"
+
+[local_auth_signed_in_as]
+other = "サインイン中"
+
+[local_auth_change_password]
+other = "パスワードを変更"
+
+[local_auth_change_password_desc]
+other = "変更すると、ほかのすべてのセッションがサインアウトされます。"
+
+[local_auth_current_password]
+other = "現在のパスワード"
+
+[local_auth_new_password]
+other = "新しいパスワード"
+
+[local_auth_update_password]
+other = "パスワードを更新"
+
+[local_auth_password_changed]
+other = "パスワードを更新し、ほかのセッションをサインアウトしました"
+
+[local_auth_other_sessions]
+other = "ほかのセッション"
+
+[local_auth_other_sessions_desc]
+other = "このブラウザーのサインインを維持し、ほかのローカルセッションを無効にします。"
+
+[local_auth_revoke_others]
+other = "ほかを無効化"
+
+[local_auth_revoking]
+other = "無効化中…"
+
+[local_auth_sessions_revoked]
+other = "ほかのセッションを無効にしました"
+
+[local_auth_disable_title]
+other = "保護を無効にする"
+
+[local_auth_disable_desc]
+other = "無効にすると、サインインせずに管理 API へアクセスできます。"
+
+[local_auth_disable]
+other = "無効にする"
+
+[local_auth_disabling]
+other = "無効化中…"
+
+[local_auth_disabled_message]
+other = "ローカルアクセス保護を無効にしました"
+
+[local_auth_sign_out]
+other = "サインアウト"
+
+[status_starting]
+other = "起動中"
+
+[status_stopping]
+other = "停止中"
+
+[status_reconnecting]
+other = "再接続待ち"
+
+[status_reconnecting_detail]
+other = "再試行 {n} · 次回 {time}"
+
+[rule_check_all]
+other = "すべて確認"
+
+[rule_check]
+other = "確認"
+
+[rule_checking]
+other = "確認中…"
+
+[rule_check_complete]
+other = "ルールの確認が完了しました"
+
+[rule_check_failed]
+other = "ルールの確認に失敗しました"
+
+[rule_check_summary]
+other = "確認済み {checked}/{total} · DNS 正常 {dns} · Origin 到達可能 {origin} · 問題 {issues}"
+
+[rule_origin]
+other = "Origin"
+
+[rule_dns_untested]
+other = "未確認"
+
+[rule_dns_ok]
+other = "正常"
+
+[rule_dns_missing]
+other = "見つかりません"
+
+[rule_dns_conflict]
+other = "競合"
+
+[rule_dns_error]
+other = "確認失敗"
+
+[rule_origin_untested]
+other = "未確認"
+
+[rule_origin_ok]
+other = "到達可能"
+
+[rule_origin_timeout]
+other = "タイムアウト"
+
+[rule_origin_tls_error]
+other = "TLS エラー"
+
+[rule_origin_dns_error]
+other = "DNS エラー"
+
+[rule_origin_refused]
+other = "接続拒否"
+
+[rule_origin_skipped]
+other = "対象外"
+
+[rule_origin_error]
+other = "確認失敗"

@@ -4,6 +4,8 @@
 (() => {
     'use strict';
     const { state, $, t, apiGet, apiSend, toast, setBusy, flashField, setTokenVisible } = window.cfui;
+    let ruleCheckEpoch = 0;
+    const latestRuleCheckEpoch = new Map();
 
     /* ====================================================================
        Features
@@ -18,6 +20,7 @@
             if ($('feature-ddns-toggle')) { $('feature-ddns-toggle').checked = !!data.ddns; $('feature-ddns-toggle').disabled = !data.tunnel_manager; }
             if ($('feature-mcp-toggle')) $('feature-mcp-toggle').checked = !!data.mcp;
             renderS3FeatureToggle(data);
+            window.cfui.renderLocalAuthFeature?.();
         } catch (err) { console.error('features fetch failed', err); }
     }
 
@@ -175,6 +178,8 @@
         state.tunnelManager.zones = [];
         state.tunnelManager.zonesLoaded = false;
         state.tunnelManager.config = null;
+        state.tunnelManager.checks = {};
+        state.tunnelManager.checkSnapshot = null;
         if ($('manager-config-panel')) $('manager-config-panel').hidden = true;
         renderTunnelManagerProfileSelector();
         await fetchTunnelManagerSettings();
@@ -342,6 +347,12 @@
 
     function renderTunnelManagerConfig(cfg) {
         $('manager-config-panel').hidden = false;
+        const snapshot = tunnelManagerCheckSnapshot(cfg);
+        if (state.tunnelManager.checkSnapshot !== snapshot) {
+            state.tunnelManager.checkSnapshot = snapshot;
+            state.tunnelManager.checks = {};
+            latestRuleCheckEpoch.clear();
+        }
         const meta = $('manager-config-meta');
         meta.innerHTML = '';
         const tunnelPart = cfg.tunnel_name
@@ -355,7 +366,7 @@
         list.ondragover = null;
         list.ondrop = null;
         list.ondragend = null;
-        if (!cfg.entries?.length) { const empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = t('no_ingress_rules'); list.appendChild(empty); return; }
+        if (!cfg.entries?.length) { const empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = t('no_ingress_rules'); list.appendChild(empty); renderRuleCheckSummary([]); return; }
         const entries = cfg.entries || [];
         for (const entry of cfg.entries) {
             const catchAll = isCatchAllTunnelRule(entry, entries);
@@ -374,17 +385,113 @@
             const noTls = entry.no_tls_verify ? ` · ${t('no_tls_verify_detail')}` : '';
             detail.textContent = `${entry.path || '/'} → ${entry.service}${noTls}`;
             body.append(title, detail);
+            if (!catchAll) body.appendChild(renderRuleChecks(entry));
             const actions = document.createElement('div'); actions.className = 'actions';
             if (!catchAll) {
                 const up = tunnelRuleMoveButton(t('tunnel_rule_move_up'), '↑', () => moveTunnelManagerEntry(entry.index, -1));
                 const down = tunnelRuleMoveButton(t('tunnel_rule_move_down'), '↓', () => moveTunnelManagerEntry(entry.index, 1));
                 actions.append(up, down);
             }
+            if (!catchAll) {
+                const test = document.createElement('button'); test.className = 'btn btn--sm'; test.type = 'button';
+                test.innerHTML = `<span class="spinner" aria-hidden="true"></span><span class="text">${t('rule_check')}</span>`;
+                test.addEventListener('click', () => checkTunnelManagerRules([entry.index], test));
+                actions.append(test);
+            }
             const edit = document.createElement('button'); edit.className = 'btn btn--sm'; edit.type = 'button'; edit.textContent = t('edit'); edit.addEventListener('click', () => openTunnelEntryDialog(entry));
             const del = document.createElement('button'); del.className = 'btn btn--sm btn--ghost'; del.type = 'button'; del.textContent = t('delete'); del.addEventListener('click', () => confirmDeleteEntry(entry));
             actions.append(edit, del); row.append(handle, body, actions); list.appendChild(row);
         }
         bindTunnelRuleDragSort(list);
+        renderRuleCheckSummary(entries);
+    }
+
+    const dnsCheckKeys = { untested: 'rule_dns_untested', ok: 'rule_dns_ok', missing: 'rule_dns_missing', conflict: 'rule_dns_conflict', error: 'rule_dns_error' };
+    const originCheckKeys = { untested: 'rule_origin_untested', ok: 'rule_origin_ok', timeout: 'rule_origin_timeout', tls_error: 'rule_origin_tls_error', dns_error: 'rule_origin_dns_error', connection_refused: 'rule_origin_refused', skipped: 'rule_origin_skipped', error: 'rule_origin_error' };
+
+    function renderRuleChecks(entry) {
+        const checks = state.tunnelManager.checks?.[entry.index] || {};
+        const group = document.createElement('div');
+        group.className = 'rule-checks';
+        group.setAttribute('role', 'status');
+        group.setAttribute('aria-live', 'polite');
+        group.append(
+            ruleCheckBadge('dns', checks.dns || { status: 'untested' }),
+            ruleCheckBadge('origin', checks.origin || { status: 'untested' }),
+        );
+        return group;
+    }
+
+    function ruleCheckBadge(kind, result) {
+        const status = result.status || 'untested';
+        const badge = document.createElement('span');
+        badge.className = 'rule-check-badge';
+        badge.dataset.state = checkVisualState(status);
+        const labelKey = kind === 'dns' ? dnsCheckKeys[status] : originCheckKeys[status];
+        const label = t(labelKey || (kind === 'dns' ? 'rule_dns_error' : 'rule_origin_error'));
+        let detail = '';
+        if (kind === 'origin' && result.http_status) detail += ` · HTTP ${result.http_status}`;
+        if (kind === 'origin' && result.latency_ms) detail += ` · ${result.latency_ms} ms`;
+        badge.textContent = `${kind === 'dns' ? 'DNS' : t('rule_origin')}: ${label}${detail}`;
+        if (result.error) badge.title = result.error;
+        else if (kind === 'dns' && result.content) badge.title = `${result.type || ''} ${result.content}`.trim();
+        return badge;
+    }
+
+    function checkVisualState(status) {
+        if (status === 'ok') return 'ok';
+        if (status === 'untested' || status === 'skipped') return 'neutral';
+        if (status === 'missing' || status === 'timeout') return 'warn';
+        return 'error';
+    }
+
+    function tunnelManagerCheckSnapshot(cfg = state.tunnelManager.config) {
+        if (!cfg) return '';
+        return [tunnelManagerKey(), String(cfg.tunnel_id || ''), String(cfg.version ?? '')].join(':');
+    }
+
+    function renderRuleCheckSummary(entries = state.tunnelManager.config?.entries || []) {
+        const node = $('manager-check-summary');
+        if (!node) return;
+        const publicEntries = entries.filter((entry) => String(entry.hostname || '').trim());
+        const checked = publicEntries.map((entry) => state.tunnelManager.checks?.[entry.index]).filter(Boolean);
+        const dnsOK = checked.filter((item) => item.dns?.status === 'ok').length;
+        const originOK = checked.filter((item) => item.origin?.status === 'ok').length;
+        const issues = checked.filter((item) => item.dns?.status !== 'ok' || !['ok', 'skipped'].includes(item.origin?.status)).length;
+        node.textContent = t('rule_check_summary', { checked: checked.length, total: publicEntries.length, dns: dnsOK, origin: originOK, issues });
+        node.dataset.state = issues ? 'warn' : (checked.length ? 'ok' : 'neutral');
+    }
+
+    async function checkTunnelManagerRules(indexes, button) {
+        const requestedKey = tunnelManagerKey();
+        const requestedSnapshot = tunnelManagerCheckSnapshot();
+        const requestEpoch = ++ruleCheckEpoch;
+        const requestedIndexes = indexes?.length
+            ? indexes
+            : (state.tunnelManager.config?.entries || []).filter((entry) => String(entry.hostname || '').trim()).map((entry) => entry.index);
+        for (const index of requestedIndexes) latestRuleCheckEpoch.set(`${requestedSnapshot}:${index}`, requestEpoch);
+        setBusy(button, true, t('rule_checking'));
+        try {
+            const data = await apiSend('/tunnel-manager/checks' + tunnelManagerQuery(), 'POST', { indexes: indexes || [] });
+            const current = state.tunnelManager.config;
+            const responseSnapshot = current
+                ? [requestedKey, String(data.tunnel_id || ''), String(data.version ?? '')].join(':')
+                : '';
+            if (requestedKey !== tunnelManagerKey() || requestedSnapshot !== tunnelManagerCheckSnapshot() || responseSnapshot !== requestedSnapshot) return;
+            const currentEntries = new Map((current.entries || []).map((entry) => [entry.index, String(entry.hostname || '').trim().toLowerCase()]));
+            for (const result of (data.results || [])) {
+                const epochKey = `${requestedSnapshot}:${result.index}`;
+                if (latestRuleCheckEpoch.get(epochKey) === requestEpoch && currentEntries.get(result.index) === String(result.hostname || '').trim().toLowerCase()) {
+                    state.tunnelManager.checks[result.index] = result;
+                }
+            }
+            renderTunnelManagerConfig(state.tunnelManager.config);
+            toast.ok(t('rule_check_complete'));
+        } catch (err) {
+            toast.err(t('rule_check_failed') + ': ' + err.message);
+        } finally {
+            setBusy(button, false);
+        }
     }
 
     async function confirmDeleteEntry(entry) { const { confirm } = window.cfui; const ok = await confirm({ title: t('delete_rule_title'), message: t('delete_rule_message', { hostname: entry.hostname || t('catch_all_rule'), path: entry.path || '/' }), okText: t('delete') }); if (ok) await deleteTunnelManagerEntry(entry.index); }
@@ -877,6 +984,7 @@
         $('manager-load-config')?.addEventListener('click', () => loadTunnelManagerConfig(false));
         $('manager-refresh-zones')?.addEventListener('click', () => loadTunnelManagerZones(false));
         $('manager-add-entry-btn')?.addEventListener('click', () => openTunnelEntryDialog());
+        $('manager-check-all')?.addEventListener('click', (event) => checkTunnelManagerRules([], event.currentTarget));
         $('manager-entry-form')?.addEventListener('submit', submitTunnelManagerEntry);
         $('manager-entry-domain-select')?.addEventListener('change', updateDomainInputMode);
         $('manager-entry-service-type')?.addEventListener('change', updateServicePlaceholder);
@@ -914,6 +1022,7 @@
         document.addEventListener('localechange', () => {
             renderTunnelManagerProfileSelector();
             if (state.tunnelManager.settings) renderTunnelManagerSettings(state.tunnelManager.settings);
+            if (state.tunnelManager.config) renderTunnelManagerConfig(state.tunnelManager.config);
         });
     }
 

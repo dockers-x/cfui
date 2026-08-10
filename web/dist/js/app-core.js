@@ -215,9 +215,10 @@
             dnsFilter: '',
             loading: false,
         },
-        tunnelManager: { settings: {}, config: null, zones: [], zonesLoaded: false, selectedTunnelKey: '' },
+        tunnelManager: { settings: {}, config: null, zones: [], zonesLoaded: false, selectedTunnelKey: '', checks: {}, checkSnapshot: null },
         selectedTunnelKey: '',
         mcp: { status: null, tokens: [] },
+        localAuth: { status: { enabled: false, authenticated: false, username: '' }, loginWaiters: [] },
         ddns: { config: null, status: null, zones: [], zonesLoaded: false },
         s3: { settings: null, buckets: [], path: '/', files: [], loading: false },
         pendingConfigSave: null,
@@ -234,7 +235,7 @@
         tunnelProtocol: '',
         lastError: '',
         tunnelAlertDismissed: null,
-        /** @type {Record<string,{running:boolean,status:string,protocol:string,error?:string}>} */
+        /** @type {Record<string,{running:boolean,status:string,protocol:string,retry_count?:number,next_retry_at?:string,error?:string}>} */
         tunnelStatuses: {},
         /** Per-tunnel config signature captured while running (restart hint). */
         runningSigs: {},
@@ -264,6 +265,7 @@
 
     async function apiGet(path) {
         const res = await fetch(API_BASE + path);
+        if (res.status === 401 && !path.startsWith('/auth/')) document.dispatchEvent(new CustomEvent('localauthrequired'));
         if (!res.ok) throw new Error(await apiError(res));
         return res.json();
     }
@@ -274,6 +276,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: body == null ? undefined : JSON.stringify(body),
         });
+        if (res.status === 401 && !path.startsWith('/auth/')) document.dispatchEvent(new CustomEvent('localauthrequired'));
         if (!res.ok) throw new Error(await apiError(res));
         return res.json().catch(() => ({}));
     }
