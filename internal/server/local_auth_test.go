@@ -57,7 +57,7 @@ func TestLocalAuthMiddlewareProtectsAPIButNotMCPOrWebDAV(t *testing.T) {
 	}
 }
 
-func TestLocalAuthSetupIssuesProtectedCookieAndNeverReturnsSecrets(t *testing.T) {
+func TestLocalAuthSetupImmediatelyLocksTheCurrentBrowser(t *testing.T) {
 	s := newLocalAuthServer(t)
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/setup", strings.NewReader(`{"username":"admin","password":"correct password"}`))
 	req.Host = "cfui.local"
@@ -68,23 +68,22 @@ func TestLocalAuthSetupIssuesProtectedCookieAndNeverReturnsSecrets(t *testing.T)
 		t.Fatalf("setup status = %d: %s", rec.Code, rec.Body.String())
 	}
 	cookies := rec.Result().Cookies()
-	if len(cookies) != 1 || cookies[0].Name != localAuthCookieName || cookies[0].Path != "/api" || !cookies[0].HttpOnly || cookies[0].SameSite != http.SameSiteStrictMode {
-		t.Fatalf("unsafe session cookie: %#v", cookies)
+	if len(cookies) != 0 {
+		t.Fatalf("setup unexpectedly authenticated the current browser: %#v", cookies)
 	}
-	if strings.Contains(rec.Body.String(), "correct password") || strings.Contains(rec.Body.String(), "argon2") || strings.Contains(rec.Body.String(), cookies[0].Value) {
+	if strings.Contains(rec.Body.String(), "correct password") || strings.Contains(rec.Body.String(), "argon2") {
 		t.Fatalf("authentication secret leaked in response: %s", rec.Body.String())
 	}
 
 	var status localauth.Status
-	if err := json.Unmarshal(rec.Body.Bytes(), &status); err != nil || !status.Enabled || !status.Authenticated {
+	if err := json.Unmarshal(rec.Body.Bytes(), &status); err != nil || !status.Enabled || status.Authenticated {
 		t.Fatalf("unexpected setup response: %#v, %v", status, err)
 	}
 	protected := httptest.NewRequest(http.MethodGet, "/api/config", nil)
-	protected.AddCookie(cookies[0])
 	protectedRec := httptest.NewRecorder()
 	s.localAuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })).ServeHTTP(protectedRec, protected)
-	if protectedRec.Code != http.StatusNoContent {
-		t.Fatalf("issued session was rejected: %d", protectedRec.Code)
+	if protectedRec.Code != http.StatusUnauthorized {
+		t.Fatalf("current browser stayed unlocked after setup: %d", protectedRec.Code)
 	}
 }
 

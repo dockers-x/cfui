@@ -35,6 +35,55 @@ func TestLocalAuthenticationUsesCustomDialogsAndSafeScriptOrder(t *testing.T) {
 	}
 }
 
+func TestLocalAuthenticationSetupImmediatelyOpensLoginGate(t *testing.T) {
+	authBytes, err := assets.ReadFile("web/dist/js/app-auth.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth := string(authBytes)
+	setupStart := strings.Index(auth, "async function submitSetup(event)")
+	if setupStart < 0 {
+		t.Fatal("local authentication setup handler is missing")
+	}
+	setupEnd := strings.Index(auth[setupStart:], "async function submitPasswordChange(event)")
+	if setupEnd < 0 {
+		t.Fatal("local authentication password-change handler is missing")
+	}
+	setup := auth[setupStart : setupStart+setupEnd]
+	loginPos := strings.Index(setup, "openLoginDialog();")
+	pollPos := strings.Index(setup, "startLoginStatusPolling();")
+	if loginPos < 0 || pollPos <= loginPos {
+		t.Fatalf("setup does not immediately open and maintain the login gate: login=%d poll=%d", loginPos, pollPos)
+	}
+	recoveryPos := strings.Index(setup, "const recovered = await fetchLocalAuthStatus();")
+	recoveryGatePos := strings.LastIndex(setup, "openLoginDialog();")
+	if recoveryPos < 0 || recoveryGatePos <= recoveryPos {
+		t.Fatalf("setup cannot recover when protection was enabled before the response failed: status=%d gate=%d", recoveryPos, recoveryGatePos)
+	}
+}
+
+func TestLocalAuthenticationRepeatedGateEventsPreserveLoginInput(t *testing.T) {
+	authBytes, err := assets.ReadFile("web/dist/js/app-auth.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth := string(authBytes)
+	openStart := strings.Index(auth, "function openLoginDialog()")
+	if openStart < 0 {
+		t.Fatal("local authentication login gate is missing")
+	}
+	openEnd := strings.Index(auth[openStart:], "function waitForLogin()")
+	if openEnd < 0 {
+		t.Fatal("local authentication login waiter is missing")
+	}
+	open := auth[openStart : openStart+openEnd]
+	guardPos := strings.Index(open, "if (!dialog.hidden) return;")
+	resetPos := strings.Index(open, "$('local-auth-login-password').value = '';")
+	if guardPos < 0 || resetPos <= guardPos {
+		t.Fatalf("repeated login gates can reset in-progress input: guard=%d reset=%d", guardPos, resetPos)
+	}
+}
+
 func TestIndexElementIDsRemainUnique(t *testing.T) {
 	indexBytes, err := assets.ReadFile("web/dist/index.html")
 	if err != nil {

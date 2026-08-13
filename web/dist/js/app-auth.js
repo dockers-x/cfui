@@ -39,6 +39,7 @@
     function openLoginDialog() {
         const dialog = $('local-auth-login-dialog');
         if (!dialog || !authStatus().enabled || authStatus().authenticated) return;
+        if (!dialog.hidden) return;
         $('local-auth-login-username').value = authStatus().username || '';
         $('local-auth-login-password').value = '';
         setAuthError('local-auth-login-error');
@@ -148,7 +149,18 @@
             closeDialog($('local-auth-setup-dialog'));
             renderLocalAuthFeature();
             toast.ok(t('local_auth_enabled_message'));
+            openLoginDialog();
+            startLoginStatusPolling();
         } catch (err) {
+            try {
+                const recovered = await fetchLocalAuthStatus();
+                if (recovered.enabled && !recovered.authenticated) {
+                    closeDialog($('local-auth-setup-dialog'));
+                    openLoginDialog();
+                    startLoginStatusPolling();
+                    return;
+                }
+            } catch { /* retain the original setup error */ }
             setAuthError('local-auth-setup-error', err.message);
         } finally {
             setBusy(button, false);

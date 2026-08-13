@@ -170,12 +170,7 @@ func (s *Server) handleLocalAuthSetup(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, status, err)
 		return
 	}
-	token, err := s.issueLocalAuthSession(w, r)
-	if err != nil {
-		writeAPIError(w, http.StatusInternalServerError, errors.New("failed to create session"))
-		return
-	}
-	s.writeLocalAuthStatusForToken(w, r, token)
+	s.writeLocalAuthStatusForToken(w, r, "")
 }
 
 func (s *Server) handleLocalAuthLogin(w http.ResponseWriter, r *http.Request) {
@@ -340,15 +335,6 @@ func writeLocalAuthMutationError(w http.ResponseWriter, err error) {
 	default:
 		writeAPIError(w, http.StatusBadRequest, err)
 	}
-}
-
-func (s *Server) issueLocalAuthSession(w http.ResponseWriter, r *http.Request) (string, error) {
-	token, err := s.localAuth.CreateSession(r.Context())
-	if err != nil {
-		return "", err
-	}
-	setLocalAuthCookie(w, r, token)
-	return token, nil
 }
 
 func setLocalAuthCookie(w http.ResponseWriter, r *http.Request, token string) {
