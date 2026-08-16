@@ -48,7 +48,7 @@ func requiredModuleVersion(t *testing.T, goMod []byte, modulePath string) string
 }
 
 func moduleReplacement(goMod []byte, modulePath string) (string, string, bool) {
-	pattern := regexp.MustCompile(`(?m)^\s*replace\s+` + regexp.QuoteMeta(modulePath) + `\s*=>\s*(\S+)(?:\s+(v\S+))?\s*$`)
+	pattern := regexp.MustCompile(`(?m)^\s*replace\s+` + regexp.QuoteMeta(modulePath) + `\s*=>\s*(\S+)(?:\s+(v\S+))?(?:\s+//.*)?\s*$`)
 	match := pattern.FindSubmatch(goMod)
 	if len(match) == 0 {
 		return "", "", false
