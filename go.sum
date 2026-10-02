@@ -59,8 +59,8 @@ github.com/chungthuang/quic-go v0.45.1-0.20260529212404-a9fddf436fc4 h1:ZaFGQi6l
 github.com/chungthuang/quic-go v0.45.1-0.20260529212404-a9fddf436fc4/go.mod h1:upnsH4Ju1YkqpLXC305eW3yDZ4NfnNbmQRCMWS58IKU=
 github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0 h1:pRcxfaAlK0vR6nOeQs7eAEvjJzdGXl8+KaBlcvpQTyQ=
 github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0/go.mod h1:rzgs2ZOiguV6/NpiDgADjRLPNyZlApIWxKpkT+X8SdY=
-github.com/cloudflare/cloudflare-go v0.117.0 h1:y00E0XCvxuZGplL+gkoMRIhWpfNqIgyBFS6UUWC4s0c=
-github.com/cloudflare/cloudflare-go v0.117.0/go.mod h1:Ds6urDwn/TF2uIU24mu7H91xkKP8gSAHxQ44DSZgVmU=
+github.com/cloudflare/cloudflare-go v0.119.0 h1:E1Qaf8AbXrNA5tBhYYpvH2NsPfpUtTpeG2A9SCJhlbE=
+github.com/cloudflare/cloudflare-go v0.119.0/go.mod h1:Ds6urDwn/TF2uIU24mu7H91xkKP8gSAHxQ44DSZgVmU=
 github.com/cloudflare/cloudflared v0.0.0-20260924153110-96d39adbc812 h1:AUfeL1tD4fHDbD8dowQz5pyb2dcHAv7inb/O4cupyA8=
 github.com/cloudflare/cloudflared v0.0.0-20260924153110-96d39adbc812/go.mod h1:NBIZ/fOb2lXNotPYZbDZv8LG9C73f9WhDKlMdJ/aMB8=
 github.com/coreos/go-oidc/v3 v3.17.0 h1:hWBGaQfbi0iVviX4ibC7bk8OKT5qNr4klBaCHVNvehc=
