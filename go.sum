@@ -61,8 +61,8 @@ github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0 h1:pRcxfaAlK0vR
 github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0/go.mod h1:rzgs2ZOiguV6/NpiDgADjRLPNyZlApIWxKpkT+X8SdY=
 github.com/cloudflare/cloudflare-go v0.117.0 h1:y00E0XCvxuZGplL+gkoMRIhWpfNqIgyBFS6UUWC4s0c=
 github.com/cloudflare/cloudflare-go v0.117.0/go.mod h1:Ds6urDwn/TF2uIU24mu7H91xkKP8gSAHxQ44DSZgVmU=
-github.com/cloudflare/cloudflared v0.0.0-20260924153110-96d39adbc812 h1:AUfeL1tD4fHDbD8dowQz5pyb2dcHAv7inb/O4cupyA8=
-github.com/cloudflare/cloudflared v0.0.0-20260924153110-96d39adbc812/go.mod h1:NBIZ/fOb2lXNotPYZbDZv8LG9C73f9WhDKlMdJ/aMB8=
+github.com/cloudflare/cloudflared v0.0.0-20261005153913-18cdfe0a6fc7 h1:gbKvYKw1YeYNZP35Ht3cagcwfWW2evon6b8l5vN0hg0=
+github.com/cloudflare/cloudflared v0.0.0-20261005153913-18cdfe0a6fc7/go.mod h1:NBIZ/fOb2lXNotPYZbDZv8LG9C73f9WhDKlMdJ/aMB8=
 github.com/coreos/go-oidc/v3 v3.17.0 h1:hWBGaQfbi0iVviX4ibC7bk8OKT5qNr4klBaCHVNvehc=
 github.com/coreos/go-oidc/v3 v3.17.0/go.mod h1:wqPbKFrVnE90vty060SB40FCJ8fTHTxSwyXJqZH+sI8=
 github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e/go.mod h1:F5haX7vjVVG0kc13fIWeqUViNPyEJxv/OmvnBo0Yme4=
