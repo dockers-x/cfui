@@ -1,0 +1,40 @@
+name: Update cloudflared
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Update to the latest cloudflared release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(gh api repos/cloudflare/cloudflared/releases/latest --jq .tag_name)"
+          bash scripts/update-cloudflared.sh "$tag"
+      - name: Test
+        run: go test ./...
+      - uses: peter-evans/create-pull-request@v8
+        with:
+          branch: automation/cloudflared-update
+          delete-branch: true
+          commit-message: "build(deps): update cloudflared and QUIC fork"
+          title: "build(deps): update cloudflared and QUIC fork"
+          body: |
+            Updates cloudflared to its latest GitHub release and keeps the embedded QUIC fork aligned with cloudflared's go.mod.
+
+            Verification: `go test ./...`
+          add-paths: |
+            go.mod
+            go.sum
