@@ -14,7 +14,7 @@ require (
 	github.com/fclairamb/afero-s3 v0.5.0
 	github.com/lib-x/aferodav v0.2.0
 	github.com/lib-x/entsqlite v0.2.3
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/spf13/afero v1.15.0
 	github.com/urfave/cli/v2 v2.27.7
