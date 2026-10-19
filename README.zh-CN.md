@@ -545,7 +545,7 @@ OAuth Cloudflare 接口：
 
 要求：
 
-- Go 1.26 或更新版本
+- Go 1.27 或更新版本
 - Git
 - Make，可选
 

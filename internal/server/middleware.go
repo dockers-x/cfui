@@ -41,7 +41,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 
 func isPollingPath(path string) bool {
 	switch path {
-	case "/api/status", "/api/ddns/status", "/api/logs/recent", "/api/s3/files/sync":
+	case "/api/status", "/api/tunnels", "/api/ddns/status", "/api/logs/recent", "/api/s3/files/sync":
 		return true
 	}
 	return strings.HasPrefix(path, "/api/tunnels/") && strings.HasSuffix(path, "/status")
