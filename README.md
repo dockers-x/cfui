@@ -566,7 +566,7 @@ OAuth Cloudflare endpoints:
 
 Requirements:
 
-- Go 1.27 or newer
+- Go 1.27.3 or newer
 - Git
 - Make, optional
 

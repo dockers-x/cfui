@@ -1,6 +1,6 @@
 module cfui
 
-go 1.27
+go 1.27.3
 
 require (
 	entgo.io/ent v0.14.6
@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.3
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/cloudflare/cloudflare-go v0.119.0
-	github.com/cloudflare/cloudflared v0.0.0-20261015161528-8e090e5bfa7a
+	github.com/cloudflare/cloudflared v0.0.0-20261021105109-de6376c5af4a
 	github.com/fclairamb/afero-s3 v0.5.0
 	github.com/lib-x/aferodav v0.2.0
 	github.com/lib-x/entsqlite v0.2.6
