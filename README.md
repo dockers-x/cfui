@@ -18,7 +18,7 @@ The web UI is built into the binary. Configuration is stored in a local SQLite d
   - Start or stop each tunnel profile independently; multiple profiles can run at the same time.
   - Configure auto-start, auto-restart, protocol, region, retries, graceful shutdown, metrics, post-quantum mode, edge IP version, edge bind address, TLS verification, and extra cloudflared arguments.
   - Show tunnel status, configured protocol, last error, and version/build information.
-  - Report edge connectivity independently of the running instance, including active connection counts and the last health observation. Health checks continue when auto-restart is disabled. Embedded animal PNG indicators use green for healthy, yellow for warning/recovery, red for errors, and gray for unknown; hover, focus, or tap to reveal the full icon.
+  - Report edge connectivity independently of the running instance, including active connection counts and the last health observation. Health checks continue when auto-restart is disabled. Small embedded animal PNG indicators on each tunnel card use green for healthy, yellow for warning/recovery, red for errors, and gray for unknown; hover, focus, or tap to reveal the full icon. The header summarizes configured protocols without repeating the animal, and each card shows its own protocol. The header shows one protocol at a time; mixed protocols rotate gently, with transitions disabled when reduced motion is requested.
   - Preserve cloudflared's automatic QUIC/HTTP2 selection and keep recovering during long outages, switching to jittered 5–6 minute retries after ten fast attempts.
 
 - **Remote Tunnel Manager**

@@ -15,17 +15,39 @@ function animalNode() {
     };
 }
 
-function harness() {
+function harness({reduced = false} = {}) {
     const animal = animalNode();
-    const pill = {setAttribute(key, value) { this[key] = value; }, querySelector(selector) {
-        return selector === '.health-animal' ? animal : {removeAttribute() {}};
-    }};
+    const tasks = new Map();
+    let nextTask = 0;
+    let now = 0;
+    const clock = {
+        tasks,
+        advance(ms) {
+            const until = now + ms;
+            for (;;) {
+                const task = [...tasks].filter(([, task]) => task.at <= until).sort((a, b) => a[1].at - b[1].at)[0];
+                if (!task) break;
+                tasks.delete(task[0]);
+                now = task[1].at;
+                task[1].callback();
+            }
+            now = until;
+        },
+    };
+    const value = {};
+    const proto = {...animalNode(), querySelector() { return value; }};
+    const dot = {hidden: false};
+    const pillText = {removeAttribute() {}};
+    const pill = {...animalNode(), querySelector(selector) {
+        return {'.proto': proto, '.dot': dot, '.text': pillText}[selector] || null;
+    }, contains(element) { return element === proto; }};
     const network = {fail: true};
     const rows = ['a', 'b'].map(key => ({
-        dataset: {key}, classList: {toggle() {}}, animal: animalNode(),
+        dataset: {key}, classList: {toggle() {}}, animal: animalNode(), protocol: {},
         querySelector(selector) {
             if (selector === '.health-animal') return this.animal;
             if (selector.includes('runtime')) return this.runtime ||= {};
+            if (selector.includes('__protocol')) return this.protocol;
             if (selector.includes('summary')) return {setAttribute() {}};
             return null;
         },
@@ -34,9 +56,16 @@ function harness() {
         tunnelStatuses: {}, statusFailCount: 0, runningSigs: {a: 'saved'}, tunnelAlertDismissed: ''};
     const cfui = {state, $: id => id === 'status-pill' ? pill : null, t: (key, params) => params ? key + JSON.stringify(params) : key,
         apiGet: async () => {if (network.fail) throw Error('browser offline'); return {statuses: state.tunnelStatuses};}, addLog() {}};
-    const context = {window: {cfui}, document: {querySelectorAll: () => rows, createElement: () => animalNode()}, console};
+    const motion = {matches: reduced, addEventListener(type, listener) {this.listener = listener;}};
+    const document = {hidden: false, events: {}, addEventListener(type, listener) {this.events[type] = listener;}, querySelectorAll: () => rows, createElement: () => animalNode()};
+    const window = {cfui, events: {}, matchMedia: () => motion,
+        addEventListener(type, listener) {this.events[type] = listener;},
+        setTimeout(callback, delay) { const id = ++nextTask; tasks.set(id, {callback, at: now + delay}); return id; },
+        clearTimeout(id) {tasks.delete(id);},
+    };
+    const context = {window, document, console};
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../dist/js/app-tunnel.js'), 'utf8'), context);
-    return {cfui, state, rows, pill, context, network, animal};
+    return {cfui, state, rows, pill, pillText, proto, dot, value, clock, motion, document, window, context, network, animal};
 }
 
 test('running instance only gets green with confirmed edge connectivity', () => {
@@ -73,15 +102,15 @@ test('three poll failures mark every row unknown without changing last observati
     assert.equal(state.tunnelStatuses.a.last_checked_at, observed);
     assert.equal(state.tunnelStatuses.a.connectivity, 'connected');
     for (const row of rows) assert.equal(row.dataset.state, 'unknown');
-    assert.match(animal.attributes['aria-label'], /status_stale/);
-    assert.equal(animal.title, undefined);
-    assert.equal(animal.dataset.health, 'unknown');
+    assert.match(pill.attributes['aria-label'], /status_stale/);
+    assert.equal(pill.querySelector('.health-animal'), null);
+    assert.equal(pill.attributes['data-state'], 'offline');
     for (const row of rows) assert.equal(row.animal.dataset.health, 'unknown');
     network.fail = false;
     await cfui.fetchStatus();
     assert.equal(state.statusFailCount, 0);
     for (const row of rows) assert.equal(row.dataset.state, 'running');
-    assert.equal(pill['data-state'], 'ok');
+    assert.equal(pill.attributes['data-state'], 'ok');
 });
 
 
@@ -154,19 +183,122 @@ test('lifecycle error is red and stopped instances never keep stale connected he
 });
 
 test('aggregate prioritizes lifecycle errors and never borrows selected tunnel observation details', async () => {
-    const {cfui, state, animal, network} = harness();
+    const {cfui, state, pill, network} = harness();
     state.tunnelStatuses = {
         a: {running: true, status: 'running', connectivity: 'connected', last_checked_at: '2026-10-29T10:00:00Z', health_error: 'selected-only detail'},
         b: {running: false, status: 'error', connectivity: 'unknown', error: 'invalid token'},
     };
     network.fail = false;
     await cfui.fetchStatus();
-    assert.equal(animal.dataset.health, 'error');
-    assert.match(animal.attributes['aria-label'], /status_error.*tunnels_active_ratio/);
-    assert.doesNotMatch(animal.attributes['aria-label'], /last_checked|selected-only|2026/);
+    assert.equal(pill.attributes['data-state'], 'error');
+    assert.match(pill.attributes['aria-label'], /status_error.*tunnels_active_ratio/);
+    assert.doesNotMatch(pill.attributes['aria-label'], /last_checked|selected-only|2026/);
     network.fail = true;
     await cfui.fetchStatus(); await cfui.fetchStatus(); await cfui.fetchStatus();
-    assert.equal(animal.dataset.health, 'unknown');
-    assert.match(animal.attributes['aria-label'], /status_stale.*tunnels_active_ratio/);
-    assert.doesNotMatch(animal.attributes['aria-label'], /last_checked|selected-only|2026/);
+    assert.equal(pill.attributes['data-state'], 'offline');
+    assert.match(pill.attributes['aria-label'], /status_stale.*tunnels_active_ratio/);
+    assert.doesNotMatch(pill.attributes['aria-label'], /last_checked|selected-only|2026/);
+});
+
+test('header has a dot and deduplicated protocols, without animals', async () => {
+    const {cfui, state, network, pill, dot, value, clock, rows} = harness();
+    state.config.tunnels[0].protocol = 'auto';
+    state.config.tunnels[1].protocol = 'auto';
+    state.tunnelStatuses = {a: {running: true, status: 'running', connectivity: 'connected', protocol: 'auto'},
+        b: {running: true, status: 'running', connectivity: 'connected', protocol: 'auto'}};
+    network.fail = false;
+    await cfui.fetchStatus();
+    assert.equal(pill.querySelector('.health-animal'), null);
+    assert.equal(dot.hidden, false);
+    assert.equal(value.textContent, 'AUTO');
+    assert.equal(clock.tasks.size, 0);
+    assert.equal(rows[0].protocol.textContent, 'AUTO');
+    assert.equal(rows[1].protocol.textContent, 'AUTO');
+    assert.match(pill.attributes['aria-label'], /protocol_configured_set.*AUTO/);
+});
+
+test('mixed protocol set rotates without polling resets or live announcements', () => {
+    const {cfui, value, clock, proto} = harness();
+    const profiles = [{key: 'a', protocol: 'http2'}, {key: 'b', protocol: 'quic'}, {key: 'c', protocol: 'quic'}];
+    assert.deepEqual(Array.from(cfui.updateHeaderProtocols(profiles, {})), ['HTTP2', 'QUIC']);
+    assert.equal(value.textContent, 'HTTP2');
+    const label = proto.attributes['aria-label'];
+    clock.advance(2000);
+    cfui.updateHeaderProtocols(profiles, {});
+    clock.advance(3000);
+    assert.equal(proto.attributes['data-fading'], 'true');
+    clock.advance(160);
+    assert.equal(value.textContent, 'QUIC');
+    assert.equal(proto.attributes['aria-label'], label);
+    cfui.updateHeaderProtocols(profiles, {});
+    assert.equal(value.textContent, 'QUIC');
+    assert.equal(clock.tasks.size, 1);
+    cfui.updateHeaderProtocols([{key: 'a', protocol: 'quic'}], {});
+    assert.equal(value.textContent, 'QUIC');
+    assert.equal(clock.tasks.size, 0);
+});
+
+test('rotation supports manual pause, hover, focus, page visibility and cleanup', () => {
+    const {cfui, value, clock, proto, pill, document, window} = harness();
+    cfui.updateHeaderProtocols([{key: 'a', protocol: 'auto'}, {key: 'b', protocol: 'quic'}], {});
+    proto.events.click();
+    assert.equal(proto.attributes['aria-pressed'], 'true');
+    assert.equal(clock.tasks.size, 0);
+    clock.advance(10000);
+    assert.equal(value.textContent, 'AUTO');
+    proto.events.click();
+    assert.equal(clock.tasks.size, 1);
+    pill.events.pointerenter();
+    assert.equal(clock.tasks.size, 0);
+    pill.events.pointerleave();
+    assert.equal(clock.tasks.size, 1);
+    pill.events.focusin();
+    assert.equal(clock.tasks.size, 0);
+    pill.events.focusout({relatedTarget: null});
+    assert.equal(clock.tasks.size, 1);
+    document.hidden = true;
+    document.events.visibilitychange();
+    assert.equal(clock.tasks.size, 0);
+    document.hidden = false;
+    document.events.visibilitychange();
+    assert.equal(clock.tasks.size, 1);
+    window.events.pagehide();
+    assert.equal(clock.tasks.size, 0);
+});
+
+test('reduced motion keeps one protocol and changes instantly without a fade timer', () => {
+    const {cfui, clock, value, motion, proto} = harness({reduced: true});
+    cfui.updateHeaderProtocols([{key: 'a', protocol: 'auto'}, {key: 'b', protocol: 'quic'}, {key: 'c', protocol: 'http2'}], {});
+    assert.equal(value.textContent, 'AUTO');
+    assert.equal(clock.tasks.size, 1);
+    clock.advance(5000);
+    assert.equal(value.textContent, 'HTTP2');
+    assert.equal(proto.attributes['data-fading'], undefined);
+    assert.equal(clock.tasks.size, 1);
+    motion.matches = false;
+    motion.listener();
+    clock.advance(5000);
+    assert.equal(proto.attributes['data-fading'], 'true');
+    assert.equal(clock.tasks.size, 1);
+    motion.matches = true;
+    motion.listener();
+    assert.equal(value.textContent, 'HTTP2');
+    assert.equal(proto.attributes['data-fading'], undefined);
+    assert.equal(clock.tasks.size, 1);
+    clock.advance(5000);
+    assert.equal(value.textContent, 'QUIC');
+    assert.equal(clock.tasks.size, 1);
+});
+
+test('every card shows its own protocol including AUTO and stopped configured values', async () => {
+    const {cfui, state, network, rows} = harness();
+    state.config.tunnels[0].protocol = 'http2';
+    state.config.tunnels[1].protocol = 'auto';
+    state.tunnelStatuses = {a: {status: 'stopped'}, b: {running: true, status: 'running', connectivity: 'connected', protocol: 'auto'}};
+    network.fail = false;
+    await cfui.fetchStatus();
+    assert.equal(rows[0].protocol.textContent, 'HTTP2');
+    assert.equal(rows[1].protocol.textContent, 'AUTO');
+    assert.equal(rows[0].protocol.hidden, false);
+    assert.equal(rows[1].protocol.hidden, false);
 });

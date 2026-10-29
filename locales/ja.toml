@@ -2385,3 +2385,12 @@ other = "最終確認：{time}"
 
 [tunnels_active_ratio]
 other = "{n}/{m} 稼働中"
+
+[protocol_rotation_pause]
+other = "プロトコル表示の切替を一時停止"
+
+[protocol_rotation_resume]
+other = "プロトコル表示の切替を再開"
+
+[protocol_configured_set]
+other = "設定または選択されたプロトコル：{protocols}"

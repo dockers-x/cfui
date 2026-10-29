@@ -187,8 +187,101 @@
         /* Drop the static i18n binding so a locale switch doesn't reset the
            live text to "Checking..." until the next poll. */
         textEl.removeAttribute('data-i18n');
-        textEl.textContent = text;
+        if (textEl.textContent !== text) textEl.textContent = text;
     }
+
+    const protocolRotation = { labels: [], signature: '', index: 0, timer: null, fadeTimer: null, hovered: false, focused: false, paused: false, pill: null };
+    const protocolMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+
+    function protocolLabels(profiles, statuses) {
+        return [...new Set(profiles.map(profile => {
+            const protocol = statuses[profile.key]?.protocol || profile.protocol || 'auto';
+            return ['auto', 'quic', 'http2'].includes(protocol.toLowerCase()) ? protocol.toUpperCase() : 'AUTO';
+        }))].sort();
+    }
+
+    function stopHeaderProtocolRotation() {
+        if (protocolRotation.timer !== null) window.clearTimeout(protocolRotation.timer);
+        if (protocolRotation.fadeTimer !== null) window.clearTimeout(protocolRotation.fadeTimer);
+        protocolRotation.timer = null;
+        protocolRotation.fadeTimer = null;
+        protocolRotation.pill?.querySelector('.proto')?.removeAttribute('data-fading');
+    }
+
+    function renderHeaderProtocol() {
+        const slot = protocolRotation.pill?.querySelector('.proto');
+        if (!slot) return;
+        slot.querySelector('.proto__value').textContent = protocolRotation.labels[protocolRotation.index] || 'AUTO';
+        slot.disabled = protocolRotation.labels.length < 2;
+        if (slot.getAttribute('aria-pressed') !== String(protocolRotation.paused)) slot.setAttribute('aria-pressed', String(protocolRotation.paused));
+        const action = t(protocolRotation.paused ? 'protocol_rotation_resume' : 'protocol_rotation_pause');
+        const label = [t('protocol'), protocolRotation.labels.join(' / '), slot.disabled ? '' : action].filter(Boolean).join(' · ');
+        if (slot.getAttribute('aria-label') !== label) slot.setAttribute('aria-label', label);
+        slot.title = slot.disabled ? '' : action;
+    }
+
+    function scheduleHeaderProtocolRotation() {
+        if (protocolRotation.timer !== null || protocolRotation.fadeTimer !== null || protocolRotation.labels.length < 2 || protocolRotation.paused || protocolRotation.hovered || protocolRotation.focused || document.hidden) return;
+        protocolRotation.timer = window.setTimeout(() => {
+            protocolRotation.timer = null;
+            const slot = protocolRotation.pill?.querySelector('.proto');
+            if (!slot) return;
+            if (protocolMotion?.matches) {
+                protocolRotation.index = (protocolRotation.index + 1) % protocolRotation.labels.length;
+                renderHeaderProtocol();
+                scheduleHeaderProtocolRotation();
+                return;
+            }
+            slot.setAttribute('data-fading', 'true');
+            protocolRotation.fadeTimer = window.setTimeout(() => {
+                protocolRotation.fadeTimer = null;
+                protocolRotation.index = (protocolRotation.index + 1) % protocolRotation.labels.length;
+                renderHeaderProtocol();
+                slot.removeAttribute('data-fading');
+                scheduleHeaderProtocolRotation();
+            }, 160);
+        }, 5000);
+    }
+
+    function updateHeaderProtocols(profiles, statuses) {
+        const pill = $('status-pill');
+        if (!pill) return [];
+        if (protocolRotation.pill !== pill) {
+            stopHeaderProtocolRotation();
+            protocolRotation.pill = pill;
+            const slot = pill.querySelector('.proto');
+            slot?.addEventListener('click', () => {
+                protocolRotation.paused = !protocolRotation.paused;
+                stopHeaderProtocolRotation();
+                renderHeaderProtocol();
+                scheduleHeaderProtocolRotation();
+            });
+            pill.addEventListener('pointerenter', () => { protocolRotation.hovered = true; stopHeaderProtocolRotation(); });
+            pill.addEventListener('pointerleave', () => { protocolRotation.hovered = false; scheduleHeaderProtocolRotation(); });
+            pill.addEventListener('focusin', () => { protocolRotation.focused = true; stopHeaderProtocolRotation(); });
+            pill.addEventListener('focusout', event => {
+                if (pill.contains(event.relatedTarget)) return;
+                protocolRotation.focused = false;
+                scheduleHeaderProtocolRotation();
+            });
+        }
+        const labels = protocolLabels(profiles, statuses);
+        const signature = labels.join('|');
+        if (signature !== protocolRotation.signature) {
+            stopHeaderProtocolRotation();
+            const previous = protocolRotation.labels[protocolRotation.index];
+            protocolRotation.labels = labels;
+            protocolRotation.signature = signature;
+            protocolRotation.index = Math.max(0, labels.indexOf(previous));
+        }
+        renderHeaderProtocol();
+        scheduleHeaderProtocolRotation();
+        return labels;
+    }
+
+    protocolMotion?.addEventListener('change', () => { stopHeaderProtocolRotation(); renderHeaderProtocol(); scheduleHeaderProtocolRotation(); });
+    document.addEventListener('visibilitychange', () => { stopHeaderProtocolRotation(); scheduleHeaderProtocolRotation(); });
+    window.addEventListener?.('pagehide', stopHeaderProtocolRotation);
 
     /* ---- Tunnel error alert ---- */
 
@@ -344,10 +437,6 @@
         state.tunnelProtocol = selectedStatus.protocol || '';
         state.lastError = selectedStatus.error || '';
 
-        const protoText = state.tunnelProtocol && state.tunnelProtocol !== 'auto'
-            ? ` · ${state.tunnelProtocol.toUpperCase()}`
-            : '';
-
         /* The alert banner reflects the selected tunnel. */
         if (state.isRunning) {
             hideTunnelAlert();
@@ -360,29 +449,23 @@
         const localProfiles = tunnelProfiles().filter((p) => p.local_enabled !== false);
         const stale = state.statusFailCount >= 3;
         const view = tunnelPresentation(selectedStatus, stale);
-        let animalStatus = selectedStatus;
-        let animalSummary = '';
+        let headerLabel = view.text;
         if (localProfiles.length > 1) {
             const overview = tunnelOverview(localProfiles, state.tunnelStatuses || {}, stale);
             const activity = t('tunnels_active_ratio', { n: overview.active, m: localProfiles.length });
-            setStatusPill(overview.pill, stale ? t('status_stale') : activity);
-            animalStatus = { running: true, connectivity: overview.health, status: overview.health === 'error' ? 'error' : (overview.health === 'recovering' ? 'reconnecting' : 'running') };
             const healthLabel = stale ? t('status_stale') : t('status_' + (overview.health === 'recovering' ? 'reconnecting' : overview.health));
-            animalSummary = [healthLabel, activity].join(' · ');
+            headerLabel = healthLabel + ' · ' + activity;
+            setStatusPill(overview.pill, stale ? t('status_stale') : activity);
         } else {
-            const lifecycle = stale ? t('status_stale') : tunnelStatusText(selectedStatus);
-            setStatusPill(view.pill, lifecycle + (stale ? '' : protoText));
+            setStatusPill(view.pill, view.text);
         }
+        const labels = updateHeaderProtocols(localProfiles, state.tunnelStatuses || {});
         const pill = $('status-pill');
         if (pill) {
-            let animal = pill.querySelector('.health-animal');
-            if (!animal) {
-                animal = createHealthAnimal();
-                pill.insertBefore(animal, pill.firstChild);
-                const dot = pill.querySelector('.dot');
-                if (dot) dot.hidden = true;
-            }
-            updateHealthAnimal(animal, animalStatus, stale, animalSummary);
+            pill.querySelector('.health-animal')?.remove();
+            const dot = pill.querySelector('.dot');
+            if (dot) dot.hidden = false;
+            pill.setAttribute('aria-label', headerLabel + ' · ' + t('protocol_configured_set', { protocols: labels.join(' / ') }));
         }
 
         /* Capture the running config signature once per run so the
@@ -595,9 +678,8 @@
             const runtime = item.querySelector('.tunnel-profile-item__runtime');
             if (runtime) runtime.textContent = statusText;
 
-            const protoText = st.status !== 'stopped' && st.protocol && st.protocol !== 'auto'
-                ? st.protocol.toUpperCase()
-                : '';
+            const profile = tunnelProfiles().find(profile => profile.key === key) || { key };
+            const protoText = protocolLabels([profile], { [key]: st })[0] || 'AUTO';
             const protocol = item.querySelector('.tunnel-profile-item__protocol');
             if (protocol) {
                 protocol.textContent = protoText;
@@ -835,6 +917,9 @@
 
     /* ---- Export ---- */
     const ns = window.cfui;
+    ns.updateHeaderProtocols = updateHeaderProtocols;
+    ns.stopHeaderProtocolRotation = stopHeaderProtocolRotation;
+    ns.protocolLabels = protocolLabels;
     ns.healthAnimalPresentation = healthAnimalPresentation;
     ns.createHealthAnimal = createHealthAnimal;
     ns.updateHealthAnimal = updateHealthAnimal;

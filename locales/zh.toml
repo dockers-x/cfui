@@ -2385,3 +2385,12 @@ other = "最近检测：{time}"
 
 [tunnels_active_ratio]
 other = "{n}/{m} 个活动实例"
+
+[protocol_rotation_pause]
+other = "暂停协议轮播"
+
+[protocol_rotation_resume]
+other = "继续协议轮播"
+
+[protocol_configured_set]
+other = "配置或选择的协议：{protocols}"

@@ -2385,3 +2385,12 @@ other = "Last checked: {time}"
 
 [tunnels_active_ratio]
 other = "{n}/{m} active"
+
+[protocol_rotation_pause]
+other = "Pause protocol rotation"
+
+[protocol_rotation_resume]
+other = "Resume protocol rotation"
+
+[protocol_configured_set]
+other = "Configured or selected protocols: {protocols}"

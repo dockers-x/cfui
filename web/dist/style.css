@@ -12,7 +12,7 @@
     --state-ok-text: #08783F;
     --state-ok-soft: rgba(15, 157, 88, 0.12);
     --state-warn: #D97706;
-    --health-warn: #A17C00;
+    --health-warn: #927000;
     --state-warn-text: #92400E;
     --state-warn-soft: rgba(217, 119, 6, 0.12);
     --state-error: #DC2626;
@@ -993,7 +993,9 @@ html[data-workspace="local"] #panel-oauth {
 
 @media (max-width: 520px) {
     .tunnel-profile-item {
-        flex-basis: calc(50% - (var(--gap-2) / 2));
+        flex-basis: 100%;
+        min-width: 0;
+        max-width: 100%;
     }
 
     .tunnel-profile-bar .btn-row .btn {
@@ -6691,7 +6693,7 @@ details.oauth-form-section > summary {
 
 /* Official react-animals artwork; health color is separate from lifecycle text. */
 .health-animal {
-    --animal-color: var(--state-neutral);
+    --animal-color: var(--text-muted);
     --animal-image: url('/icons/react-animals/rabbit.png');
     position: relative;
     display: inline-block;
@@ -6706,45 +6708,163 @@ details.oauth-form-section > summary {
     border-radius: var(--r-control);
     touch-action: manipulation;
 }
-.health-animal[data-health="connected"] { --animal-color: var(--state-ok); --animal-image: url('/icons/react-animals/panda.png'); }
+.health-animal[data-health="connected"] { --animal-color: var(--state-ok-text); --animal-image: url('/icons/react-animals/panda.png'); }
 .health-animal[data-health="degraded"],
 .health-animal[data-health="recovering"] { --animal-color: var(--health-warn); --animal-image: url('/icons/react-animals/otter.png'); }
 .health-animal[data-health="error"],
-.health-animal[data-health="disconnected"] { --animal-color: var(--state-error); --animal-image: url('/icons/react-animals/grizzly.png'); }
+.health-animal[data-health="disconnected"] { --animal-color: var(--state-error-text); --animal-image: url('/icons/react-animals/grizzly.png'); }
 .health-animal:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
 }
 .health-animal__window {
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 6px;
-    height: 54px;
-    overflow: hidden;
+    inset: 0;
+    overflow: visible;
     pointer-events: none;
 }
 .health-animal__art {
     position: absolute;
-    left: 0;
-    bottom: 0;
-    transform: translateY(10px);
-    width: 44px;
-    height: 44px;
+    left: 6px;
+    bottom: 6px;
+    width: 32px;
+    height: 32px;
+    transform: translateY(4px) scale(.75);
+    transform-origin: bottom center;
+    opacity: .85;
     background-color: var(--animal-color);
     mask: var(--animal-image) center / contain no-repeat;
-    transition: transform 180ms ease-out, background-color 180ms ease-out;
+    transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out);
 }
 .health-animal:focus-visible .health-animal__art,
-.health-animal[aria-expanded="true"] .health-animal__art { transform: translateY(0); }
-@media (hover: hover) and (pointer: fine) {
-    .health-animal:hover .health-animal__art { transform: translateY(0); }
+.health-animal[aria-expanded="true"] .health-animal__art {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    transition: none;
 }
-.status-pill { transition: color 180ms ease-out, background-color 180ms ease-out; }
-.status-pill:has(.health-animal) { padding-left: 0; gap: 0; }
+@media (hover: hover) and (pointer: fine) {
+    .health-animal:hover .health-animal__art { transform: translateY(0) scale(1); opacity: 1; }
+}
+@media (hover: none), (pointer: coarse) {
+    .health-animal__art { transition: none; }
+}
+.status-pill .proto {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 7ch;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 0 0 var(--gap-2);
+    margin-left: 2px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: center;
+    cursor: pointer;
+}
+.status-pill .proto::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 1px;
+    height: 20px;
+    transform: translateY(-50%);
+    background: var(--border);
+    pointer-events: none;
+}
+.status-pill .proto:disabled { opacity: 1; cursor: default; }
+.status-pill .proto:focus-visible { outline: 2px solid var(--cf-orange); outline-offset: 2px; }
+.proto__value { display: inline-block; opacity: 1; transition: opacity 160ms var(--ease-out); }
+.proto[data-fading="true"] .proto__value { opacity: 0; }
 .tunnel-profile-item { overflow: visible; }
 .tunnel-profile-item__summary { min-height: 48px; padding-left: 48px; }
 .tunnel-profile-item > .health-animal { position: absolute; z-index: 2; left: 2px; top: 2px; }
 @media (prefers-reduced-motion: reduce) {
-    .health-animal__art, .status-pill { transition: none; }
+    .health-animal__art, .proto__value { transition: none; }
+}
+
+.tunnel-profile-item__protocol {
+    flex: 0 0 auto;
+    padding: 2px 4px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.status-pill .proto[aria-pressed="true"] .proto__value {
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+}
+
+/* Keep all mobile header controls together; long protocol sets wrap within the pill. */
+@media (max-width: 480px) {
+    .header-actions {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 44px 44px;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+    }
+    html[data-workspace="cloudflare"] .header-actions {
+        display: flex;
+        justify-content: flex-end;
+        flex-wrap: nowrap;
+    }
+    .header-actions .status-pill {
+        display: grid;
+        grid-template-columns: 8px minmax(0, 1fr) 44px;
+        gap: 6px;
+        min-width: 0;
+        padding: 0 8px;
+        font-size: 12px;
+    }
+    .header-actions .status-pill .text {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .header-actions .status-pill .proto {
+        width: 44px;
+        min-width: 44px;
+        padding-left: 4px;
+        margin-left: 0;
+    }
+
+}
+@media (max-width: 360px) {
+    .header-actions .status-pill {
+        grid-template-columns: 8px minmax(0, 1fr);
+        height: auto;
+        min-height: 44px;
+        padding-block: 6px;
+        row-gap: 4px;
+    }
+    .header-actions .status-pill .proto {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 3px 0 0;
+        border-left: 0;
+    }
+    .header-actions .status-pill .proto::before {
+        left: 50%;
+        top: 0;
+        width: 20px;
+        height: 1px;
+        transform: translateX(-50%);
+    }
 }
