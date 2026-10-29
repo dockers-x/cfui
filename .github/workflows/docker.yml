@@ -75,7 +75,7 @@ jobs:
 
       - name: Check whether this is the highest stable version
         id: latest
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           TAG: ${{ inputs.tag }}
         with:

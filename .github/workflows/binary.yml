@@ -61,7 +61,7 @@ jobs:
           echo "build_time=$(git show -s --format=%cI HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Reject an already published release
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           TAG: ${{ steps.version.outputs.tag }}
         with:
@@ -91,7 +91,7 @@ jobs:
 
       - name: Create or reuse draft release
         id: release
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           TAG: ${{ steps.version.outputs.tag }}
         with:
@@ -210,7 +210,7 @@ jobs:
         run: sha256sum cfui-*.tar.gz cfui-*.zip > checksums.txt
 
       - name: Upload assets to draft by ID
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           TAG: ${{ needs.prepare.outputs.tag }}
@@ -257,7 +257,7 @@ jobs:
       contents: write
     steps:
       - name: Publish draft
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           TAG: ${{ needs.prepare.outputs.tag }}
