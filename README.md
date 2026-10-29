@@ -620,6 +620,42 @@ cfui/
 └── main.go
 ```
 
+## Automated updates and releases
+
+The **Update cloudflared** workflow checks the latest stable upstream GitHub
+Release daily at 06:17 UTC. It updates the embedded Go module and its matching
+QUIC requirement/replacement, verifies dependencies, runs the tests, and builds
+cfui. When dependencies change, it commits to the default branch and atomically
+pushes the next `vMAJOR.MINOR.PATCH` tag (incrementing the highest existing stable
+tag's patch). This requires Actions to have permission to push to that branch.
+
+The update workflow calls **Release** directly using `GITHUB_TOKEN`. Release
+builds Linux amd64/arm64/armv7/armv6, Windows amd64, and macOS amd64/arm64
+archives with `checksums.txt`, then publishes amd64/arm64 container images and
+makes the GitHub Release public. A failed build leaves the release as a draft.
+GHCR is always used (`ghcr.io/dockers-x/cfui`); Docker Hub (`czyt/cfui`) is also
+used when both `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets are
+configured. The newest stable tag updates the image's `latest`, major, and minor
+tags; rebuilding older versions only updates their version tags.
+
+Trigger an update now:
+
+```bash
+gh workflow run cloudflared-update.yml --ref main
+```
+
+Retry an unfinished release using its existing tag:
+
+```bash
+gh workflow run binary.yml --ref main -f tag=v0.10.8
+```
+
+The daily check also retries an unfinished release whose tag is still at the
+default branch's HEAD. Already public releases are skipped by the updater and
+rejected by the manual release entry point. A manually pushed stable `v*` tag
+uses the same release pipeline. **Docker Build and Push** can rebuild images for
+an explicitly selected existing tag.
+
 ## Security Notes
 
 - Do not expose cfui directly to the public internet without a trusted access control layer.

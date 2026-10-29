@@ -5,162 +5,274 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
-
+    inputs:
+      tag:
+        description: Existing version tag to release or retry (for example v0.2.1)
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        description: Existing version tag to release
+        required: true
+        type: string
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.repository }}-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-  # First job: Create the release with changelog
-  create-github-release:
-    name: Create Release
+  prepare:
+    name: Validate, test, and prepare draft
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      commit: ${{ steps.metadata.outputs.commit }}
+      build_time: ${{ steps.metadata.outputs.build_time }}
+      release_id: ${{ steps.release.outputs.result }}
     steps:
-      - name: Checkout code
+      - name: Validate version tag
+        id: version
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || {
+            echo 'Expected an existing stable version tag such as v0.2.1' >&2
+            exit 1
+          }
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout version tag
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          ref: refs/tags/${{ steps.version.outputs.tag }}
+          persist-credentials: false
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v3
+      - name: Resolve build metadata
+        id: metadata
+        run: |
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "build_time=$(git show -s --format=%cI HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Reject an already published release
+        uses: actions/github-script@v8
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         with:
-          draft: true
-          generate_release_notes: true
-          body: |
-            ## Downloads
-            Download the appropriate binary for your platform below.
-
-            ## Installation
-            ```bash
-            # Linux/macOS
-            tar xzf cfui-<platform>.tar.gz
-            chmod +x cfui
-            ./cfui
-
-            # Windows
-            # Extract cfui-windows-amd64.zip
-            # Run cfui.exe
-            ```
-
-  # Second job: Build binaries for all platforms
-  build-binary:
-    name: Build for ${{ matrix.platform }}
-    runs-on: ${{ matrix.os }}
-    needs: create-github-release
-    if: startsWith(github.ref, 'refs/tags/')
-    strategy:
-      matrix:
-        include:
-          # Linux builds
-          - os: ubuntu-latest
-            platform: linux-amd64
-            goos: linux
-            goarch: amd64
-            exe: cfui
-
-          - os: ubuntu-latest
-            platform: linux-arm64
-            goos: linux
-            goarch: arm64
-            exe: cfui
-
-          - os: ubuntu-latest
-            platform: linux-armv7
-            goos: linux
-            goarch: arm
-            goarm: 7
-            exe: cfui
-
-          - os: ubuntu-latest
-            platform: linux-armv6
-            goos: linux
-            goarch: arm
-            goarm: 6
-            exe: cfui
-
-          # Windows builds
-          - os: ubuntu-latest
-            platform: windows-amd64
-            goos: windows
-            goarch: amd64
-            exe: cfui.exe
-
-          # macOS builds
-          - os: macos-latest
-            platform: darwin-amd64
-            goos: darwin
-            goarch: amd64
-            exe: cfui
-
-          - os: macos-latest
-            platform: darwin-arm64
-            goos: darwin
-            goarch: arm64
-            exe: cfui
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+          script: |
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              ...context.repo, per_page: 100,
+            });
+            if (releases.some(release => release.tag_name === process.env.TAG && !release.draft)) {
+              core.setFailed(`Release ${process.env.TAG} is already published`);
+            }
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-          check-latest: true
 
-      - name: Get dependencies
-        run: go mod download
+      - name: Test
+        run: go test ./...
 
-      - name: Run tests
-        if: matrix.os == runner.os
-        run: go test -v ./...
+      - name: Create or reuse draft release
+        id: release
+        uses: actions/github-script@v8
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        with:
+          script: |
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              ...context.repo, per_page: 100,
+            });
+            const matches = releases.filter(release => release.tag_name === process.env.TAG);
+            if (matches.some(release => !release.draft)) {
+              throw new Error(`Release ${process.env.TAG} is already published`);
+            }
+            if (matches.length) return matches[0].id;
+            const { data } = await github.rest.repos.createRelease({
+              ...context.repo,
+              tag_name: process.env.TAG,
+              name: process.env.TAG,
+              draft: true,
+              generate_release_notes: true,
+            });
+            return data.id;
 
-      - name: Build
+  build-binary:
+    name: Build ${{ matrix.platform }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-amd64
+            goos: linux
+            goarch: amd64
+          - platform: linux-arm64
+            goos: linux
+            goarch: arm64
+          - platform: linux-armv7
+            goos: linux
+            goarch: arm
+            goarm: '7'
+          - platform: linux-armv6
+            goos: linux
+            goarch: arm
+            goarm: '6'
+          - platform: windows-amd64
+            goos: windows
+            goarch: amd64
+          - platform: darwin-amd64
+            goos: darwin
+            goarch: amd64
+          - platform: darwin-arm64
+            goos: darwin
+            goarch: arm64
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build and archive
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           GOARM: ${{ matrix.goarm }}
-          CGO_ENABLED: 0
+          CGO_ENABLED: '0'
+          VERSION: ${{ needs.prepare.outputs.tag }}
+          BUILD_TIME: ${{ needs.prepare.outputs.build_time }}
+          GIT_COMMIT: ${{ needs.prepare.outputs.commit }}
+          PLATFORM: ${{ matrix.platform }}
         run: |
-          BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S_UTC')
-          go build -v -trimpath \
-            -ldflags="-s -w \
-              -X cfui/version.Version=${{ github.ref_name }} \
-              -X cfui/version.BuildTime=${BUILD_TIME} \
-              -X cfui/version.GitCommit=${{ github.sha }}" \
-            -o dist/${{ matrix.exe }} .
-
-      - name: Run UPX
-        if: matrix.os == 'ubuntu-latest' && matrix.goos != 'darwin'
-        continue-on-error: true
-        uses: crazy-max/ghaction-upx@v4
-        with:
-          version: v4.2.2
-          files: dist/${{ matrix.exe }}
-          args: -q --best --lzma
-
-      - name: Create archive
-        run: |
+          set -euo pipefail
+          mkdir -p dist
+          executable=cfui
+          if [[ "$GOOS" == windows ]]; then executable=cfui.exe; fi
+          go build -trimpath \
+            -ldflags="-s -w -X cfui/version.Version=$VERSION -X cfui/version.BuildTime=$BUILD_TIME -X cfui/version.GitCommit=$GIT_COMMIT" \
+            -o "dist/$executable" .
           cd dist
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip cfui-${{ matrix.platform }}.zip ${{ matrix.exe }}
+          if [[ "$GOOS" == windows ]]; then
+            zip "cfui-$PLATFORM.zip" "$executable"
           else
-            tar czf cfui-${{ matrix.platform }}.tar.gz ${{ matrix.exe }}
+            tar czf "cfui-$PLATFORM.tar.gz" "$executable"
           fi
-        shell: bash
 
-      - name: Upload artifacts
+      - name: Upload archive
         uses: actions/upload-artifact@v7
         with:
           name: cfui-${{ matrix.platform }}
-          path: dist/cfui-${{ matrix.platform }}.*
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+          if-no-files-found: error
           retention-days: 7
 
-      - name: Upload to release
-        uses: softprops/action-gh-release@v3
+  upload-release:
+    name: Upload archives and checksums to draft
+    needs: [prepare, build-binary]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download archives
+        uses: actions/download-artifact@v8
         with:
-          files: dist/cfui-${{ matrix.platform }}.*
-          # Don't generate release notes here - already done in create-release job
-          draft: true
+          pattern: cfui-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum cfui-*.tar.gz cfui-*.zip > checksums.txt
+
+      - name: Upload assets to draft by ID
+        uses: actions/github-script@v8
+        env:
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        with:
+          script: |
+            const fs = require('fs');
+            const release_id = Number(process.env.RELEASE_ID);
+            const { data } = await github.rest.repos.getRelease({ ...context.repo, release_id });
+            if (!data.draft || data.tag_name !== process.env.TAG) {
+              throw new Error('Release is no longer the expected draft');
+            }
+            const assets = await github.paginate(github.rest.repos.listReleaseAssets, {
+              ...context.repo, release_id, per_page: 100,
+            });
+            for (const name of fs.readdirSync('dist')) {
+              if (!/^cfui-.*\.(tar\.gz|zip)$/.test(name) && name !== 'checksums.txt') continue;
+              for (const asset of assets.filter(asset => asset.name === name)) {
+                await github.rest.repos.deleteReleaseAsset({ ...context.repo, asset_id: asset.id });
+              }
+              const contents = fs.readFileSync(`dist/${name}`);
+              await github.rest.repos.uploadReleaseAsset({
+                ...context.repo, release_id, name, data: contents,
+                headers: { 'content-type': 'application/octet-stream', 'content-length': contents.length },
+              });
+            }
+
+  docker:
+    name: Publish container images
+    needs: [prepare, upload-release]
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: ${{ needs.prepare.outputs.tag }}
+      expected_commit: ${{ needs.prepare.outputs.commit }}
+    secrets: inherit
+
+  publish:
+    name: Publish completed release
+    needs: [prepare, upload-release, docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish draft
+        uses: actions/github-script@v8
+        env:
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        with:
+          script: |
+            const release_id = Number(process.env.RELEASE_ID);
+            const { data } = await github.rest.repos.getRelease({ ...context.repo, release_id });
+            if (!data.draft || data.tag_name !== process.env.TAG) {
+              throw new Error('Release is no longer the expected draft');
+            }
+            const tags = await github.paginate(github.rest.repos.listTags, {
+              ...context.repo, per_page: 100,
+            });
+            const parse = tag => /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.exec(tag)?.slice(1).map(BigInt);
+            const version = parse(process.env.TAG);
+            const newer = tags.some(({ name }) => {
+              const candidate = parse(name);
+              if (!candidate) return false;
+              for (let i = 0; i < 3; i++) {
+                if (candidate[i] !== version[i]) return candidate[i] > version[i];
+              }
+              return false;
+            });
+            await github.rest.repos.updateRelease({
+              ...context.repo, release_id, draft: false, make_latest: newer ? 'false' : 'true',
+            });

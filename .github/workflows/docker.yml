@@ -1,22 +1,98 @@
 name: Docker Build and Push
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build (for example v0.2.1)
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        description: Existing version tag to build
+        required: true
+        type: string
+      expected_commit:
+        description: Tested commit that the version tag must still reference
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
   packages: write
+
+# Use a distinct group from the calling release workflow.
+concurrency:
+  group: container-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
   docker:
     name: Build and push Docker image
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Validate version tag
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || {
+            echo 'Expected an existing stable version tag such as v0.2.1' >&2
+            exit 1
+          }
+
+      - name: Checkout version tag
         uses: actions/checkout@v6
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          persist-credentials: false
+
+      - name: Resolve image metadata and registries
+        id: build
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -euo pipefail
+          commit=$(git rev-parse HEAD)
+          if [[ -n "$EXPECTED_COMMIT" && "$commit" != "$EXPECTED_COMMIT" ]]; then
+            echo 'Version tag moved after release validation' >&2
+            exit 1
+          fi
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "build_time=$(git show -s --format=%cI HEAD)" >> "$GITHUB_OUTPUT"
+          echo "ghcr_image=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          if [[ -n "$DOCKERHUB_USERNAME" && -n "$DOCKERHUB_TOKEN" ]]; then
+            echo 'dockerhub=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'dockerhub=false' >> "$GITHUB_OUTPUT"
+            echo 'Docker Hub credentials are incomplete; publishing to GHCR only.'
+          fi
+
+      - name: Check whether this is the highest stable version
+        id: latest
+        uses: actions/github-script@v8
+        env:
+          TAG: ${{ inputs.tag }}
+        with:
+          script: |
+            const tags = await github.paginate(github.rest.repos.listTags, {
+              ...context.repo, per_page: 100,
+            });
+            const parse = tag => /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.exec(tag)?.slice(1).map(BigInt);
+            const version = parse(process.env.TAG);
+            return !tags.some(({ name }) => {
+              const candidate = parse(name);
+              if (!candidate) return false;
+              for (let i = 0; i < 3; i++) {
+                if (candidate[i] !== version[i]) return candidate[i] > version[i];
+              }
+              return false;
+            });
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -25,6 +101,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to Docker Hub
+        if: steps.build.outputs.dockerhub == 'true'
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -35,21 +112,26 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: |
-            czyt/cfui
-            ghcr.io/${{ github.repository }}
+            ${{ steps.build.outputs.ghcr_image }}
+            name=czyt/cfui,enable=${{ steps.build.outputs.dockerhub }}
+          flavor: latest=false
           tags: |
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest
+            type=raw,value=${{ inputs.tag }}
+            type=semver,pattern={{version}},value=${{ inputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.tag }},enable=${{ steps.latest.outputs.result == 'true' }}
+            type=semver,pattern={{major}},value=${{ inputs.tag }},enable=${{ steps.latest.outputs.result == 'true' }}
+            type=raw,value=latest,enable=${{ steps.latest.outputs.result == 'true' }}
+          labels: |
+            org.opencontainers.image.version=${{ inputs.tag }}
+            org.opencontainers.image.revision=${{ steps.build.outputs.commit }}
+            org.opencontainers.image.created=${{ steps.build.outputs.build_time }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v7
@@ -62,6 +144,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VERSION=${{ github.ref_name }}
-            BUILD_TIME=${{ github.event.repository.updated_at }}
-            GIT_COMMIT=${{ github.sha }}
+            VERSION=${{ inputs.tag }}
+            BUILD_TIME=${{ steps.build.outputs.build_time }}
+            GIT_COMMIT=${{ steps.build.outputs.commit }}

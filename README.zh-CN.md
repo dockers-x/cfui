@@ -599,6 +599,38 @@ cfui/
 └── main.go
 ```
 
+## 自动更新与发布
+
+**Update cloudflared** 工作流每天 UTC 06:17（北京时间 14:17）检查上游最新稳定
+GitHub Release，更新内嵌 Go 模块及匹配的 QUIC require/replace，校验依赖、运行测试
+并构建 cfui。依赖有变化时，自动提交到默认分支，并原子推送下一个
+`vMAJOR.MINOR.PATCH` tag：取现有最高稳定 tag，递增 patch。Actions 需要拥有默认
+分支的推送权限。
+
+更新工作流使用 `GITHUB_TOKEN` 直接调用 **Release**：构建 Linux
+amd64/arm64/armv7/armv6、Windows amd64、macOS amd64/arm64 二进制归档和
+`checksums.txt`，随后发布 amd64/arm64 容器镜像，全部成功才公开 GitHub Release。
+构建失败时保留草稿，便于重试。镜像始终发布到 GHCR（`ghcr.io/dockers-x/cfui`）；
+同时配置仓库 Secrets `DOCKERHUB_USERNAME` 和 `DOCKERHUB_TOKEN` 后，也会发布到
+Docker Hub（`czyt/cfui`）。最新稳定 tag 更新镜像的 `latest`、major、minor 标签；
+重建旧版仅更新对应版本的标签。
+
+立即检查并自动发布：
+
+```bash
+gh workflow run cloudflared-update.yml --ref main
+```
+
+按现有 tag 重试尚未完成的发布：
+
+```bash
+gh workflow run binary.yml --ref main -f tag=v0.10.8
+```
+
+每日检查也会重试仍指向默认分支 HEAD 的未完成版本。更新器会跳过已公开版本，
+手动发布入口会拒绝改写已公开版本。手动推送稳定 `v*` tag 也会走同一发布流程。
+**Docker Build and Push** 支持指定现有 tag 单独重建镜像。
+
 ## 安全说明
 
 - 不要在没有可信访问控制的情况下，把 cfui 直接暴露到公网。

@@ -2,39 +2,71 @@ name: Update cloudflared
 
 on:
   schedule:
-    - cron: "17 6 * * 1"
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+
+concurrency:
+  group: cloudflared-update
+  cancel-in-progress: false
 
 jobs:
   update:
+    if: github.repository == 'dockers-x/cfui' && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - name: Update to the latest cloudflared release
+      - name: Test update and release automation
+        run: python3 -B -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Update to the latest stable cloudflared release
+        id: upstream
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="$(gh api repos/cloudflare/cloudflared/releases/latest --jq .tag_name)"
+          tag="$(gh api repos/cloudflare/cloudflared/releases/latest --jq 'select(.draft == false and .prerelease == false) | .tag_name')"
           bash scripts/update-cloudflared.sh "$tag"
-      - name: Test
-        run: go test ./...
-      - uses: peter-evans/create-pull-request@v8
-        with:
-          branch: automation/cloudflared-update
-          delete-branch: true
-          commit-message: "build(deps): update cloudflared and QUIC fork"
-          title: "build(deps): update cloudflared and QUIC fork"
-          body: |
-            Updates cloudflared to its latest GitHub release and keeps the embedded QUIC fork aligned with cloudflared's go.mod.
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if git diff --quiet HEAD -- go.mod go.sum; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Verify dependencies and application
+        if: steps.upstream.outputs.changed == 'true'
+        run: |
+          go mod verify
+          go test ./...
+          CGO_ENABLED=0 go build -trimpath -o "$RUNNER_TEMP/cfui" .
+      - name: Commit the update and prepare the release tag
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_TAG: ${{ steps.upstream.outputs.tag }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: bash scripts/prepare-cloudflared-release.sh "$UPSTREAM_TAG" "$DEFAULT_BRANCH"
 
-            Verification: `go test ./...`
-          add-paths: |
-            go.mod
-            go.sum
+  # A tag pushed with GITHUB_TOKEN does not start another push workflow.
+  # Call the release workflow explicitly so no PAT or auto-merge setup is needed.
+  release:
+    needs: update
+    if: needs.update.outputs.tag != ''
+    permissions:
+      contents: write
+      packages: write
+    uses: ./.github/workflows/binary.yml
+    with:
+      tag: ${{ needs.update.outputs.tag }}
+    secrets: inherit
