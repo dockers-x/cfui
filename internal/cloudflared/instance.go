@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -36,6 +37,7 @@ type Status struct {
 	// Protocol reports the configured transport. "auto" delegates negotiation
 	// and fallback to cloudflared; it does not claim an observed wire protocol.
 	Protocol            string
+	ActiveProtocols     []string // Observed protocols of currently active edge connections.
 	Connectivity        string
 	ReadyConnections    uint
 	ExpectedConnections uint
@@ -72,6 +74,7 @@ type Instance struct {
 	restartBackoff *backoff.Backoff
 
 	currentProtocol     string
+	activeProtocols     []string
 	connectivity        string
 	readyConnections    uint
 	expectedConnections uint
@@ -147,6 +150,7 @@ func (i *Instance) start(expectedGeneration *uint64, expectedCtx context.Context
 	i.nextRetryAt = time.Time{}
 	i.restartRequested = false
 	i.connectivity = "unknown"
+	i.activeProtocols = nil
 	i.readyConnections = 0
 	i.lastCheckedAt = time.Time{}
 	i.healthError = ""
@@ -200,6 +204,7 @@ func (i *Instance) start(expectedGeneration *uint64, expectedCtx context.Context
 func (i *Instance) Stop() error {
 	i.mu.Lock()
 	i.connectivity = "unknown"
+	i.activeProtocols = nil
 	i.readyConnections = 0
 	i.healthError = ""
 	i.healthySince = time.Time{}
@@ -270,6 +275,7 @@ func (i *Instance) Status() Status {
 		LastError:           i.lastError,
 		RetryCount:          i.restartCount,
 		Protocol:            i.currentProtocol,
+		ActiveProtocols:     slices.Clone(i.activeProtocols),
 		Connectivity:        i.connectivity,
 		ReadyConnections:    i.readyConnections,
 		ExpectedConnections: i.expectedConnections,
@@ -363,6 +369,7 @@ func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct
 		i.restartRequested = false
 		i.running = false
 		i.connectivity = "unknown"
+		i.activeProtocols = nil
 		i.readyConnections = 0
 		i.healthySince = time.Time{}
 		if !shouldRestartAfterExit(ctx, restartAllowed, restartRequested) {

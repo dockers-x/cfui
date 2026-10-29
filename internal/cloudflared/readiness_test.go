@@ -355,6 +355,10 @@ func TestReadinessMonitorRecoveryAndDisabledRestart(t *testing.T) {
 		t.Run(fmt.Sprintf("auto_restart_%t", autoRestart), func(t *testing.T) {
 			responses := make(chan string)
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/diag/tunnel" {
+					http.NotFound(w, r)
+					return
+				}
 				select {
 				case body := <-responses:
 					status := http.StatusOK

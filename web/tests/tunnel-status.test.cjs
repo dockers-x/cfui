@@ -204,17 +204,17 @@ test('header has a dot and deduplicated protocols, without animals', async () =>
     const {cfui, state, network, pill, dot, value, clock, rows} = harness();
     state.config.tunnels[0].protocol = 'auto';
     state.config.tunnels[1].protocol = 'auto';
-    state.tunnelStatuses = {a: {running: true, status: 'running', connectivity: 'connected', protocol: 'auto'},
-        b: {running: true, status: 'running', connectivity: 'connected', protocol: 'auto'}};
+    state.tunnelStatuses = {a: {running: true, status: 'running', connectivity: 'connected', protocol: 'auto', active_protocols: ['quic']},
+        b: {running: true, status: 'running', connectivity: 'connected', protocol: 'auto', active_protocols: ['quic']}};
     network.fail = false;
     await cfui.fetchStatus();
     assert.equal(pill.querySelector('.health-animal'), null);
     assert.equal(dot.hidden, false);
-    assert.equal(value.textContent, 'AUTO');
+    assert.equal(value.textContent, 'QUIC');
     assert.equal(clock.tasks.size, 0);
-    assert.equal(rows[0].protocol.textContent, 'AUTO');
-    assert.equal(rows[1].protocol.textContent, 'AUTO');
-    assert.match(pill.attributes['aria-label'], /protocol_configured_set.*AUTO/);
+    assert.equal(rows[0].protocol.textContent, 'QUIC');
+    assert.equal(rows[1].protocol.textContent, 'QUIC');
+    assert.match(pill.attributes['aria-label'], /protocol_display_set.*QUIC/);
 });
 
 test('mixed protocol set rotates without polling resets or live announcements', () => {
@@ -290,7 +290,7 @@ test('reduced motion keeps one protocol and changes instantly without a fade tim
     assert.equal(clock.tasks.size, 1);
 });
 
-test('every card shows its own protocol including AUTO and stopped configured values', async () => {
+test('every card shows observed protocol or unknown while stopped cards retain configured values', async () => {
     const {cfui, state, network, rows} = harness();
     state.config.tunnels[0].protocol = 'http2';
     state.config.tunnels[1].protocol = 'auto';
@@ -298,7 +298,46 @@ test('every card shows its own protocol including AUTO and stopped configured va
     network.fail = false;
     await cfui.fetchStatus();
     assert.equal(rows[0].protocol.textContent, 'HTTP2');
-    assert.equal(rows[1].protocol.textContent, 'AUTO');
+    assert.equal(rows[1].protocol.textContent, '—');
     assert.equal(rows[0].protocol.hidden, false);
     assert.equal(rows[1].protocol.hidden, false);
+});
+
+
+test('automatic tunnels display observed transports and follow fallback', async () => {
+    const {cfui, state, network, rows, value, clock} = harness();
+    state.config.tunnels.forEach(profile => { profile.protocol = 'auto'; });
+    state.tunnelStatuses = {
+        a: {running: true, status: 'running', protocol: 'auto', active_protocols: ['quic']},
+        b: {running: true, status: 'running', protocol: 'auto', active_protocols: ['http2']},
+    };
+    network.fail = false;
+    await cfui.fetchStatus();
+    assert.equal(rows[0].protocol.textContent, 'QUIC');
+    assert.equal(rows[1].protocol.textContent, 'HTTP2');
+    assert.equal(value.textContent, 'HTTP2');
+    clock.advance(5160);
+    assert.equal(value.textContent, 'QUIC');
+    state.tunnelStatuses.a.active_protocols = ['http2'];
+    await cfui.fetchStatus();
+    assert.equal(value.textContent, 'HTTP2');
+    assert.equal(clock.tasks.size, 0);
+    assert.equal(rows[0].protocol.textContent, 'HTTP2');
+});
+
+test('active protocols exclude stopped configuration and unknown never claims AUTO', () => {
+    const {cfui} = harness();
+    const profiles = [{key: 'a', protocol: 'auto'}, {key: 'b', protocol: 'auto'}];
+    assert.deepEqual(Array.from(cfui.protocolLabels(profiles, {a: {running: true, active_protocols: ['quic', 'http2', 'quic']}})), ['HTTP2', 'QUIC']);
+    for (const status of [{running: true}, {status: 'reconnecting'}, {running: true, active_protocols: ['auto', 'invalid']}]) {
+        assert.deepEqual(Array.from(cfui.protocolLabels(profiles, {a: status})), ['—']);
+    }
+});
+
+test('one tunnel can show mixed active protocols on its card', async () => {
+    const {cfui, state, network, rows} = harness();
+    state.tunnelStatuses = {a: {running: true, active_protocols: ['quic', 'http2', 'quic']}};
+    network.fail = false;
+    await cfui.fetchStatus();
+    assert.equal(rows[0].protocol.textContent, 'HTTP2 / QUIC');
 });

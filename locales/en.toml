@@ -2392,5 +2392,5 @@ other = "Pause protocol rotation"
 [protocol_rotation_resume]
 other = "Resume protocol rotation"
 
-[protocol_configured_set]
-other = "Configured or selected protocols: {protocols}"
+[protocol_display_set]
+other = "Transport protocols: {protocols}"

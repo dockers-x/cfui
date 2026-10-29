@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -144,6 +145,7 @@ type readinessResponse struct {
 }
 
 type readinessResult struct {
+	activeProtocols  []string
 	ready            bool
 	statusCode       int
 	readyConnections uint
@@ -239,7 +241,6 @@ func (i *Instance) monitorReadinessForRun(ctx context.Context, readyURL string, 
 		}
 		probeCtx, cancel := context.WithTimeout(ctx, readinessProbeTimeout)
 		result := checkReadiness(probeCtx, client, readyURL)
-		cancel()
 		if result.err == nil {
 			if connectorID == "" {
 				connectorID = result.connectorID
@@ -247,6 +248,15 @@ func (i *Instance) monitorReadinessForRun(ctx context.Context, readyURL string, 
 				result.err = fmt.Errorf("readiness connector identity changed during run")
 			}
 		}
+		if result.err == nil && result.ready {
+			protocols, err := activeProtocols(probeCtx, client, readyURL, result.connectorID)
+			if err != nil {
+				logDebugf("Tunnel %q active protocol observation unavailable: %v", i.name, err)
+			} else {
+				result.activeProtocols = protocols
+			}
+		}
+		cancel()
 		if !i.publishReadiness(ctx, generation, result) {
 			return
 		}
@@ -307,6 +317,7 @@ func (i *Instance) publishReadiness(ctx context.Context, generation uint64, resu
 	now := time.Now()
 	i.lastCheckedAt = now
 	i.readyConnections = 0
+	i.activeProtocols = nil
 	i.healthError = ""
 	if result.err != nil {
 		i.connectivity = "unknown"
@@ -325,6 +336,7 @@ func (i *Instance) publishReadiness(ctx context.Context, generation uint64, resu
 	if result.readyConnections < i.expectedConnections {
 		i.connectivity = "degraded"
 	}
+	i.activeProtocols = slices.Clone(result.activeProtocols)
 	i.lastConnectedAt = now
 	if i.healthySince.IsZero() {
 		i.healthySince = now

@@ -2392,5 +2392,5 @@ other = "プロトコル表示の切替を一時停止"
 [protocol_rotation_resume]
 other = "プロトコル表示の切替を再開"
 
-[protocol_configured_set]
-other = "設定または選択されたプロトコル：{protocols}"
+[protocol_display_set]
+other = "接続プロトコル：{protocols}"

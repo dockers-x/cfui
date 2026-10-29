@@ -223,6 +223,7 @@ type TunnelStatusOutput struct {
 	Running             bool       `json:"running"`
 	Status              string     `json:"status"`
 	Protocol            string     `json:"protocol"`
+	ActiveProtocols     []string   `json:"active_protocols"`
 	RetryCount          int        `json:"retry_count"`
 	NextRetryAt         *time.Time `json:"next_retry_at,omitempty"`
 	Error               string     `json:"error,omitempty"`
@@ -238,7 +239,8 @@ type TunnelStatusOutput struct {
 func TunnelStatusFrom(st cloudflared.Status) TunnelStatusOutput {
 	out := TunnelStatusOutput{
 		Running: st.Running, Status: st.Phase, Protocol: st.Protocol,
-		RetryCount: st.RetryCount, NextRetryAt: st.NextRetryAt,
+		ActiveProtocols: st.ActiveProtocols,
+		RetryCount:      st.RetryCount, NextRetryAt: st.NextRetryAt,
 		Connectivity: st.Connectivity, ReadyConnections: st.ReadyConnections,
 		ExpectedConnections: st.ExpectedConnections, LastCheckedAt: st.LastCheckedAt,
 		LastConnectedAt: st.LastConnectedAt, HealthError: st.HealthError,

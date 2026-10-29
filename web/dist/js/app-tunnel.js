@@ -193,11 +193,22 @@
     const protocolRotation = { labels: [], signature: '', index: 0, timer: null, fadeTimer: null, hovered: false, focused: false, paused: false, pill: null };
     const protocolMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
 
+    function profileProtocolLabels(profile, status = {}) {
+        if (status.running || ['starting', 'stopping', 'reconnecting'].includes(status.status)) {
+            const active = Array.isArray(status.active_protocols) ? status.active_protocols : [];
+            const labels = [...new Set(active.filter(value => ['quic', 'http2'].includes(value)).map(value => value.toUpperCase()))].sort();
+            return labels.length ? labels : ['—'];
+        }
+        const configured = status.protocol || profile.protocol || 'auto';
+        return [['auto', 'quic', 'http2'].includes(configured) ? configured.toUpperCase() : 'AUTO'];
+    }
+
     function protocolLabels(profiles, statuses) {
-        return [...new Set(profiles.map(profile => {
-            const protocol = statuses[profile.key]?.protocol || profile.protocol || 'auto';
-            return ['auto', 'quic', 'http2'].includes(protocol.toLowerCase()) ? protocol.toUpperCase() : 'AUTO';
-        }))].sort();
+        const active = profiles.filter(profile => {
+            const status = statuses[profile.key] || {};
+            return status.running || ['starting', 'stopping', 'reconnecting'].includes(status.status);
+        });
+        return [...new Set((active.length ? active : profiles).flatMap(profile => profileProtocolLabels(profile, statuses[profile.key])))].sort();
     }
 
     function stopHeaderProtocolRotation() {
@@ -465,7 +476,7 @@
             pill.querySelector('.health-animal')?.remove();
             const dot = pill.querySelector('.dot');
             if (dot) dot.hidden = false;
-            pill.setAttribute('aria-label', headerLabel + ' · ' + t('protocol_configured_set', { protocols: labels.join(' / ') }));
+            pill.setAttribute('aria-label', headerLabel + ' · ' + t('protocol_display_set', { protocols: labels.join(' / ') }));
         }
 
         /* Capture the running config signature once per run so the
@@ -679,7 +690,7 @@
             if (runtime) runtime.textContent = statusText;
 
             const profile = tunnelProfiles().find(profile => profile.key === key) || { key };
-            const protoText = protocolLabels([profile], { [key]: st })[0] || 'AUTO';
+            const protoText = profileProtocolLabels(profile, st).join(' / ');
             const protocol = item.querySelector('.tunnel-profile-item__protocol');
             if (protocol) {
                 protocol.textContent = protoText;
