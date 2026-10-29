@@ -35,24 +35,10 @@ import (
 // API Response structures for type safety
 
 // StatusResponse represents the tunnel status response
-type StatusResponse struct {
-	Running     bool       `json:"running"`
-	Status      string     `json:"status"`
-	Protocol    string     `json:"protocol"`
-	RetryCount  int        `json:"retry_count"`
-	NextRetryAt *time.Time `json:"next_retry_at,omitempty"`
-	Error       string     `json:"error,omitempty"`
-}
+type StatusResponse mcpbridge.TunnelStatusOutput
 
-// Reset resets the StatusResponse to its zero state
-func (r *StatusResponse) Reset() {
-	r.Running = false
-	r.Status = ""
-	r.Protocol = ""
-	r.RetryCount = 0
-	r.NextRetryAt = nil
-	r.Error = ""
-}
+// Reset resets the StatusResponse to its zero state.
+func (r *StatusResponse) Reset() { *r = StatusResponse{} }
 
 // ControlResponse represents the control action response
 type ControlResponse struct {
@@ -1176,24 +1162,7 @@ func (s *Server) tunnelsResponse(cfg config.Config) TunnelsResponse {
 }
 
 func statusResponseFrom(st cloudflared.Status) StatusResponse {
-	resp := StatusResponse{
-		Running:     st.Running,
-		Status:      st.Phase,
-		Protocol:    st.Protocol,
-		RetryCount:  st.RetryCount,
-		NextRetryAt: st.NextRetryAt,
-	}
-	if resp.Status == "" {
-		if st.Running {
-			resp.Status = "running"
-		} else {
-			resp.Status = "stopped"
-		}
-	}
-	if st.LastError != nil {
-		resp.Error = st.LastError.Error()
-	}
-	return resp
+	return StatusResponse(mcpbridge.TunnelStatusFrom(st))
 }
 
 func (s *Server) handleTunnels(w http.ResponseWriter, r *http.Request) {
@@ -1313,7 +1282,7 @@ func (s *Server) handleTunnelStatus(w http.ResponseWriter, r *http.Request, key 
 		return
 	}
 	if s.runner == nil {
-		writeJSON(w, StatusResponse{Running: false, Status: "unavailable"})
+		writeJSON(w, StatusResponse{Running: false, Status: "unavailable", Connectivity: "unknown"})
 		return
 	}
 	st, _ := s.runner.ProfileStatus(key)
@@ -1343,7 +1312,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) writeRunnerStatus(w http.ResponseWriter) {
 	if s.runner == nil {
-		writeJSON(w, StatusResponse{Running: false, Status: "unavailable"})
+		writeJSON(w, StatusResponse{Running: false, Status: "unavailable", Connectivity: "unknown"})
 		return
 	}
 	st, _ := s.runner.ProfileStatus("")

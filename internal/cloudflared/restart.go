@@ -2,6 +2,7 @@ package cloudflared
 
 import (
 	"context"
+	"math/rand/v2"
 	"time"
 
 	"github.com/cloudflare/backoff"
@@ -11,7 +12,9 @@ const (
 	restartBackoffBaseDelay  = 5 * time.Second
 	restartBackoffMaxDelay   = 60 * time.Second
 	restartBackoffResetAfter = 5 * time.Minute
-	maxRestartAttempts       = 10
+	maxFastRestartAttempts   = 10
+	restartSlowDelay         = 5 * time.Minute
+	restartSlowJitter        = time.Minute
 )
 
 // NewBackoff builds an exponential backoff helper; exposed for tests and for
@@ -30,9 +33,23 @@ func NewBackoff(interval, max, decay time.Duration, noJitter bool) *backoff.Back
 }
 
 // NewRestartBackoff returns the standard tunnel restart schedule
-// (5s, 10s, 20s, 40s, 60s cap, reset after 5 minutes of stability).
+// (full jitter with a 5s base and 60s cap). Only confirmed connection stability
+// resets this schedule; elapsed time during an outage does not imply recovery.
 func NewRestartBackoff() *backoff.Backoff {
-	return NewBackoff(restartBackoffBaseDelay, restartBackoffMaxDelay, restartBackoffResetAfter, true)
+	return NewBackoff(restartBackoffBaseDelay, restartBackoffMaxDelay, 0, false)
+}
+
+// nextRestartDelay is called with i.mu held. Long outages retain a low-frequency
+// retry instead of exhausting all recovery opportunities. A minimum delay on
+// the slow path prevents jitter from producing another burst of fast retries.
+func (i *Instance) nextRestartDelay() time.Duration {
+	if i.restartCount >= maxFastRestartAttempts {
+		return restartSlowDelay + rand.N(restartSlowJitter)
+	}
+	if i.restartBackoff == nil {
+		i.restartBackoff = NewRestartBackoff()
+	}
+	return i.restartBackoff.Duration()
 }
 
 func shouldAutoRestartAfterRun(ctx context.Context, err error) bool {
@@ -97,26 +114,7 @@ func (i *Instance) maybeAutoRestartForRun(ctx context.Context, generation uint64
 		i.mu.Unlock()
 		return
 	}
-	if i.restartBackoff == nil {
-		i.restartBackoff = NewRestartBackoff()
-	}
-
-	// Reset restart state if the last retry was long enough ago to consider
-	// the next failure a fresh incident.
-	if time.Since(i.lastRestart) > restartBackoffResetAfter {
-		i.restartCount = 0
-		i.restartBackoff.Reset()
-	}
-
-	if i.restartCount >= maxRestartAttempts {
-		logWarnf("Tunnel %q: maximum restart attempts reached (%d), stopping auto-restart", i.name, i.restartCount)
-		i.phase = "error"
-		i.nextRetryAt = time.Time{}
-		i.mu.Unlock()
-		return
-	}
-
-	delay := i.restartBackoff.Duration()
+	delay := i.nextRestartDelay()
 	i.restartCount++
 	i.lastRestart = time.Now()
 	i.nextRetryAt = i.lastRestart.Add(delay)

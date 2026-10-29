@@ -262,8 +262,79 @@
         }
     }
 
-    function runningTunnelCount() {
-        return Object.values(state.tunnelStatuses || {}).filter((s) => s && s.running).length;
+    // A failed browser poll says nothing about the tunnel's edge connectivity.
+    function tunnelPresentation(st = {}, stale = false) {
+        if (stale) return { state: 'unknown', pill: 'offline', text: t('status_stale') };
+        if (['starting', 'stopping', 'reconnecting'].includes(st.status)) {
+            return { state: st.status, pill: 'loading', text: tunnelStatusText(st) };
+        }
+        if (st.status === 'error') return { state: 'error', pill: 'error', text: t('status_error') };
+        if (!st.running) return { state: 'stopped', pill: 'warn', text: t('status_stopped') };
+        const health = ['connected', 'degraded', 'disconnected'].includes(st.connectivity) ? st.connectivity : 'unknown';
+        return {
+            state: health === 'connected' ? 'running' : health,
+            pill: health === 'connected' ? 'ok' : (health === 'disconnected' ? 'error' : 'warn'),
+            text: t('status_' + health),
+        };
+    }
+
+    function tunnelOverview(profiles, statuses, stale = false) {
+        let active = 0;
+        let connected = 0;
+        let anyError = false;
+        const healthStates = [];
+        for (const profile of profiles) {
+            const st = statuses[profile.key] || {};
+            const view = tunnelPresentation(st, stale);
+            if (st.running || ['starting', 'stopping', 'reconnecting'].includes(st.status)) active++;
+            if (view.state === 'running') connected++;
+            if (view.pill === 'error') anyError = true;
+            healthStates.push(healthAnimalPresentation(st, stale).health);
+        }
+        const health = ['error', 'disconnected', 'recovering', 'unknown', 'degraded'].find(value => healthStates.includes(value)) || 'connected';
+        return { active, connected, health, pill: stale ? 'offline' : (connected === profiles.length ? 'ok' : (anyError ? 'error' : 'warn')) };
+    }
+
+    function healthAnimalPresentation(st = {}, stale = false) {
+        if (stale) return { health: 'unknown', label: t('status_stale') };
+        if (st.status === 'error') return { health: 'error', label: [t('status_error'), st.error].filter(Boolean).join(' · ') };
+        if (['starting', 'stopping', 'reconnecting'].includes(st.status)) {
+            return { health: 'recovering', label: tunnelStatusText(st) };
+        }
+        if (!st.running || st.status === 'stopped') return { health: 'unknown', label: t('status_unknown') };
+        const health = ['connected', 'degraded', 'disconnected'].includes(st.connectivity) ? st.connectivity : 'unknown';
+        return { health, label: t('status_' + health) };
+    }
+
+    function createHealthAnimal() {
+        const animal = document.createElement('button');
+        animal.type = 'button';
+        animal.className = 'health-animal';
+        animal.setAttribute('aria-expanded', 'false');
+        animal.innerHTML = '<span class="health-animal__window" aria-hidden="true"><span class="health-animal__art"></span></span>';
+        animal.addEventListener('click', (event) => {
+            event.stopPropagation();
+            animal.setAttribute('aria-expanded', String(animal.getAttribute('aria-expanded') !== 'true'));
+        });
+        animal.addEventListener('blur', () => animal.setAttribute('aria-expanded', 'false'));
+        animal.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') animal.setAttribute('aria-expanded', 'false');
+        });
+        return animal;
+    }
+
+    function updateHealthAnimal(animal, st, stale = false, summaryLabel = '') {
+        if (!animal) return;
+        const view = healthAnimalPresentation(st, stale);
+        animal.dataset.health = view.health;
+        const label = summaryLabel || [view.label, lastCheckedText(st), st.health_error || ''].filter(Boolean).join(' · ');
+        animal.setAttribute('aria-label', label);
+        animal.removeAttribute('title');
+    }
+
+    function lastCheckedText(st) {
+        if (!st.last_checked_at) return '';
+        return t('status_last_checked', { time: new Date(st.last_checked_at).toLocaleString() });
     }
 
     function updateStatusUI() {
@@ -287,21 +358,31 @@
         /* Header pill: selected tunnel state, or an aggregate when several
            local tunnels exist. */
         const localProfiles = tunnelProfiles().filter((p) => p.local_enabled !== false);
-        const running = runningTunnelCount();
-        const anyError = Object.values(state.tunnelStatuses || {}).some((s) => s && s.status === 'error');
-        if (state.statusFailCount >= 3) {
-            setStatusPill('offline', t('status_offline'));
-        } else if (localProfiles.length > 1) {
-            const pillState = running > 0 ? 'ok' : (anyError ? 'error' : 'warn');
-            setStatusPill(pillState, t('tunnels_running_ratio', { n: running, m: localProfiles.length }));
-        } else if (['starting', 'stopping', 'reconnecting'].includes(state.status)) {
-            setStatusPill('loading', tunnelStatusText(selectedStatus));
-        } else if (state.isRunning) {
-            setStatusPill('ok', t('status_running') + protoText);
-        } else if (state.status === 'error') {
-            setStatusPill('error', t('status_error'));
+        const stale = state.statusFailCount >= 3;
+        const view = tunnelPresentation(selectedStatus, stale);
+        let animalStatus = selectedStatus;
+        let animalSummary = '';
+        if (localProfiles.length > 1) {
+            const overview = tunnelOverview(localProfiles, state.tunnelStatuses || {}, stale);
+            const activity = t('tunnels_active_ratio', { n: overview.active, m: localProfiles.length });
+            setStatusPill(overview.pill, stale ? t('status_stale') : activity);
+            animalStatus = { running: true, connectivity: overview.health, status: overview.health === 'error' ? 'error' : (overview.health === 'recovering' ? 'reconnecting' : 'running') };
+            const healthLabel = stale ? t('status_stale') : t('status_' + (overview.health === 'recovering' ? 'reconnecting' : overview.health));
+            animalSummary = [healthLabel, activity].join(' · ');
         } else {
-            setStatusPill('warn', t('status_stopped'));
+            const lifecycle = stale ? t('status_stale') : tunnelStatusText(selectedStatus);
+            setStatusPill(view.pill, lifecycle + (stale ? '' : protoText));
+        }
+        const pill = $('status-pill');
+        if (pill) {
+            let animal = pill.querySelector('.health-animal');
+            if (!animal) {
+                animal = createHealthAnimal();
+                pill.insertBefore(animal, pill.firstChild);
+                const dot = pill.querySelector('.dot');
+                if (dot) dot.hidden = true;
+            }
+            updateHealthAnimal(animal, animalStatus, stale, animalSummary);
         }
 
         /* Capture the running config signature once per run so the
@@ -456,9 +537,7 @@
         summary.className = 'tunnel-profile-item__summary';
         summary.addEventListener('click', () => selectTunnelProfile(profile.key));
 
-        const led = document.createElement('span');
-        led.className = 'tunnel-profile-item__led';
-        led.setAttribute('aria-hidden', 'true');
+        const animal = createHealthAnimal();
 
         const copy = document.createElement('span');
         copy.className = 'tunnel-profile-item__copy';
@@ -480,9 +559,9 @@
         const runtime = document.createElement('span');
         runtime.className = 'tunnel-profile-item__runtime';
         copy.append(runtime);
-        summary.append(led, copy, protocol);
+        summary.append(copy, protocol);
 
-        item.append(summary);
+        item.append(summary, animal);
         return item;
     }
 
@@ -508,19 +587,10 @@
 
             const summary = item.querySelector('.tunnel-profile-item__summary');
             if (summary) summary.setAttribute('aria-pressed', String(isSelected));
-            let stateName = 'stopped';
-            let statusText = t('status_stopped');
-            if (st.status === 'starting' || st.status === 'stopping' || st.status === 'reconnecting') {
-                stateName = st.status;
-                statusText = tunnelStatusText(st);
-            } else if (st.running) {
-                stateName = 'running';
-                statusText = t('status_running');
-            } else if (st.status === 'error') {
-                stateName = 'error';
-                statusText = t('status_error');
-            }
-            item.dataset.state = stateName;
+            const view = tunnelPresentation(st, state.statusFailCount >= 3);
+            const statusText = state.statusFailCount >= 3 ? t('status_stale') : tunnelStatusText(st);
+            updateHealthAnimal(item.querySelector('.health-animal'), st, state.statusFailCount >= 3);
+            item.dataset.state = view.state;
 
             const runtime = item.querySelector('.tunnel-profile-item__runtime');
             if (runtime) runtime.textContent = statusText;
@@ -540,6 +610,8 @@
                 const fullStatus = protoText ? `${statusText} · ${protoText}` : statusText;
                 const titleParts = [name, remote, fullStatus];
                 if (st.status === 'error' && st.error) titleParts.push(st.error);
+                if (st.health_error) titleParts.push(st.health_error);
+                titleParts.push(lastCheckedText(st));
                 summary.title = titleParts.filter(Boolean).join(' · ');
                 summary.setAttribute('aria-label', summary.title);
             }
@@ -763,6 +835,11 @@
 
     /* ---- Export ---- */
     const ns = window.cfui;
+    ns.healthAnimalPresentation = healthAnimalPresentation;
+    ns.createHealthAnimal = createHealthAnimal;
+    ns.updateHealthAnimal = updateHealthAnimal;
+    ns.tunnelPresentation = tunnelPresentation;
+    ns.tunnelOverview = tunnelOverview;
     ns.readConfigFromForm = readConfigFromForm;
     ns.writeConfigToForm = writeConfigToForm;
     ns.fetchConfig = fetchConfig;

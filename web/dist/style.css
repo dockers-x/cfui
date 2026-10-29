@@ -12,6 +12,7 @@
     --state-ok-text: #08783F;
     --state-ok-soft: rgba(15, 157, 88, 0.12);
     --state-warn: #D97706;
+    --health-warn: #A17C00;
     --state-warn-text: #92400E;
     --state-warn-soft: rgba(217, 119, 6, 0.12);
     --state-error: #DC2626;
@@ -92,6 +93,7 @@
 }
 
 [data-theme="dark"] {
+    --health-warn: #FACC15;
     --bg: #0B0D10;
     --bg-elevated: #15181D;
     --surface: #15181D;
@@ -580,16 +582,6 @@ html[data-workspace="local"] #panel-oauth {
     background: var(--state-ok);
 }
 
-/* Live "heartbeat" ring — signals an active, connected tunnel */
-.status-pill[data-state="ok"] .dot::after {
-    content: "";
-    position: absolute;
-    inset: -3px;
-    border-radius: 50%;
-    border: 1.5px solid var(--state-ok);
-    animation: ping 1.9s var(--ease-out) infinite;
-}
-
 .status-pill[data-state="error"] {
     color: var(--state-error-text);
     background: var(--state-error-soft);
@@ -618,12 +610,12 @@ html[data-workspace="local"] #panel-oauth {
 
 .status-pill[data-state="offline"] .dot {
     background: var(--state-neutral);
-    animation: blink 1.1s ease-in-out infinite;
+    animation: none;
 }
 
 .status-pill[data-state="loading"] .dot {
     background: var(--state-warn);
-    animation: blink 1.1s ease-in-out infinite;
+    animation: none;
 }
 
 @keyframes blink {
@@ -897,7 +889,7 @@ html[data-workspace="local"] #panel-oauth {
 
 .tunnel-profile-item[data-state="running"] .tunnel-profile-item__led {
     background: var(--tunnel-led-running);
-    animation: pulse 2s infinite;
+    animation: none;
 }
 
 .tunnel-profile-item[data-state="stopped"] .tunnel-profile-item__led {
@@ -906,8 +898,12 @@ html[data-workspace="local"] #panel-oauth {
 
 .tunnel-profile-item[data-state="error"] .tunnel-profile-item__led {
     background: var(--tunnel-led-error);
-    animation: blink 0.8s infinite;
+    animation: none;
 }
+
+.tunnel-profile-item[data-state="disconnected"] .tunnel-profile-item__led { background: var(--state-error); }
+.tunnel-profile-item[data-state="unknown"] .tunnel-profile-item__led,
+.tunnel-profile-item[data-state="degraded"] .tunnel-profile-item__led { background: var(--state-warn); }
 
 .tunnel-profile-item[data-state="starting"] .tunnel-profile-item__led,
 .tunnel-profile-item[data-state="stopping"] .tunnel-profile-item__led,
@@ -6691,4 +6687,64 @@ details.oauth-form-section > summary {
     .toast-viewport {
         display: none !important;
     }
+}
+
+/* Official react-animals artwork; health color is separate from lifecycle text. */
+.health-animal {
+    --animal-color: var(--state-neutral);
+    --animal-image: url('/icons/react-animals/rabbit.png');
+    position: relative;
+    display: inline-block;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--animal-color);
+    cursor: pointer;
+    border-radius: var(--r-control);
+    touch-action: manipulation;
+}
+.health-animal[data-health="connected"] { --animal-color: var(--state-ok); --animal-image: url('/icons/react-animals/panda.png'); }
+.health-animal[data-health="degraded"],
+.health-animal[data-health="recovering"] { --animal-color: var(--health-warn); --animal-image: url('/icons/react-animals/otter.png'); }
+.health-animal[data-health="error"],
+.health-animal[data-health="disconnected"] { --animal-color: var(--state-error); --animal-image: url('/icons/react-animals/grizzly.png'); }
+.health-animal:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+.health-animal__window {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 6px;
+    height: 54px;
+    overflow: hidden;
+    pointer-events: none;
+}
+.health-animal__art {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    transform: translateY(10px);
+    width: 44px;
+    height: 44px;
+    background-color: var(--animal-color);
+    mask: var(--animal-image) center / contain no-repeat;
+    transition: transform 180ms ease-out, background-color 180ms ease-out;
+}
+.health-animal:focus-visible .health-animal__art,
+.health-animal[aria-expanded="true"] .health-animal__art { transform: translateY(0); }
+@media (hover: hover) and (pointer: fine) {
+    .health-animal:hover .health-animal__art { transform: translateY(0); }
+}
+.status-pill { transition: color 180ms ease-out, background-color 180ms ease-out; }
+.status-pill:has(.health-animal) { padding-left: 0; gap: 0; }
+.tunnel-profile-item { overflow: visible; }
+.tunnel-profile-item__summary { min-height: 48px; padding-left: 48px; }
+.tunnel-profile-item > .health-animal { position: absolute; z-index: 2; left: 2px; top: 2px; }
+@media (prefers-reduced-motion: reduce) {
+    .health-animal__art, .status-pill { transition: none; }
 }

@@ -10,7 +10,7 @@ import (
 
 func TestBuildArgsMinimal(t *testing.T) {
 	args := BuildArgs(Options{Token: "tok"}, "auto", "")
-	want := []string{"cloudflared", "tunnel", "--no-autoupdate", "run", "--token", "tok"}
+	want := []string{"cloudflared", "tunnel", "--no-autoupdate", "run", "--token", "tok", "--protocol", "auto"}
 	if !reflect.DeepEqual(args, want) {
 		t.Fatalf("BuildArgs = %v, want %v", args, want)
 	}
@@ -312,25 +312,17 @@ func TestBackoffDecayResetsAttempts(t *testing.T) {
 
 func TestInstanceProtocolSelection(t *testing.T) {
 	inst := NewInstance("test", func() (Options, error) { return Options{Token: "tok"}, nil })
-
 	inst.mu.Lock()
-	// Explicit protocol always wins.
-	if got := inst.selectProtocol("http2"); got != "http2" {
-		t.Fatalf("explicit protocol = %q, want http2", got)
+	defer inst.mu.Unlock()
+	for _, protocol := range []string{"http2", "quic", "auto", ""} {
+		want := protocol
+		if want == "" {
+			want = "auto"
+		}
+		if got := inst.selectProtocol(protocol); got != want {
+			t.Fatalf("selectProtocol(%q) = %q, want %q", protocol, got, want)
+		}
 	}
-	// Back to auto: keeps current until failures accumulate.
-	inst.currentProtocol = "quic"
-	if got := inst.selectProtocol("auto"); got != "quic" {
-		t.Fatalf("auto protocol = %q, want quic", got)
-	}
-	inst.protocolFailures["quic"] = maxProtocolFailuresBeforeSwitch
-	if got := inst.selectProtocol("auto"); got != "http2" {
-		t.Fatalf("after failures protocol = %q, want http2", got)
-	}
-	if inst.protocolFailures["quic"] != 0 {
-		t.Fatalf("quic failures not reset after switch: %d", inst.protocolFailures["quic"])
-	}
-	inst.mu.Unlock()
 }
 
 func TestInstanceStartValidation(t *testing.T) {

@@ -2364,3 +2364,24 @@ other = "Not applicable"
 
 [rule_origin_error]
 other = "Check failed"
+
+[status_connected]
+other = "Connected"
+
+[status_degraded]
+other = "Connected, reduced redundancy"
+
+[status_disconnected]
+other = "Disconnected"
+
+[status_unknown]
+other = "Connection unknown"
+
+[status_stale]
+other = "Status unavailable (cannot reach cfui)"
+
+[status_last_checked]
+other = "Last checked: {time}"
+
+[tunnels_active_ratio]
+other = "{n}/{m} active"

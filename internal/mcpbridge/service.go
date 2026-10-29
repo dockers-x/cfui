@@ -1,6 +1,7 @@
 package mcpbridge
 
 import (
+	"cfui/internal/cloudflared"
 	"cfui/internal/config"
 	"cfui/internal/ddns"
 	"cfui/internal/logger"
@@ -10,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"cfui/version"
 
@@ -125,7 +127,7 @@ func (s *Service) newMCPServer() *mcp.Server {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "cfui_get_status",
-		Description: "Get the local cloudflared tunnel running status, status text, active protocol, and last error.",
+		Description: "Get local tunnel lifecycle, edge connectivity, connection counts, observation times, protocol, and retry details.",
 	}, s.getStatus)
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "cfui_get_config",
@@ -216,28 +218,52 @@ type StatusResponse struct {
 
 type EmptyInput struct{}
 
+// TunnelStatusOutput preserves lifecycle and edge connection health independently.
 type TunnelStatusOutput struct {
-	Running  bool   `json:"running"`
-	Status   string `json:"status"`
-	Protocol string `json:"protocol"`
-	Error    string `json:"error,omitempty"`
+	Running             bool       `json:"running"`
+	Status              string     `json:"status"`
+	Protocol            string     `json:"protocol"`
+	RetryCount          int        `json:"retry_count"`
+	NextRetryAt         *time.Time `json:"next_retry_at,omitempty"`
+	Error               string     `json:"error,omitempty"`
+	Connectivity        string     `json:"connectivity"`
+	ReadyConnections    uint       `json:"ready_connections"`
+	ExpectedConnections uint       `json:"expected_connections"`
+	LastCheckedAt       *time.Time `json:"last_checked_at,omitempty"`
+	LastConnectedAt     *time.Time `json:"last_connected_at,omitempty"`
+	HealthError         string     `json:"health_error"`
+}
+
+// TunnelStatusFrom is shared by the HTTP API and MCP to keep their semantics equal.
+func TunnelStatusFrom(st cloudflared.Status) TunnelStatusOutput {
+	out := TunnelStatusOutput{
+		Running: st.Running, Status: st.Phase, Protocol: st.Protocol,
+		RetryCount: st.RetryCount, NextRetryAt: st.NextRetryAt,
+		Connectivity: st.Connectivity, ReadyConnections: st.ReadyConnections,
+		ExpectedConnections: st.ExpectedConnections, LastCheckedAt: st.LastCheckedAt,
+		LastConnectedAt: st.LastConnectedAt, HealthError: st.HealthError,
+	}
+	if out.Status == "" {
+		out.Status = "stopped"
+		if st.Running {
+			out.Status = "running"
+		}
+	}
+	if out.Connectivity == "" {
+		out.Connectivity = "unknown"
+	}
+	if st.LastError != nil {
+		out.Error = st.LastError.Error()
+	}
+	return out
 }
 
 func (s *Service) getStatus(ctx context.Context, req *mcp.CallToolRequest, in EmptyInput) (*mcp.CallToolResult, TunnelStatusOutput, error) {
 	if s.runner == nil {
 		return nil, TunnelStatusOutput{}, fmt.Errorf("runner is not available")
 	}
-	running, err, protocol := s.runner.Status()
-	status := "stopped"
-	if running {
-		status = "running"
-	}
-	out := TunnelStatusOutput{Running: running, Status: status, Protocol: protocol}
-	if err != nil {
-		out.Status = "error"
-		out.Error = err.Error()
-	}
-	return nil, out, nil
+	st, _ := s.runner.ProfileStatus("")
+	return nil, TunnelStatusFrom(st), nil
 }
 
 type ConfigOutput struct {

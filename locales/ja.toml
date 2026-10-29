@@ -2364,3 +2364,24 @@ other = "対象外"
 
 [rule_origin_error]
 other = "確認失敗"
+
+[status_connected]
+other = "接続済み"
+
+[status_degraded]
+other = "接続済み（冗長性低下）"
+
+[status_disconnected]
+other = "切断"
+
+[status_unknown]
+other = "接続状態不明"
+
+[status_stale]
+other = "状態取得不可（cfui に接続できません）"
+
+[status_last_checked]
+other = "最終確認：{time}"
+
+[tunnels_active_ratio]
+other = "{n}/{m} 稼働中"

@@ -1,6 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"image/png"
+	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
@@ -96,5 +101,30 @@ func TestIndexElementIDsRemainUnique(t *testing.T) {
 			t.Fatalf("duplicate element id %q", match[1])
 		}
 		seen[match[1]] = true
+	}
+}
+
+func TestAnimalPNGsEmbeddedAndServed(t *testing.T) {
+	fsys, err := fs.Sub(assets, "web/dist")
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := http.FileServer(http.FS(fsys))
+	for _, animal := range []string{"panda", "otter", "grizzly", "rabbit"} {
+		t.Run(animal, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/icons/react-animals/"+animal+".png", nil)
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/png" {
+				t.Fatalf("embedded image unavailable: status=%d type=%q", response.Code, response.Header().Get("Content-Type"))
+			}
+			image, err := png.DecodeConfig(bytes.NewReader(response.Body.Bytes()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if image.Width != 129 || image.Height < 128 || image.Height > 129 {
+				t.Fatalf("unexpected embedded image dimensions: %dx%d", image.Width, image.Height)
+			}
+		})
 	}
 }

@@ -2364,3 +2364,24 @@ other = "无需检测"
 
 [rule_origin_error]
 other = "检测失败"
+
+[status_connected]
+other = "已连接"
+
+[status_degraded]
+other = "已连接，冗余连接减少"
+
+[status_disconnected]
+other = "已断开"
+
+[status_unknown]
+other = "连接状态未知"
+
+[status_stale]
+other = "状态不可用（无法连接 cfui）"
+
+[status_last_checked]
+other = "最近检测：{time}"
+
+[tunnels_active_ratio]
+other = "{n}/{m} 个活动实例"

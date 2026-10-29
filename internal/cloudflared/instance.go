@@ -13,11 +13,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const (
-	defaultStopTimeout = 30 * time.Second
-
-	maxProtocolFailuresBeforeSwitch = 3
-)
+const defaultStopTimeout = 30 * time.Second
 
 // ErrAlreadyRunning is returned by Start when the instance is running.
 var ErrAlreadyRunning = errors.New("already running")
@@ -37,9 +33,15 @@ type Status struct {
 	LastError   error
 	RetryCount  int
 	NextRetryAt *time.Time
-	// Protocol is the transport currently selected by the fallback logic
-	// (quic, http2, or auto before the first start).
-	Protocol string
+	// Protocol reports the configured transport. "auto" delegates negotiation
+	// and fallback to cloudflared; it does not claim an observed wire protocol.
+	Protocol            string
+	Connectivity        string
+	ReadyConnections    uint
+	ExpectedConnections uint
+	LastCheckedAt       *time.Time
+	LastConnectedAt     *time.Time
+	HealthError         string
 }
 
 // Instance manages the lifecycle of one cloudflared tunnel: start, stop,
@@ -69,24 +71,29 @@ type Instance struct {
 	nextRetryAt    time.Time
 	restartBackoff *backoff.Backoff
 
-	// Protocol fallback management (for auto mode).
 	currentProtocol     string
-	protocolFailures    map[string]int
-	lastProtocolSwitch  time.Time
-	protocolSwitchCount int
+	connectivity        string
+	readyConnections    uint
+	expectedConnections uint
+	lastCheckedAt       time.Time
+	lastConnectedAt     time.Time
+	healthError         string
+	healthySince        time.Time
+	autoRestart         bool
 }
 
 // NewInstance creates an instance named after its tunnel profile. The name
 // only appears in logs and error messages.
 func NewInstance(name string, optsFn OptionsProvider) *Instance {
 	return &Instance{
-		name:             name,
-		optsFn:           optsFn,
-		stopTimeout:      defaultStopTimeout,
-		protocolFailures: make(map[string]int),
-		restartBackoff:   NewRestartBackoff(),
-		currentProtocol:  "auto",
-		phase:            "stopped",
+		name:                name,
+		optsFn:              optsFn,
+		stopTimeout:         defaultStopTimeout,
+		restartBackoff:      NewRestartBackoff(),
+		currentProtocol:     "auto",
+		phase:               "stopped",
+		connectivity:        "unknown",
+		expectedConnections: 4,
 	}
 }
 
@@ -139,6 +146,15 @@ func (i *Instance) start(expectedGeneration *uint64, expectedCtx context.Context
 	i.lastError = nil
 	i.nextRetryAt = time.Time{}
 	i.restartRequested = false
+	i.connectivity = "unknown"
+	i.readyConnections = 0
+	i.lastCheckedAt = time.Time{}
+	i.healthError = ""
+	i.healthySince = time.Time{}
+	if expectedGeneration == nil {
+		i.restartCount = 0
+		i.restartBackoff.Reset()
+	}
 	i.mu.Unlock()
 	if oldCancel != nil {
 		oldCancel()
@@ -167,6 +183,8 @@ func (i *Instance) start(expectedGeneration *uint64, expectedCtx context.Context
 		return context.Canceled
 	}
 	i.running = true
+	i.autoRestart = opts.AutoRestart
+	i.expectedConnections = expectedHAConnections(opts)
 	i.mu.Unlock()
 
 	logInfof("Starting cloudflared tunnel %q", i.name)
@@ -181,6 +199,10 @@ func (i *Instance) start(expectedGeneration *uint64, expectedCtx context.Context
 // and a stray token could stop an unrelated instance.
 func (i *Instance) Stop() error {
 	i.mu.Lock()
+	i.connectivity = "unknown"
+	i.readyConnections = 0
+	i.healthError = ""
+	i.healthySince = time.Time{}
 	if !i.running {
 		cancel := i.cancel
 		if cancel != nil {
@@ -231,6 +253,7 @@ func (i *Instance) Stop() error {
 		if i.done == done && i.running {
 			i.phase = "stopping"
 			i.lastError = timeoutErr
+			i.healthError = timeoutErr.Error()
 		}
 		i.mu.Unlock()
 		return timeoutErr
@@ -242,11 +265,15 @@ func (i *Instance) Status() Status {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	status := Status{
-		Running:    i.running,
-		Phase:      i.phase,
-		LastError:  i.lastError,
-		RetryCount: i.restartCount,
-		Protocol:   i.currentProtocol,
+		Running:             i.running,
+		Phase:               i.phase,
+		LastError:           i.lastError,
+		RetryCount:          i.restartCount,
+		Protocol:            i.currentProtocol,
+		Connectivity:        i.connectivity,
+		ReadyConnections:    i.readyConnections,
+		ExpectedConnections: i.expectedConnections,
+		HealthError:         i.healthError,
 	}
 	if status.Phase == "" {
 		if status.Running {
@@ -254,6 +281,12 @@ func (i *Instance) Status() Status {
 		} else {
 			status.Phase = "stopped"
 		}
+	}
+	if !i.lastCheckedAt.IsZero() {
+		status.LastCheckedAt = new(i.lastCheckedAt)
+	}
+	if !i.lastConnectedAt.IsZero() {
+		status.LastConnectedAt = new(i.lastConnectedAt)
 	}
 	if !i.nextRetryAt.IsZero() {
 		next := i.nextRetryAt
@@ -295,78 +328,14 @@ func (i *Instance) markRunning(generation uint64) {
 	i.mu.Unlock()
 }
 
-// selectProtocol determines which protocol to use based on configuration and
-// failure history. Callers must hold i.mu.
+// selectProtocol preserves cloudflared's native auto negotiation and fallback.
+// Callers must hold i.mu.
 func (i *Instance) selectProtocol(configProtocol string) string {
-	// If the user explicitly chose a protocol, always use it.
-	if configProtocol != "" && configProtocol != "auto" {
-		i.currentProtocol = configProtocol
-		return configProtocol
+	if configProtocol == "" {
+		configProtocol = "auto"
 	}
-
-	// Auto mode: cycle quic -> http2 -> quic after repeated failures.
-	if i.protocolFailures[i.currentProtocol] >= maxProtocolFailuresBeforeSwitch {
-		var nextProtocol string
-		if i.currentProtocol == "quic" || i.currentProtocol == "auto" {
-			nextProtocol = "http2"
-		} else {
-			nextProtocol = "quic"
-		}
-
-		logWarnf("Tunnel %q: protocol %s has failed %d times, switching to %s",
-			i.name, i.currentProtocol, i.protocolFailures[i.currentProtocol], nextProtocol)
-
-		// Reset the failing protocol's count so it gets a fresh start if we
-		// ever switch back.
-		i.protocolFailures[i.currentProtocol] = 0
-
-		i.currentProtocol = nextProtocol
-		i.lastProtocolSwitch = time.Now()
-		i.protocolSwitchCount++
-
-		return nextProtocol
-	}
-
-	if i.currentProtocol == "" || i.currentProtocol == "auto" {
-		i.currentProtocol = "quic"
-	}
-	return i.currentProtocol
-}
-
-// recordProtocolSuccess clears failure history after a clean exit so no
-// protocol stays blacklisted forever.
-func (i *Instance) recordProtocolSuccess() {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-
-	if i.currentProtocol != "" && i.currentProtocol != "auto" {
-		logInfof("Tunnel %q: protocol %s connected successfully, resetting failure counts", i.name, i.currentProtocol)
-
-		i.restartCount = 0
-		if i.restartBackoff != nil {
-			i.restartBackoff.Reset()
-		}
-		for proto := range i.protocolFailures {
-			i.protocolFailures[proto] = 0
-		}
-	}
-}
-
-// recordProtocolFailure increments the failure count for the current protocol
-// when the error looks transport-related.
-func (i *Instance) recordProtocolFailure(err error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-
-	if i.currentProtocol == "" || i.currentProtocol == "auto" {
-		i.currentProtocol = "quic"
-	}
-
-	if IsProtocolRelatedError(err) {
-		i.protocolFailures[i.currentProtocol]++
-		logWarnf("Tunnel %q: protocol %s failure count: %d (error: %v)",
-			i.name, i.currentProtocol, i.protocolFailures[i.currentProtocol], err)
-	}
+	i.currentProtocol = configProtocol
+	return configProtocol
 }
 
 func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct{}, generation uint64) {
@@ -393,6 +362,9 @@ func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct
 		restartRequested := i.restartRequested
 		i.restartRequested = false
 		i.running = false
+		i.connectivity = "unknown"
+		i.readyConnections = 0
+		i.healthySince = time.Time{}
 		if !shouldRestartAfterExit(ctx, restartAllowed, restartRequested) {
 			if ctx.Err() != nil {
 				i.phase = "stopped"
@@ -447,10 +419,6 @@ func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct
 
 	i.mu.Lock()
 	selectedProtocol := i.selectProtocol(opts.Protocol)
-	if opts.Protocol == "auto" {
-		logDebugf("Tunnel %q protocol failure counts: quic=%d, http2=%d",
-			i.name, i.protocolFailures["quic"], i.protocolFailures["http2"])
-	}
 	i.mu.Unlock()
 
 	readinessURL := i.configureReadinessProbe(&opts)
@@ -462,13 +430,21 @@ func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct
 	// The run we are about to launch registers an upstream signal watcher;
 	// schedule pulses that strip it (and any stale ones) again.
 	scheduleSignalReclaim()
+	probeCtx, stopProbe := context.WithCancel(ctx)
+	defer stopProbe()
 	if readinessURL != "" {
-		go i.monitorReadinessForRun(ctx, readinessURL, generation)
+		go i.monitorReadinessForRun(probeCtx, readinessURL, generation)
 	} else {
 		i.markRunning(generation)
+		i.mu.Lock()
+		if i.generation == generation && i.running && ctx.Err() == nil {
+			i.healthError = "Readiness probe unavailable; check the local metrics listener address"
+		}
+		i.mu.Unlock()
 	}
 
 	err := app.RunContext(ctx, args)
+	stopProbe()
 	restartAllowed = shouldAutoRestartAfterRun(ctx, err)
 
 	// Context cancellation means a user-requested stop.
@@ -487,14 +463,11 @@ func (i *Instance) runTunnel(ctx context.Context, opts Options, done chan struct
 		i.lastError = err
 		i.mu.Unlock()
 
-		i.recordProtocolFailure(err)
-
 		if !restartAllowed {
 			logWarnf("Tunnel %q: non-retryable error detected: %v", i.name, err)
 			return
 		}
 	} else {
-		i.recordProtocolSuccess()
 		logInfof("Tunnel %q exited cleanly", i.name)
 	}
 }

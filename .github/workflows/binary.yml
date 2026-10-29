@@ -81,6 +81,14 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: Set up Node for frontend behavior tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Test tunnel status presentation
+        run: node --test web/tests/*.test.cjs
+
       - name: Create or reuse draft release
         id: release
         uses: actions/github-script@v8

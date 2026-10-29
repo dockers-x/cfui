@@ -43,8 +43,8 @@ func (o Options) Validate() error {
 }
 
 // BuildArgs assembles the cloudflared CLI invocation for the given options.
-// protocol is the concrete protocol chosen by the fallback logic (may differ
-// from o.Protocol in auto mode); configFile is the optional temporary YAML
+// protocol preserves the configured protocol, including upstream auto fallback;
+// configFile is the optional temporary YAML
 // config path used for custom tags. cloudflared has two flag scopes here:
 // parent tunnel-command flags must sit before "run", and run subcommand flags
 // must sit after it.
@@ -94,7 +94,7 @@ func BuildArgs(o Options, protocol, configFile string) []string {
 
 	args = append(args, "run", "--token", o.Token)
 
-	if protocol != "" && protocol != "auto" {
+	if protocol != "" {
 		args = append(args, "--protocol", protocol)
 	}
 	if o.PostQuantum {
