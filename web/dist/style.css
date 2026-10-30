@@ -6867,3 +6867,24 @@ details.oauth-form-section > summary {
         transform: translateX(-50%);
     }
 }
+
+
+/* A compact protocol observation indicator, shared by the header and cards. */
+.protocol-loader {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    vertical-align: -2px;
+    color: inherit;
+    animation: protocol-loader-spin 800ms linear infinite;
+}
+.tunnel-profile-item__protocol[data-protocol-label="—"] {
+    justify-content: center;
+    min-width: 38px;
+}
+@keyframes protocol-loader-spin {
+    to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .protocol-loader { animation: none; }
+}

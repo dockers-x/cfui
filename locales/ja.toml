@@ -2394,3 +2394,6 @@ other = "プロトコル表示の切替を再開"
 
 [protocol_display_set]
 other = "接続プロトコル：{protocols}"
+
+[protocol_pending]
+other = "接続プロトコルを確認中"

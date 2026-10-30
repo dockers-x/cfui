@@ -34,7 +34,7 @@ function harness({reduced = false} = {}) {
             now = until;
         },
     };
-    const value = {};
+    const value = animalNode();
     const proto = {...animalNode(), querySelector() { return value; }};
     const dot = {hidden: false};
     const pillText = {removeAttribute() {}};
@@ -43,7 +43,7 @@ function harness({reduced = false} = {}) {
     }, contains(element) { return element === proto; }};
     const network = {fail: true};
     const rows = ['a', 'b'].map(key => ({
-        dataset: {key}, classList: {toggle() {}}, animal: animalNode(), protocol: {},
+        dataset: {key}, classList: {toggle() {}}, animal: animalNode(), protocol: animalNode(),
         querySelector(selector) {
             if (selector === '.health-animal') return this.animal;
             if (selector.includes('runtime')) return this.runtime ||= {};
@@ -298,7 +298,8 @@ test('every card shows observed protocol or unknown while stopped cards retain c
     network.fail = false;
     await cfui.fetchStatus();
     assert.equal(rows[0].protocol.textContent, 'HTTP2');
-    assert.equal(rows[1].protocol.textContent, '—');
+    assert.match(rows[1].protocol.innerHTML, /<svg class="protocol-loader"/);
+    assert.equal(rows[1].protocol.attributes['aria-label'], 'protocol_pending');
     assert.equal(rows[0].protocol.hidden, false);
     assert.equal(rows[1].protocol.hidden, false);
 });
@@ -340,4 +341,31 @@ test('one tunnel can show mixed active protocols on its card', async () => {
     network.fail = false;
     await cfui.fetchStatus();
     assert.equal(rows[0].protocol.textContent, 'HTTP2 / QUIC');
+});
+
+
+test('pending protocol uses an accessible SVG in both slots without resetting on polling', async () => {
+    const {cfui, state, network, rows, value, proto, pill} = harness();
+    state.tunnelStatuses = {a: {running: true, status: 'starting'}, b: {running: true, status: 'reconnecting'}};
+    network.fail = false;
+    await cfui.fetchStatus();
+    const svg = value.innerHTML;
+    assert.match(svg, /<svg class="protocol-loader"/);
+    assert.match(svg, /aria-hidden="true"/);
+    assert.equal(value.attributes['aria-label'], 'protocol_pending');
+    assert.match(proto.attributes['aria-label'], /protocol_pending/);
+    assert.match(pill.attributes['aria-label'], /protocol_pending/);
+    assert.doesNotMatch(proto.attributes['aria-label'], /—/);
+    assert.equal(rows[0].protocol.innerHTML, svg);
+    assert.equal(rows[1].protocol.innerHTML, svg);
+    let writes = 0;
+    Object.defineProperty(value, 'innerHTML', {get: () => svg, set: () => {writes++;}});
+    await cfui.fetchStatus();
+    assert.equal(writes, 0);
+    state.tunnelStatuses.a.active_protocols = ['quic'];
+    state.tunnelStatuses.b.active_protocols = ['quic'];
+    await cfui.fetchStatus();
+    assert.equal(value.textContent, 'QUIC');
+    assert.equal(rows[0].protocol.textContent, 'QUIC');
+    assert.equal(rows[1].protocol.textContent, 'QUIC');
 });

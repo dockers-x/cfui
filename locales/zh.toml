@@ -2394,3 +2394,6 @@ other = "继续协议轮播"
 
 [protocol_display_set]
 other = "连接协议：{protocols}"
+
+[protocol_pending]
+other = "正在获取连接协议"

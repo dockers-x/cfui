@@ -2394,3 +2394,6 @@ other = "Resume protocol rotation"
 
 [protocol_display_set]
 other = "Transport protocols: {protocols}"
+
+[protocol_pending]
+other = "Detecting connection protocol"

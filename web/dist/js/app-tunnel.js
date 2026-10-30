@@ -193,6 +193,23 @@
     const protocolRotation = { labels: [], signature: '', index: 0, timer: null, fadeTimer: null, hovered: false, focused: false, paused: false, pill: null };
     const protocolMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
 
+    // Shared by the header slot and cards; only the static SVG is inserted as HTML.
+    const protocolLoader = '<svg class="protocol-loader" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="14" height="14" aria-hidden="true" focusable="false"><circle cx="20" cy="20" r="13.5" fill="none" stroke="currentColor" stroke-width="3" opacity=".2"/><path d="M20 6.5a13.5 13.5 0 0 1 13.5 13.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+
+    function protocolDescription(label) {
+        return label === '—' ? t('protocol_pending') : label;
+    }
+
+    function renderProtocolLabel(element, label) {
+        if (!element) return;
+        if (element.dataset.protocolLabel !== label) {
+            element.dataset.protocolLabel = label;
+            if (label === '—') element.innerHTML = protocolLoader;
+            else element.textContent = label;
+        }
+        element.setAttribute('aria-label', protocolDescription(label));
+    }
+
     function profileProtocolLabels(profile, status = {}) {
         if (status.running || ['starting', 'stopping', 'reconnecting'].includes(status.status)) {
             const active = Array.isArray(status.active_protocols) ? status.active_protocols : [];
@@ -222,11 +239,11 @@
     function renderHeaderProtocol() {
         const slot = protocolRotation.pill?.querySelector('.proto');
         if (!slot) return;
-        slot.querySelector('.proto__value').textContent = protocolRotation.labels[protocolRotation.index] || 'AUTO';
+        renderProtocolLabel(slot.querySelector('.proto__value'), protocolRotation.labels[protocolRotation.index] || 'AUTO');
         slot.disabled = protocolRotation.labels.length < 2;
         if (slot.getAttribute('aria-pressed') !== String(protocolRotation.paused)) slot.setAttribute('aria-pressed', String(protocolRotation.paused));
         const action = t(protocolRotation.paused ? 'protocol_rotation_resume' : 'protocol_rotation_pause');
-        const label = [t('protocol'), protocolRotation.labels.join(' / '), slot.disabled ? '' : action].filter(Boolean).join(' · ');
+        const label = [t('protocol'), protocolRotation.labels.map(protocolDescription).join(' / '), slot.disabled ? '' : action].filter(Boolean).join(' · ');
         if (slot.getAttribute('aria-label') !== label) slot.setAttribute('aria-label', label);
         slot.title = slot.disabled ? '' : action;
     }
@@ -476,7 +493,7 @@
             pill.querySelector('.health-animal')?.remove();
             const dot = pill.querySelector('.dot');
             if (dot) dot.hidden = false;
-            pill.setAttribute('aria-label', headerLabel + ' · ' + t('protocol_display_set', { protocols: labels.join(' / ') }));
+            pill.setAttribute('aria-label', headerLabel + ' · ' + t('protocol_display_set', { protocols: labels.map(protocolDescription).join(' / ') }));
         }
 
         /* Capture the running config signature once per run so the
@@ -693,14 +710,14 @@
             const protoText = profileProtocolLabels(profile, st).join(' / ');
             const protocol = item.querySelector('.tunnel-profile-item__protocol');
             if (protocol) {
-                protocol.textContent = protoText;
+                renderProtocolLabel(protocol, protoText);
                 protocol.hidden = !protoText;
             }
 
             if (summary) {
                 const name = item.querySelector('.tunnel-profile-item__name')?.textContent || '';
                 const remote = item.querySelector('.tunnel-profile-item__meta')?.textContent || '';
-                const fullStatus = protoText ? `${statusText} · ${protoText}` : statusText;
+                const fullStatus = protoText ? `${statusText} · ${protocolDescription(protoText)}` : statusText;
                 const titleParts = [name, remote, fullStatus];
                 if (st.status === 'error' && st.error) titleParts.push(st.error);
                 if (st.health_error) titleParts.push(st.health_error);
