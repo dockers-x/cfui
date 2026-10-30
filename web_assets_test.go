@@ -110,7 +110,7 @@ func TestAnimalPNGsEmbeddedAndServed(t *testing.T) {
 		t.Fatal(err)
 	}
 	handler := http.FileServer(http.FS(fsys))
-	for _, animal := range []string{"panda", "otter", "grizzly", "rabbit"} {
+	for _, animal := range []string{"panda", "koala", "grizzly", "rabbit"} {
 		t.Run(animal, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/icons/react-animals/"+animal+".png", nil)
 			response := httptest.NewRecorder()

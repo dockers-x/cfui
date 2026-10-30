@@ -194,7 +194,7 @@
     const protocolMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
 
     // Shared by the header slot and cards; only the static SVG is inserted as HTML.
-    const protocolLoader = '<svg class="protocol-loader" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="14" height="14" aria-hidden="true" focusable="false"><circle cx="20" cy="20" r="13.5" fill="none" stroke="currentColor" stroke-width="3" opacity=".2"/><path d="M20 6.5a13.5 13.5 0 0 1 13.5 13.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+    const protocolLoader = '<svg class="protocol-loader" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 30" width="18" height="18" aria-hidden="true" focusable="false"><rect x="0" y="0" width="4" height="10" rx=".5"/><rect x="10" y="0" width="4" height="10" rx=".5"/><rect x="20" y="0" width="4" height="10" rx=".5"/></svg>';
 
     function protocolDescription(label) {
         return label === '—' ? t('protocol_pending') : label;

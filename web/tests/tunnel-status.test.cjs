@@ -160,7 +160,7 @@ test('vendored PNGs match the pinned original react-animals artwork', () => {
     assert.equal(metadata.version, '0.0.82');
     const hashes = {
         panda: '847235a238b90011ed8648d248f68a9454c7da848676104570b24fa6383372b3',
-        otter: '51caa3a89e23c8c8924027fd78736c70e12b904f608f4e3d1ca9ae9aa0431f83',
+        koala: '0e45fd58e19a7e6ea5ea40efddc4b57b223bc62efd8ffb03c32934a9269a0510',
         grizzly: '143d4c799e0dbfaf7f107328ee38d0132e6eb8d7de5af7cca21cf69cc175f61d',
         rabbit: '5ba9c64d1b32fd21972e45d106b272aa430dc8dc02dc81feb42909f129997b64',
     };
@@ -352,6 +352,8 @@ test('pending protocol uses an accessible SVG in both slots without resetting on
     const svg = value.innerHTML;
     assert.match(svg, /<svg class="protocol-loader"/);
     assert.match(svg, /aria-hidden="true"/);
+    assert.equal((svg.match(/<rect /g) || []).length, 3);
+    assert.doesNotMatch(svg, /<circle|<path/);
     assert.equal(value.attributes['aria-label'], 'protocol_pending');
     assert.match(proto.attributes['aria-label'], /protocol_pending/);
     assert.match(pill.attributes['aria-label'], /protocol_pending/);

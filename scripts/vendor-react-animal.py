@@ -15,7 +15,7 @@ VERSION = "0.0.82"
 SHA512 = "kxuRHOqt1Y+uA1ecuPR0fJhA7o4XXc/rz1rC+dcS1lYC+OkDC+/LrGn5+ixz5IjrImYKAFpni7kNWJ2w45OUiQ=="
 ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / "web/dist/icons/react-animals"
-ANIMALS = ("panda", "otter", "grizzly", "rabbit")
+ANIMALS = ("panda", "koala", "grizzly", "rabbit")
 URL = f"https://registry.npmjs.org/react-animals/-/react-animals-{VERSION}.tgz"
 
 def main():

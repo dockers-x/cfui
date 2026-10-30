@@ -4,7 +4,7 @@ Source: https://github.com/arvinpoddar/react-animals
 Pinned npm release: react-animals@0.0.82
 Original assets (all included byte-for-byte unchanged):
 - panda.png: connected (green)
-- otter.png: degraded / recovering (yellow)
+- koala.png: degraded / recovering (yellow)
 - grizzly.png: disconnected (red)
 - rabbit.png: unknown (neutral gray)
 

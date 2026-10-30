@@ -6709,7 +6709,7 @@ details.oauth-form-section > summary {
 }
 .health-animal[data-health="connected"] { --animal-color: var(--state-ok-text); --animal-image: url('/icons/react-animals/panda.png'); }
 .health-animal[data-health="degraded"],
-.health-animal[data-health="recovering"] { --animal-color: var(--health-warn); --animal-image: url('/icons/react-animals/otter.png'); }
+.health-animal[data-health="recovering"] { --animal-color: var(--health-warn); --animal-image: url('/icons/react-animals/koala.png'); }
 .health-animal[data-health="error"],
 .health-animal[data-health="disconnected"] { --animal-color: var(--state-error-text); --animal-image: url('/icons/react-animals/grizzly.png'); }
 .health-animal:focus-visible {
@@ -6869,22 +6869,31 @@ details.oauth-form-section > summary {
 }
 
 
-/* A compact protocol observation indicator, shared by the header and cards. */
+/* Three staggered bars follow the supplied loading reference. */
 .protocol-loader {
     display: inline-block;
-    width: 14px;
-    height: 14px;
-    vertical-align: -2px;
-    color: inherit;
-    animation: protocol-loader-spin 800ms linear infinite;
+    width: 18px;
+    height: 18px;
+    vertical-align: -3px;
+    color: #ff6700;
+    fill: currentColor;
 }
+.protocol-loader rect {
+    animation: protocol-loader-step 600ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.protocol-loader rect:nth-child(2) { animation-delay: -400ms; }
+.protocol-loader rect:nth-child(3) { animation-delay: -200ms; }
 .tunnel-profile-item__protocol[data-protocol-label="—"] {
     justify-content: center;
     min-width: 38px;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
 }
-@keyframes protocol-loader-spin {
-    to { transform: rotate(360deg); }
+@keyframes protocol-loader-step {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(20px); }
 }
 @media (prefers-reduced-motion: reduce) {
-    .protocol-loader { animation: none; }
+    .protocol-loader rect { animation: none; transform: translateY(10px); }
 }
