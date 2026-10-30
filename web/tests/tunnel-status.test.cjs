@@ -3,7 +3,6 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
-const {createHash} = require('node:crypto');
 
 function animalNode() {
     return {dataset: {}, attributes: {}, events: {}, face: {},
@@ -153,23 +152,15 @@ test('health is represented by official animal state while runtime text remains 
     assert.equal(rows[1].animal.dataset.health, 'recovering');
 });
 
-test('vendored PNGs match the pinned original react-animals artwork', () => {
-    const iconDir = path.join(__dirname, '../dist/icons/react-animals');
-    const metadata = JSON.parse(fs.readFileSync(path.join(iconDir, 'UPSTREAM-package.json'), 'utf8'));
-    assert.equal(metadata.name, 'react-animals');
-    assert.equal(metadata.version, '0.0.82');
-    const hashes = {
-        panda: '847235a238b90011ed8648d248f68a9454c7da848676104570b24fa6383372b3',
-        koala: '0e45fd58e19a7e6ea5ea40efddc4b57b223bc62efd8ffb03c32934a9269a0510',
-        grizzly: '143d4c799e0dbfaf7f107328ee38d0132e6eb8d7de5af7cca21cf69cc175f61d',
-        rabbit: '5ba9c64d1b32fd21972e45d106b272aa430dc8dc02dc81feb42909f129997b64',
-    };
-    for (const [animal, expected] of Object.entries(hashes)) {
-        const image = fs.readFileSync(path.join(iconDir, animal + '.png'));
-        assert.equal(createHash('sha256').update(image).digest('hex'), expected);
-        assert.deepEqual(image.subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+test('owner-provided health PNGs retain transparent 512px canvases', () => {
+    const iconDir = path.join(__dirname, '../dist/icons/tunnel-health');
+    for (const state of ['connected', 'warning', 'error', 'unknown']) {
+        const data = fs.readFileSync(path.join(iconDir, state + '.png'));
+        assert.deepEqual(data.subarray(0, 8), Buffer.from([137,80,78,71,13,10,26,10]));
+        assert.equal(data.readUInt32BE(16), 512);
+        assert.equal(data.readUInt32BE(20), 512);
+        assert.ok(data.length < 1024 * 1024);
     }
-    assert.equal(fs.existsSync(path.join(iconDir, 'fox.svg')), false);
 });
 
 test('lifecycle error is red and stopped instances never keep stale connected health', () => {

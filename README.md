@@ -18,7 +18,7 @@ The web UI is built into the binary. Configuration is stored in a local SQLite d
   - Start or stop each tunnel profile independently; multiple profiles can run at the same time.
   - Configure auto-start, auto-restart, protocol, region, retries, graceful shutdown, metrics, post-quantum mode, edge IP version, edge bind address, TLS verification, and extra cloudflared arguments.
   - Show tunnel status, active transport protocols, last error, and version/build information.
-  - Report edge connectivity independently of the running instance, including active connection counts and the last health observation. Health checks continue when auto-restart is disabled. Small embedded animal PNG indicators on each tunnel card use green for healthy, yellow for warning/recovery, red for errors, and gray for unknown; hover, focus, or tap to reveal the full icon. The header summarizes observed active transport protocols (QUIC/HTTP2), including automatic negotiation and fallback; stopped tunnels show their configured protocol. It does so without repeating the animal, and each card shows its own protocol. A compact embedded orange SVG loading animation with three staggered bars appears while the connection protocol is being detected, remaining still with reduced motion. The header shows one protocol at a time; mixed protocols rotate gently, with transitions disabled when reduced motion is requested.
+  - Report edge connectivity independently of the running instance, including active connection counts and the last health observation. Health checks continue when auto-restart is disabled. Owner-provided full-color animal PNGs on each tunnel card hold green (healthy), yellow (warning/recovery), red (error), or gray (stopped/unknown) signs; hover, focus, or tap to reveal the full icon. The header summarizes observed active transport protocols (QUIC/HTTP2), including automatic negotiation and fallback; stopped tunnels show their configured protocol. It does so without repeating the animal, and each card shows its own protocol. A compact embedded orange SVG loading animation with three staggered bars appears while the connection protocol is being detected, remaining still with reduced motion. The header shows one protocol at a time; mixed protocols rotate gently, with transitions disabled when reduced motion is requested.
   - Preserve cloudflared's automatic QUIC/HTTP2 selection and keep recovering during long outages, switching to jittered 5–6 minute retries after ten fast attempts.
 
 - **Remote Tunnel Manager**
@@ -699,3 +699,14 @@ an explicitly selected existing tag.
 ## License
 
 This project is licensed under the MIT License.
+
+### LazyCat dynamic launcher icon
+
+On LazyCat OS 1.6.2+, cfui detects `/lzcapp/run` and writes the same health artwork
+to `/lzcapp/run/launcher-icon/icon.png`. The icon summarizes locally enabled tunnel
+profiles using the header's health priority. It updates only when that state
+changes, with atomic replacement; a clean shutdown shows the gray unknown icon.
+Runtime icons are regenerated after app restart. User-specific `<uid>.png`
+overrides take priority over this deployment icon. Other environments do not
+create this runtime directory. No manifest icon field is required; packages that
+require this feature should declare `min_os_version: 1.6.2`.

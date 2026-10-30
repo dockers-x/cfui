@@ -6690,10 +6690,10 @@ details.oauth-form-section > summary {
     }
 }
 
-/* Official react-animals artwork; health color is separate from lifecycle text. */
+/* Owner-provided full-color artwork, shared with the LazyCat launcher. */
 .health-animal {
     --animal-color: var(--text-muted);
-    --animal-image: url('/icons/react-animals/rabbit.png');
+    --animal-image: url('/icons/tunnel-health/unknown.png');
     position: relative;
     display: inline-block;
     flex: 0 0 44px;
@@ -6707,11 +6707,11 @@ details.oauth-form-section > summary {
     border-radius: var(--r-control);
     touch-action: manipulation;
 }
-.health-animal[data-health="connected"] { --animal-color: var(--state-ok-text); --animal-image: url('/icons/react-animals/panda.png'); }
+.health-animal[data-health="connected"] { --animal-color: var(--state-ok-text); --animal-image: url('/icons/tunnel-health/connected.png'); }
 .health-animal[data-health="degraded"],
-.health-animal[data-health="recovering"] { --animal-color: var(--health-warn); --animal-image: url('/icons/react-animals/koala.png'); }
+.health-animal[data-health="recovering"] { --animal-color: var(--health-warn); --animal-image: url('/icons/tunnel-health/warning.png'); }
 .health-animal[data-health="error"],
-.health-animal[data-health="disconnected"] { --animal-color: var(--state-error-text); --animal-image: url('/icons/react-animals/grizzly.png'); }
+.health-animal[data-health="disconnected"] { --animal-color: var(--state-error-text); --animal-image: url('/icons/tunnel-health/error.png'); }
 .health-animal:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
@@ -6724,15 +6724,14 @@ details.oauth-form-section > summary {
 }
 .health-animal__art {
     position: absolute;
-    left: 6px;
-    bottom: 6px;
-    width: 32px;
-    height: 32px;
-    transform: translateY(4px) scale(.75);
+    left: 2px;
+    bottom: 2px;
+    width: 40px;
+    height: 40px;
+    transform: translateY(2px) scale(.8);
     transform-origin: bottom center;
-    opacity: .85;
-    background-color: var(--animal-color);
-    mask: var(--animal-image) center / contain no-repeat;
+    opacity: .92;
+    background: var(--animal-image) center / contain no-repeat;
     transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out);
 }
 .health-animal:focus-visible .health-animal__art,

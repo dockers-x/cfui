@@ -3,6 +3,7 @@ package main
 import (
 	"cfui/internal/cloudflared"
 	"cfui/internal/config"
+	"cfui/internal/launchericon"
 	"cfui/internal/logger"
 	"cfui/internal/server"
 	"cfui/internal/service"
@@ -106,6 +107,20 @@ func main() {
 	} else {
 		logger.Sugar.Info("Tunnel runner auto-start skipped in oauth mode")
 	}
+
+	stopLauncherIcon := launchericon.Start(assets, func() []cloudflared.Status {
+		cfg := cfgMgr.Get()
+		statuses := make([]cloudflared.Status, 0, len(cfg.Tunnels))
+		for _, profile := range cfg.Tunnels {
+			if !profile.LocalEnabled {
+				continue
+			}
+			status, _ := runner.ProfileStatus(profile.Key)
+			statuses = append(statuses, status)
+		}
+		return statuses
+	}, func(err error) { logger.Sugar.Warnf("LazyCat launcher icon: %v", err) })
+	defer stopLauncherIcon()
 
 	// Setup Server
 	srv := server.NewServerWithMode(cfgMgr, runner, assets, locales, runModeSelection.Mode)

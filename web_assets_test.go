@@ -110,9 +110,9 @@ func TestAnimalPNGsEmbeddedAndServed(t *testing.T) {
 		t.Fatal(err)
 	}
 	handler := http.FileServer(http.FS(fsys))
-	for _, animal := range []string{"panda", "koala", "grizzly", "rabbit"} {
+	for _, animal := range []string{"connected", "warning", "error", "unknown"} {
 		t.Run(animal, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodGet, "/icons/react-animals/"+animal+".png", nil)
+			request := httptest.NewRequest(http.MethodGet, "/icons/tunnel-health/"+animal+".png", nil)
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, request)
 			if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/png" {
@@ -122,7 +122,7 @@ func TestAnimalPNGsEmbeddedAndServed(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if image.Width != 129 || image.Height < 128 || image.Height > 129 {
+			if image.Width != 512 || image.Height != 512 {
 				t.Fatalf("unexpected embedded image dimensions: %dx%d", image.Width, image.Height)
 			}
 		})
