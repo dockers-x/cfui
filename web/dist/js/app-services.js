@@ -11,7 +11,7 @@
        Features
        ==================================================================== */
 
-    async function fetchFeatures() {
+    async function fetchFeatures({ required = false } = {}) {
         try {
             const data = await apiGet('/features');
             state.features = data;
@@ -21,7 +21,10 @@
             if ($('feature-mcp-toggle')) $('feature-mcp-toggle').checked = !!data.mcp;
             renderS3FeatureToggle(data);
             window.cfui.renderLocalAuthFeature?.();
-        } catch (err) { console.error('features fetch failed', err); }
+        } catch (err) {
+            if (required) throw err;
+            console.error('features fetch failed', err);
+        }
     }
 
     function applyFeatureVisibility(data) {

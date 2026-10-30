@@ -28,9 +28,10 @@
 
     async function loadLocalWorkspaceData() {
         closeOAuthLiveStreams?.();
-        await fetchConfig();
-        await fetchStatus();
+        await fetchConfig({ required: true });
+        await fetchStatus({ required: true });
         startStatusPolling();
+        window.cfuiBoot?.ready();
         if (state.features.tunnel_manager) {
             await fetchTunnelManagerSettings();
             await maybeLoadTunnelManagerZones(true);
@@ -44,9 +45,10 @@
     async function loadCloudflareWorkspaceData() {
         stopStatusPolling();
         disconnectLogStream(true);
-        if (!state.features.oauth_enabled) return;
+        if (!state.features.oauth_enabled) { window.cfuiBoot?.ready(); return; }
         await fetchOAuthStatus?.();
         await loadOAuthOverview?.();
+        window.cfuiBoot?.ready();
     }
 
     async function loadWorkspaceData(workspace) {
@@ -67,14 +69,13 @@
         wireBackup();
         wireS3();
         wireOAuth?.();
-        await loadLanguage(state.currentLang);
+        await loadLanguage(state.currentLang, { required: true });
         await initializeLocalAuth();
         updateMetricsVisibility();
         addLog({ key: 'system_ready' }, 'system');
         await fetchVersion();
-        await fetchFeatures();
+        await fetchFeatures({ required: true });
         syncWorkspaceFromRoute?.({ replaceDefault: true });
-        await loadWorkspaceData(currentWorkspace?.() || 'local');
         document.addEventListener('workspacechange', (e) => {
             loadWorkspaceData(e.detail?.workspace || 'local').catch((err) => {
                 console.error('workspace load failed', err);
@@ -82,6 +83,7 @@
             });
         });
         setInterval(() => { if (!$('panel-ddns').hidden) fetchDDNSStatus(); }, 10000);
+        await loadWorkspaceData(currentWorkspace?.() || 'local');
     }
 
     function fetchDDNSStatus() { return window.cfui.fetchDDNSStatus(); }
@@ -89,6 +91,7 @@
     window.addEventListener('beforeunload', () => disconnectLogStream(true));
 
     init().catch((err) => {
+        window.cfuiBoot?.fail();
         console.error('init failed', err);
         toast.err('Initialization failed: ' + err.message);
     });

@@ -1,0 +1,104 @@
+/* The curtain is present before the application scripts run. */
+html.booting .app-container,
+html.booting .skip-link { visibility: hidden; }
+html.booting { overflow: hidden; }
+.boot-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 850;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    color: var(--text-muted, #687181);
+    background: rgba(242, 244, 247, .9);
+    -webkit-backdrop-filter: blur(24px) saturate(125%);
+    backdrop-filter: blur(24px) saturate(125%);
+    opacity: 1;
+    transition: opacity 200ms var(--ease-out, cubic-bezier(.23, 1, .32, 1));
+}
+.boot-screen[hidden] { display: none; }
+.boot-screen[data-phase="ready"] { opacity: 0; pointer-events: none; }
+.boot-scene {
+    width: min(100%, 368px);
+    text-align: center;
+    font: 13px/1.6 system-ui, sans-serif;
+}
+.boot-animals {
+    position: relative;
+    height: 124px;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(145, 153, 167, .18);
+    background: radial-gradient(ellipse at bottom, rgba(246, 130, 31, .09), transparent 68%);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.boot-walker {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 88px;
+    opacity: 0;
+    animation: boot-walk 12000ms linear infinite backwards;
+    animation-delay: calc(var(--boot-slot, 0) * 3000ms);
+}
+.boot-pet { display: block; transition: transform 200ms var(--ease-out, cubic-bezier(.23, 1, .32, 1)); }
+.boot-pet img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    transform-origin: center bottom;
+    animation: boot-peek 2400ms cubic-bezier(.77, 0, .175, 1) infinite;
+}
+@media (hover: hover) and (pointer: fine) {
+    .boot-walker:hover { animation-play-state: paused; }
+    .boot-walker:hover .boot-pet { transform: translateY(-8px) scale(1.05); }
+}
+.boot-track { display: flex; justify-content: center; gap: 7px; margin-top: 24px; }
+.boot-track i {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #FF6700;
+    animation: boot-glow 2400ms linear infinite;
+}
+.boot-track i:nth-child(2) { animation-delay: -1800ms; }
+.boot-track i:nth-child(3) { animation-delay: -1200ms; }
+.boot-track i:nth-child(4) { animation-delay: -600ms; }
+.boot-message { margin: 14px 0 0; letter-spacing: .02em; }
+.boot-retry {
+    margin-top: 16px;
+    padding: 9px 20px;
+    border: 1px solid rgba(246, 130, 31, .35);
+    border-radius: 999px;
+    background: rgba(246, 130, 31, .1);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+.boot-retry:focus-visible { outline: 2px solid #FF6700; outline-offset: 4px; }
+.boot-screen[data-phase="error"] .boot-walker,
+.boot-screen[data-phase="error"] .boot-animals img,
+.boot-screen[data-phase="error"] .boot-track i { animation-play-state: paused; }
+@keyframes boot-walk {
+    0% { transform: translateX(min(368px, calc(100vw - 48px))); opacity: 0; }
+    10%, 90% { opacity: 1; }
+    100% { transform: translateX(-88px); opacity: 0; }
+}
+@keyframes boot-peek {
+    0%, 50%, 100% { transform: translateY(5px) rotate(0deg); opacity: .65; }
+    25% { transform: translateY(-9px) rotate(-4deg); opacity: 1; }
+}
+@keyframes boot-glow { 0%, 50%, 100% { opacity: .25; } 25% { opacity: 1; } }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .boot-screen { background: rgba(17, 20, 27, .92); color: #a9b0bd; }
+}
+[data-theme="dark"] .boot-screen { background: rgba(17, 20, 27, .92); color: #a9b0bd; }
+@media (prefers-reduced-motion: reduce) {
+    .boot-animals { display: flex; justify-content: center; align-items: end; }
+    .boot-walker { position: static; width: 25%; animation: none; transform: none; opacity: 1; }
+    .boot-pet img { animation: none; transform: none; opacity: 1; }
+    .boot-walker:hover .boot-pet { transform: none; }
+    .boot-track i { animation: boot-glow 2400ms linear infinite; }
+    .boot-screen { transition-duration: 150ms; }
+}

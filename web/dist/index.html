@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="booting">
 
 <head>
     <meta charset="UTF-8">
@@ -34,10 +34,26 @@
         <link rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.1.0/style.css">
     </noscript>
+    <link rel="stylesheet" href="/boot.css">
     <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
+    <div id="boot-screen" class="boot-screen" role="status" aria-live="polite" aria-busy="true">
+        <div class="boot-scene">
+            <div class="boot-animals" aria-hidden="true">
+                <span class="boot-walker"><span class="boot-pet"><img src="/icons/tunnel-health/connected.png" alt="" width="512" height="512" fetchpriority="high"></span></span>
+                <span class="boot-walker"><span class="boot-pet"><img src="/icons/tunnel-health/warning.png" alt="" width="512" height="512"></span></span>
+                <span class="boot-walker"><span class="boot-pet"><img src="/icons/tunnel-health/error.png" alt="" width="512" height="512"></span></span>
+                <span class="boot-walker"><span class="boot-pet"><img src="/icons/tunnel-health/unknown.png" alt="" width="512" height="512"></span></span>
+            </div>
+            <div class="boot-track" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            <p id="boot-message" class="boot-message">Getting things ready…</p>
+            <button id="boot-retry" class="boot-retry" type="button" hidden>Try again</button>
+            <noscript><style>.boot-message, .boot-track { display: none; } .boot-walker, .boot-pet img { animation: none; }</style><p>JavaScript is required to open CloudFlared UI.</p></noscript>
+        </div>
+    </div>
+    <script src="/js/app-boot.js"></script>
     <a class="skip-link" href="#main-content" data-i18n="skip_to_content">Skip to content</a>
     <div id="toast-viewport" class="toast-viewport" role="region" aria-live="polite" aria-atomic="false"></div>
 

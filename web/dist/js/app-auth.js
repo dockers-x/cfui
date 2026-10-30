@@ -82,7 +82,11 @@
 
     async function initializeLocalAuth() {
         const status = await fetchLocalAuthStatus();
-        if (status.enabled && !status.authenticated) await waitForLogin();
+        if (status.enabled && !status.authenticated) {
+            window.cfuiBoot?.waitForLogin(true);
+            try { await waitForLogin(); }
+            finally { window.cfuiBoot?.waitForLogin(false); }
+        }
     }
 
     async function submitLogin(event) {

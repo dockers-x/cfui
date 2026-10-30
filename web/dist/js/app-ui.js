@@ -7,14 +7,15 @@
 
     /* ---- i18n ---- */
 
-    async function loadLanguage(lang) {
+    async function loadLanguage(lang, { required = false } = {}) {
         try {
             const res = await fetch(`/api/i18n/${lang}`);
             if (!res.ok) throw new Error('load failed');
             state.translations = await res.json();
         } catch (err) {
             console.error('i18n load failed', lang, err);
-            if (lang !== 'en') { await loadLanguage('en'); return; }
+            if (lang !== 'en') { await loadLanguage('en', { required }); return; }
+            if (required) throw err;
             state.translations = {};
         }
         state.currentLang = lang;

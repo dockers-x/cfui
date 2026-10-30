@@ -111,7 +111,7 @@
 
     /* ---- Config fetch / save ---- */
 
-    async function fetchConfig() {
+    async function fetchConfig({ required = false } = {}) {
         try {
             const data = await apiGet('/config');
             state.config = data;
@@ -124,6 +124,7 @@
             state.localConfigSignature = localConfigSignature(readConfigFromForm());
         } catch (err) {
             window.cfui.addLog({ key: 'config_load_failed', params: { err: err.message } }, 'error');
+            if (required) throw err;
         }
     }
 
@@ -359,7 +360,7 @@
 
     /* ---- Status fetch (polls every 2s) ---- */
 
-    async function fetchStatus() {
+    async function fetchStatus({ required = false } = {}) {
         try {
             const data = await apiGet('/tunnels');
             state.statusFailCount = 0;
@@ -377,7 +378,8 @@
                 window.cfui.addLog({ key: 'status_changed', params: { status: state.status } }, 'system');
             }
             updateStatusUI();
-        } catch {
+        } catch (err) {
+            if (required) throw err;
             state.statusFailCount++;
             if (state.statusFailCount >= 3) updateStatusUI();
         }

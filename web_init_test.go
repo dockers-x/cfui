@@ -13,7 +13,7 @@ func TestAppInitStartsStatusPollingBeforeOptionalRemoteFeatures(t *testing.T) {
 	}
 	src := string(js)
 
-	statusIdx := strings.Index(src, "await fetchStatus();")
+	statusIdx := strings.Index(src, "await fetchStatus({ required: true });")
 	intervalIdx := strings.Index(src, "setInterval(fetchStatus, 2000);")
 	managerIdx := strings.Index(src, "if (state.features.tunnel_manager)")
 	if statusIdx < 0 || intervalIdx < 0 || managerIdx < 0 {
