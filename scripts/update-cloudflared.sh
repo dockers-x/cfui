@@ -10,6 +10,7 @@ if [[ ! "$release_tag" =~ ^v?[0-9]{4}\.[0-9]+\.[0-9]+$ ]]; then
 fi
 module=github.com/cloudflare/cloudflared
 quic_module=github.com/quic-go/quic-go
+export GOTOOLCHAIN=auto
 
 upstream_download="$(go mod download -json "$module@$release_tag")" || {
   download_status=$?

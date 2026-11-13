@@ -44,6 +44,11 @@ jobs:
           else
             echo 'changed=true' >> "$GITHUB_OUTPUT"
           fi
+      - name: Set up Go for updated dependencies
+        if: steps.upstream.outputs.changed == 'true'
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
       - name: Verify dependencies and application
         if: steps.upstream.outputs.changed == 'true'
         run: |

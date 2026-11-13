@@ -44,6 +44,9 @@ args = sys.argv[1:]
 with (root / "calls.jsonl").open("a") as log:
     log.write(json.dumps(args) + "\\n")
 if args[:3] == ["mod", "download", "-json"]:
+    if os.environ.get("TEST_REQUIRE_NEW_TOOLCHAIN") and os.environ.get("GOTOOLCHAIN") != "auto":
+        print(json.dumps({"Error": "requires a newer Go toolchain (GOTOOLCHAIN=local)"}))
+        sys.exit(1)
     if os.environ.get("TEST_DOWNLOAD_ERROR"):
         print(json.dumps({"Error": os.environ["TEST_DOWNLOAD_ERROR"]}))
         sys.exit(7)
@@ -73,6 +76,10 @@ elif args[:3] == ["mod", "edit", "-json"]:
         result = self.run_update(f"replace {QUIC} => {FORK} v0.60.0-fork")
         self.assert_updated(result)
         self.assertIn(["mod", "edit", f"-replace={QUIC}={FORK}@v0.60.0-fork"], self.calls)
+
+    def test_newer_upstream_toolchain_overrides_setup_go_local(self):
+        self.env["TEST_REQUIRE_NEW_TOOLCHAIN"] = "1"
+        self.assert_updated(self.run_update())
 
     def test_replacement_block(self):
         result = self.run_update(f"replace (\n\t{QUIC} => {FORK} v0.60.0-fork\n)")
