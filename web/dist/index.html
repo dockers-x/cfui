@@ -672,6 +672,12 @@
                                             <textarea id="ddns-ipv6-textarea" rows="5" placeholder="http://v6.66666.host:66/ip&#10;https://6.ipw.cn" spellcheck="false" autocomplete="off"></textarea>
                                         </div>
                                         <p class="help-text" data-i18n="ddns_batch_add_help">One URL per line. Each line is a separate source.</p>
+                                        <label class="toggle">
+                                            <input type="checkbox" id="ddns-bypass-proxy" aria-describedby="ddns-bypass-proxy-help" checked>
+                                            <span class="track"></span>
+                                            <span class="label" data-i18n="ddns_bypass_proxy">Bypass proxy for IP detection</span>
+                                        </label>
+                                        <p id="ddns-bypass-proxy-help" class="help-text" data-i18n="ddns_bypass_proxy_help">Ignores HTTP_PROXY / HTTPS_PROXY for IP detection only. For TUN or router proxies, route IP source domains directly.</p>
                                         <div class="btn-row">
                                             <button id="ddns-reset-sources" type="button" class="btn btn--sm btn--ghost" data-i18n="ddns_restore_default_sources">Restore default sources</button>
                                         </div>

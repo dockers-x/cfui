@@ -687,6 +687,8 @@ an explicitly selected existing tag.
 - Enable Remote Tunnel Manager first.
 - Verify `Zone -> DNS -> Edit` permission.
 - Check configured IP source URLs.
+- IP detection bypasses `HTTP_PROXY` / `HTTPS_PROXY` by default to avoid detecting a proxy's exit IP. Turn off **Bypass proxy for IP detection** in DDNS settings to use these proxies; Cloudflare API requests are unaffected.
+- For TUN, transparent proxies, or router policy routing, also route IP source domains directly (`DIRECT`); this setting cannot bypass network-level proxies.
 - Use manual sync to see the latest error.
 
 ### S3 WebDAV cannot list files

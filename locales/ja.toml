@@ -727,6 +727,12 @@ other = "チェック間隔"
 [ddns_only_on_change]
 other = "IP変更時のみ更新"
 
+[ddns_bypass_proxy]
+other = "IP 検出時にプロキシを使わない"
+
+[ddns_bypass_proxy_help]
+other = "IP 検出でのみ HTTP_PROXY / HTTPS_PROXY を無視します。TUN やルーターのプロキシを使用する場合は、IP 検出先のドメインを直接接続に設定してください。"
+
 [ddns_max_retries]
 other = "最大再試行回数"
 

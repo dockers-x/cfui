@@ -86,6 +86,7 @@ type SaveRequest struct {
 	IntervalMins int                 `json:"interval_mins"`
 	OnlyOnChange bool                `json:"only_on_change"`
 	MaxRetries   int                 `json:"max_retries"`
+	UseProxy     *bool               `json:"use_proxy,omitempty"`
 }
 
 // AddRecordRequest is the request body for adding DDNS records.
@@ -298,7 +299,16 @@ func validateDetectedIP(ip, targetType string) (string, error) {
 
 func (s *Service) detectIP(ctx context.Context, sources []config.IPSource, targetType string) (string, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	maxRetries := s.cfgMgr.Get().DDNS.MaxRetries
+	cfg := s.cfgMgr.Get().DDNS
+	if !cfg.UseProxy {
+		// IP sources must observe this host's egress, rather than a proxy's.
+		// Clone the transport so Cloudflare API calls retain their proxy policy.
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.Proxy = nil
+		client.Transport = transport
+		defer transport.CloseIdleConnections()
+	}
+	maxRetries := cfg.MaxRetries
 	if maxRetries <= 0 {
 		maxRetries = 3
 	}
@@ -659,6 +669,9 @@ func (s *Service) SaveConfig(req SaveRequest) error {
 	cfg.DDNS.IntervalMins = req.IntervalMins
 	cfg.DDNS.OnlyOnChange = req.OnlyOnChange
 	cfg.DDNS.MaxRetries = req.MaxRetries
+	if req.UseProxy != nil {
+		cfg.DDNS.UseProxy = *req.UseProxy
+	}
 
 	if req.IPSources != nil {
 		cfg.DDNS.IPSources = req.IPSources

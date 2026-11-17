@@ -109,6 +109,7 @@ var (
 		{Name: "interval_mins", Type: field.TypeInt, Default: 5},
 		{Name: "only_on_change", Type: field.TypeBool, Default: true},
 		{Name: "max_retries", Type: field.TypeInt, Default: 3},
+		{Name: "use_proxy", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 	}

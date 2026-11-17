@@ -20,6 +20,7 @@ func (DDNSSetting) Fields() []ent.Field {
 		field.Int("interval_mins").Default(5),
 		field.Bool("only_on_change").Default(true),
 		field.Int("max_retries").Default(3),
+		field.Bool("use_proxy").Default(false),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}

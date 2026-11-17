@@ -727,6 +727,12 @@ other = "Check Interval"
 [ddns_only_on_change]
 other = "Only update on IP change"
 
+[ddns_bypass_proxy]
+other = "Bypass proxy for IP detection"
+
+[ddns_bypass_proxy_help]
+other = "Ignores HTTP_PROXY / HTTPS_PROXY for IP detection only. For TUN or router proxies, route IP source domains directly."
+
 [ddns_max_retries]
 other = "Max Retries"
 

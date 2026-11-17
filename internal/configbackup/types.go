@@ -118,6 +118,7 @@ type DDNSSection struct {
 	IntervalMins int          `json:"interval_mins"`
 	OnlyOnChange bool         `json:"only_on_change"`
 	MaxRetries   int          `json:"max_retries"`
+	UseProxy     bool         `json:"use_proxy"`
 }
 
 type IPSource struct {

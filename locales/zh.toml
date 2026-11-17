@@ -727,6 +727,12 @@ other = "检测频率"
 [ddns_only_on_change]
 other = "仅在 IP 变化时更新"
 
+[ddns_bypass_proxy]
+other = "获取 IP 时跳过代理"
+
+[ddns_bypass_proxy_help]
+other = "仅 IP 检测忽略 HTTP_PROXY / HTTPS_PROXY。使用 TUN 或路由器代理时，还需将 IP 检测域名设为直连。"
+
 [ddns_max_retries]
 other = "最大重试次数"
 

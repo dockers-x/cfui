@@ -79,6 +79,11 @@ func MaxRetries(v int) predicate.DDNSSetting {
 	return predicate.DDNSSetting(sql.FieldEQ(FieldMaxRetries, v))
 }
 
+// UseProxy applies equality check predicate on the "use_proxy" field. It's identical to UseProxyEQ.
+func UseProxy(v bool) predicate.DDNSSetting {
+	return predicate.DDNSSetting(sql.FieldEQ(FieldUseProxy, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.DDNSSetting {
 	return predicate.DDNSSetting(sql.FieldEQ(FieldCreatedAt, v))
@@ -252,6 +257,16 @@ func MaxRetriesLT(v int) predicate.DDNSSetting {
 // MaxRetriesLTE applies the LTE predicate on the "max_retries" field.
 func MaxRetriesLTE(v int) predicate.DDNSSetting {
 	return predicate.DDNSSetting(sql.FieldLTE(FieldMaxRetries, v))
+}
+
+// UseProxyEQ applies the EQ predicate on the "use_proxy" field.
+func UseProxyEQ(v bool) predicate.DDNSSetting {
+	return predicate.DDNSSetting(sql.FieldEQ(FieldUseProxy, v))
+}
+
+// UseProxyNEQ applies the NEQ predicate on the "use_proxy" field.
+func UseProxyNEQ(v bool) predicate.DDNSSetting {
+	return predicate.DDNSSetting(sql.FieldNEQ(FieldUseProxy, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

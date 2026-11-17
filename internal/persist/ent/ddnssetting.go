@@ -27,6 +27,8 @@ type DDNSSetting struct {
 	OnlyOnChange bool `json:"only_on_change,omitempty"`
 	// MaxRetries holds the value of the "max_retries" field.
 	MaxRetries int `json:"max_retries,omitempty"`
+	// UseProxy holds the value of the "use_proxy" field.
+	UseProxy bool `json:"use_proxy,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -39,7 +41,7 @@ func (*DDNSSetting) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case ddnssetting.FieldEnabled, ddnssetting.FieldOnlyOnChange:
+		case ddnssetting.FieldEnabled, ddnssetting.FieldOnlyOnChange, ddnssetting.FieldUseProxy:
 			values[i] = new(sql.NullBool)
 		case ddnssetting.FieldID, ddnssetting.FieldIntervalMins, ddnssetting.FieldMaxRetries:
 			values[i] = new(sql.NullInt64)
@@ -97,6 +99,12 @@ func (_m *DDNSSetting) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field max_retries", values[i])
 			} else if value.Valid {
 				_m.MaxRetries = int(value.Int64)
+			}
+		case ddnssetting.FieldUseProxy:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field use_proxy", values[i])
+			} else if value.Valid {
+				_m.UseProxy = value.Bool
 			}
 		case ddnssetting.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -160,6 +168,9 @@ func (_m *DDNSSetting) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("max_retries=")
 	builder.WriteString(fmt.Sprintf("%v", _m.MaxRetries))
+	builder.WriteString(", ")
+	builder.WriteString("use_proxy=")
+	builder.WriteString(fmt.Sprintf("%v", _m.UseProxy))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

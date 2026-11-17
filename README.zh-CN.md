@@ -662,6 +662,8 @@ gh workflow run binary.yml --ref main -f tag=v0.10.8
 - 先启用远程 Tunnel 管理。
 - 确认具备 `Zone -> DNS -> Edit` 权限。
 - 检查配置的 IP source URL。
+- IP 检测默认跳过 `HTTP_PROXY` / `HTTPS_PROXY`，避免将代理出口误当成公网 IP；可在 DDNS 设置中关闭“获取 IP 时跳过代理”，Cloudflare API 请求不受此开关影响。
+- 使用 TUN、透明代理或路由器分流时，还需将 IP source 域名设为直连（`DIRECT`），此开关无法绕过网络层代理。
 - 点击手动同步查看最新错误。
 
 ### S3 WebDAV 无法列出文件

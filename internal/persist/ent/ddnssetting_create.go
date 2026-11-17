@@ -82,6 +82,20 @@ func (_c *DDNSSettingCreate) SetNillableMaxRetries(v *int) *DDNSSettingCreate {
 	return _c
 }
 
+// SetUseProxy sets the "use_proxy" field.
+func (_c *DDNSSettingCreate) SetUseProxy(v bool) *DDNSSettingCreate {
+	_c.mutation.SetUseProxy(v)
+	return _c
+}
+
+// SetNillableUseProxy sets the "use_proxy" field if the given value is not nil.
+func (_c *DDNSSettingCreate) SetNillableUseProxy(v *bool) *DDNSSettingCreate {
+	if v != nil {
+		_c.SetUseProxy(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *DDNSSettingCreate) SetCreatedAt(v time.Time) *DDNSSettingCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -161,6 +175,10 @@ func (_c *DDNSSettingCreate) defaults() {
 		v := ddnssetting.DefaultMaxRetries
 		_c.mutation.SetMaxRetries(v)
 	}
+	if _, ok := _c.mutation.UseProxy(); !ok {
+		v := ddnssetting.DefaultUseProxy
+		_c.mutation.SetUseProxy(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := ddnssetting.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -192,6 +210,9 @@ func (_c *DDNSSettingCreate) check() error {
 	}
 	if _, ok := _c.mutation.MaxRetries(); !ok {
 		return &ValidationError{Name: "max_retries", err: errors.New(`ent: missing required field "DDNSSetting.max_retries"`)}
+	}
+	if _, ok := _c.mutation.UseProxy(); !ok {
+		return &ValidationError{Name: "use_proxy", err: errors.New(`ent: missing required field "DDNSSetting.use_proxy"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "DDNSSetting.created_at"`)}
@@ -244,6 +265,10 @@ func (_c *DDNSSettingCreate) createSpec() (*DDNSSetting, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.MaxRetries(); ok {
 		_spec.SetField(ddnssetting.FieldMaxRetries, field.TypeInt, value)
 		_node.MaxRetries = value
+	}
+	if value, ok := _c.mutation.UseProxy(); ok {
+		_spec.SetField(ddnssetting.FieldUseProxy, field.TypeBool, value)
+		_node.UseProxy = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(ddnssetting.FieldCreatedAt, field.TypeTime, value)

@@ -249,12 +249,16 @@ func init() {
 	ddnssettingDescMaxRetries := ddnssettingFields[4].Descriptor()
 	// ddnssetting.DefaultMaxRetries holds the default value on creation for the max_retries field.
 	ddnssetting.DefaultMaxRetries = ddnssettingDescMaxRetries.Default.(int)
+	// ddnssettingDescUseProxy is the schema descriptor for use_proxy field.
+	ddnssettingDescUseProxy := ddnssettingFields[5].Descriptor()
+	// ddnssetting.DefaultUseProxy holds the default value on creation for the use_proxy field.
+	ddnssetting.DefaultUseProxy = ddnssettingDescUseProxy.Default.(bool)
 	// ddnssettingDescCreatedAt is the schema descriptor for created_at field.
-	ddnssettingDescCreatedAt := ddnssettingFields[5].Descriptor()
+	ddnssettingDescCreatedAt := ddnssettingFields[6].Descriptor()
 	// ddnssetting.DefaultCreatedAt holds the default value on creation for the created_at field.
 	ddnssetting.DefaultCreatedAt = ddnssettingDescCreatedAt.Default.(func() time.Time)
 	// ddnssettingDescUpdatedAt is the schema descriptor for updated_at field.
-	ddnssettingDescUpdatedAt := ddnssettingFields[6].Descriptor()
+	ddnssettingDescUpdatedAt := ddnssettingFields[7].Descriptor()
 	// ddnssetting.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	ddnssetting.DefaultUpdatedAt = ddnssettingDescUpdatedAt.Default.(func() time.Time)
 	// ddnssetting.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

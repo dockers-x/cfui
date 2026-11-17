@@ -133,6 +133,7 @@ func ddnsSection(ddns config.DDNSConfig) DDNSSection {
 	return DDNSSection{
 		Enabled: ddns.Enabled, IPSources: sources, Records: records,
 		IntervalMins: ddns.IntervalMins, OnlyOnChange: ddns.OnlyOnChange, MaxRetries: ddns.MaxRetries,
+		UseProxy: ddns.UseProxy,
 	}
 }
 

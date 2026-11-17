@@ -780,6 +780,7 @@
             setDDNSSourceTextareas(effectiveDDNSSources(cfg));
             $('ddns-interval').value = String(cfg.interval_mins || 5); $('ddns-max-retries').value = String(cfg.max_retries || 3);
             $('ddns-only-on-change').checked = cfg.only_on_change !== false;
+            $('ddns-bypass-proxy').checked = !cfg.use_proxy;
             renderDDNSRecords(cfg.records || []);
         }
         setDDNSStatus(cfg.enabled ? 'ok' : 'disabled', t(cfg.enabled ? 'ddns_status_running' : 'ddns_status_disabled'));
@@ -814,7 +815,7 @@
         const v4 = $('ddns-ipv4-textarea').value.split('\n').map((l) => l.trim()).filter(Boolean);
         const v6 = $('ddns-ipv6-textarea').value.split('\n').map((l) => l.trim()).filter(Boolean);
         const sources = [...v4.map((url) => ({ url, ip_type: 'ipv4' })), ...v6.map((url) => ({ url, ip_type: 'ipv6' }))];
-        const payload = { enabled: state.ddns.config?.enabled ?? false, ip_sources: sources, interval_mins: parseInt($('ddns-interval').value, 10) || 5, max_retries: parseInt($('ddns-max-retries').value, 10) || 3, only_on_change: $('ddns-only-on-change').checked };
+        const payload = { enabled: state.ddns.config?.enabled ?? false, ip_sources: sources, interval_mins: parseInt($('ddns-interval').value, 10) || 5, max_retries: parseInt($('ddns-max-retries').value, 10) || 3, only_on_change: $('ddns-only-on-change').checked, use_proxy: !$('ddns-bypass-proxy').checked };
         try { const data = await apiSend('/ddns/config', 'POST', payload); state.ddns.config = data; renderDDNSConfig(data); toast.ok(t('ddns_settings_saved')); }
         catch (err) { toast.err(t('ddns_save_failed') + ': ' + err.message); }
         finally { setBusy(btn, false); }

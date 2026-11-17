@@ -3677,6 +3677,7 @@ type DDNSSettingMutation struct {
 	only_on_change   *bool
 	max_retries      *int
 	addmax_retries   *int
+	use_proxy        *bool
 	created_at       *time.Time
 	updated_at       *time.Time
 	clearedFields    map[string]struct{}
@@ -4003,6 +4004,42 @@ func (m *DDNSSettingMutation) ResetMaxRetries() {
 	m.addmax_retries = nil
 }
 
+// SetUseProxy sets the "use_proxy" field.
+func (m *DDNSSettingMutation) SetUseProxy(b bool) {
+	m.use_proxy = &b
+}
+
+// UseProxy returns the value of the "use_proxy" field in the mutation.
+func (m *DDNSSettingMutation) UseProxy() (r bool, exists bool) {
+	v := m.use_proxy
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUseProxy returns the old "use_proxy" field's value of the DDNSSetting entity.
+// If the DDNSSetting object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DDNSSettingMutation) OldUseProxy(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUseProxy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUseProxy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUseProxy: %w", err)
+	}
+	return oldValue.UseProxy, nil
+}
+
+// ResetUseProxy resets all changes to the "use_proxy" field.
+func (m *DDNSSettingMutation) ResetUseProxy() {
+	m.use_proxy = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *DDNSSettingMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -4109,7 +4146,7 @@ func (m *DDNSSettingMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DDNSSettingMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.key != nil {
 		fields = append(fields, ddnssetting.FieldKey)
 	}
@@ -4124,6 +4161,9 @@ func (m *DDNSSettingMutation) Fields() []string {
 	}
 	if m.max_retries != nil {
 		fields = append(fields, ddnssetting.FieldMaxRetries)
+	}
+	if m.use_proxy != nil {
+		fields = append(fields, ddnssetting.FieldUseProxy)
 	}
 	if m.created_at != nil {
 		fields = append(fields, ddnssetting.FieldCreatedAt)
@@ -4149,6 +4189,8 @@ func (m *DDNSSettingMutation) Field(name string) (ent.Value, bool) {
 		return m.OnlyOnChange()
 	case ddnssetting.FieldMaxRetries:
 		return m.MaxRetries()
+	case ddnssetting.FieldUseProxy:
+		return m.UseProxy()
 	case ddnssetting.FieldCreatedAt:
 		return m.CreatedAt()
 	case ddnssetting.FieldUpdatedAt:
@@ -4172,6 +4214,8 @@ func (m *DDNSSettingMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldOnlyOnChange(ctx)
 	case ddnssetting.FieldMaxRetries:
 		return m.OldMaxRetries(ctx)
+	case ddnssetting.FieldUseProxy:
+		return m.OldUseProxy(ctx)
 	case ddnssetting.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case ddnssetting.FieldUpdatedAt:
@@ -4219,6 +4263,13 @@ func (m *DDNSSettingMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMaxRetries(v)
+		return nil
+	case ddnssetting.FieldUseProxy:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUseProxy(v)
 		return nil
 	case ddnssetting.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -4324,6 +4375,9 @@ func (m *DDNSSettingMutation) ResetField(name string) error {
 		return nil
 	case ddnssetting.FieldMaxRetries:
 		m.ResetMaxRetries()
+		return nil
+	case ddnssetting.FieldUseProxy:
+		m.ResetUseProxy()
 		return nil
 	case ddnssetting.FieldCreatedAt:
 		m.ResetCreatedAt()

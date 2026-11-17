@@ -23,6 +23,8 @@ const (
 	FieldOnlyOnChange = "only_on_change"
 	// FieldMaxRetries holds the string denoting the max_retries field in the database.
 	FieldMaxRetries = "max_retries"
+	// FieldUseProxy holds the string denoting the use_proxy field in the database.
+	FieldUseProxy = "use_proxy"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -39,6 +41,7 @@ var Columns = []string{
 	FieldIntervalMins,
 	FieldOnlyOnChange,
 	FieldMaxRetries,
+	FieldUseProxy,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
@@ -64,6 +67,8 @@ var (
 	DefaultOnlyOnChange bool
 	// DefaultMaxRetries holds the default value on creation for the "max_retries" field.
 	DefaultMaxRetries int
+	// DefaultUseProxy holds the default value on creation for the "use_proxy" field.
+	DefaultUseProxy bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -103,6 +108,11 @@ func ByOnlyOnChange(opts ...sql.OrderTermOption) OrderOption {
 // ByMaxRetries orders the results by the max_retries field.
 func ByMaxRetries(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMaxRetries, opts...).ToFunc()
+}
+
+// ByUseProxy orders the results by the use_proxy field.
+func ByUseProxy(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUseProxy, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

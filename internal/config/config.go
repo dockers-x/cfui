@@ -107,6 +107,7 @@ type DDNSConfig struct {
 	IntervalMins int          `json:"interval_mins"`  // check interval in minutes
 	OnlyOnChange bool         `json:"only_on_change"` // only update on IP change
 	MaxRetries   int          `json:"max_retries"`    // retries per source on failure
+	UseProxy     bool         `json:"use_proxy"`      // opt in to environment proxies for IP detection
 }
 
 // IPSource defines a remote endpoint that returns the public IP address.

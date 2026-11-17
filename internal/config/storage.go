@@ -218,6 +218,7 @@ func (m *Manager) loadStructuredConfig(ctx context.Context) (Config, bool, error
 		cfg.DDNS.IntervalMins = ddnsRow.IntervalMins
 		cfg.DDNS.OnlyOnChange = ddnsRow.OnlyOnChange
 		cfg.DDNS.MaxRetries = ddnsRow.MaxRetries
+		cfg.DDNS.UseProxy = ddnsRow.UseProxy
 	} else if !ent.IsNotFound(err) {
 		return Config{}, false, err
 	}
@@ -469,6 +470,7 @@ func saveDDNSSetting(ctx context.Context, tx *ent.Tx, cfg DDNSConfig) error {
 			SetIntervalMins(cfg.IntervalMins).
 			SetOnlyOnChange(cfg.OnlyOnChange).
 			SetMaxRetries(cfg.MaxRetries).
+			SetUseProxy(cfg.UseProxy).
 			Save(ctx)
 		return err
 	}
@@ -481,6 +483,7 @@ func saveDDNSSetting(ctx context.Context, tx *ent.Tx, cfg DDNSConfig) error {
 		SetIntervalMins(cfg.IntervalMins).
 		SetOnlyOnChange(cfg.OnlyOnChange).
 		SetMaxRetries(cfg.MaxRetries).
+		SetUseProxy(cfg.UseProxy).
 		Save(ctx)
 	return err
 }

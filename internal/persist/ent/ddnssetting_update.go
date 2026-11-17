@@ -112,6 +112,20 @@ func (_u *DDNSSettingUpdate) AddMaxRetries(v int) *DDNSSettingUpdate {
 	return _u
 }
 
+// SetUseProxy sets the "use_proxy" field.
+func (_u *DDNSSettingUpdate) SetUseProxy(v bool) *DDNSSettingUpdate {
+	_u.mutation.SetUseProxy(v)
+	return _u
+}
+
+// SetNillableUseProxy sets the "use_proxy" field if the given value is not nil.
+func (_u *DDNSSettingUpdate) SetNillableUseProxy(v *bool) *DDNSSettingUpdate {
+	if v != nil {
+		_u.SetUseProxy(*v)
+	}
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *DDNSSettingUpdate) SetUpdatedAt(v time.Time) *DDNSSettingUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -201,6 +215,9 @@ func (_u *DDNSSettingUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if value, ok := _u.mutation.AddedMaxRetries(); ok {
 		_spec.AddField(ddnssetting.FieldMaxRetries, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.UseProxy(); ok {
+		_spec.SetField(ddnssetting.FieldUseProxy, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(ddnssetting.FieldUpdatedAt, field.TypeTime, value)
@@ -306,6 +323,20 @@ func (_u *DDNSSettingUpdateOne) SetNillableMaxRetries(v *int) *DDNSSettingUpdate
 // AddMaxRetries adds value to the "max_retries" field.
 func (_u *DDNSSettingUpdateOne) AddMaxRetries(v int) *DDNSSettingUpdateOne {
 	_u.mutation.AddMaxRetries(v)
+	return _u
+}
+
+// SetUseProxy sets the "use_proxy" field.
+func (_u *DDNSSettingUpdateOne) SetUseProxy(v bool) *DDNSSettingUpdateOne {
+	_u.mutation.SetUseProxy(v)
+	return _u
+}
+
+// SetNillableUseProxy sets the "use_proxy" field if the given value is not nil.
+func (_u *DDNSSettingUpdateOne) SetNillableUseProxy(v *bool) *DDNSSettingUpdateOne {
+	if v != nil {
+		_u.SetUseProxy(*v)
+	}
 	return _u
 }
 
@@ -428,6 +459,9 @@ func (_u *DDNSSettingUpdateOne) sqlSave(ctx context.Context) (_node *DDNSSetting
 	}
 	if value, ok := _u.mutation.AddedMaxRetries(); ok {
 		_spec.AddField(ddnssetting.FieldMaxRetries, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.UseProxy(); ok {
+		_spec.SetField(ddnssetting.FieldUseProxy, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(ddnssetting.FieldUpdatedAt, field.TypeTime, value)

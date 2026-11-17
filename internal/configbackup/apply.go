@@ -311,6 +311,7 @@ func ddnsConfig(imported DDNSSection) config.DDNSConfig {
 	return config.DDNSConfig{
 		Enabled: imported.Enabled, IPSources: sources, Records: records,
 		IntervalMins: imported.IntervalMins, OnlyOnChange: imported.OnlyOnChange, MaxRetries: imported.MaxRetries,
+		UseProxy: imported.UseProxy,
 	}
 }
 
