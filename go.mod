@@ -17,7 +17,7 @@ require (
 	github.com/lib-x/entsqlite v0.2.7
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/prometheus/client_golang v1.25.0
-	github.com/rs/zerolog v1.20.0
+	github.com/rs/zerolog v1.35.1
 	github.com/spf13/afero v1.15.0
 	github.com/urfave/cli/v2 v2.27.7
 	go.uber.org/zap v1.28.0
@@ -45,7 +45,7 @@ require (
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/coreos/go-oidc/v3 v3.17.0 // indirect
-	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
+	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
