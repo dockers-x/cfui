@@ -41,7 +41,7 @@ other = "Manage your Cloudflare Tunnel connection"
 other = "Tunnel profiles"
 
 [tunnel_profiles_help]
-other = "Select a tunnel to edit. Each tunnel can be started and stopped independently and may run at the same time."
+other = "Select a tunnel to edit. Tunnels can run independently."
 
 [active_local_tunnel]
 other = "Current tunnel"
@@ -1218,6 +1218,9 @@ other = "Save"
 
 [theme_changed]
 other = "Theme changed"
+
+[dark_theme]
+other = "Dark theme"
 
 [tls_disable_message]
 other = "Disabling TLS verification exposes traffic to man-in-the-middle attacks. Continue only for trusted internal services."

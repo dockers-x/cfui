@@ -1,14 +1,44 @@
 package server
 
 import (
-	"cfui/internal/mcpbridge"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"cfui/internal/cloudflared"
+	"cfui/internal/config"
+	"cfui/internal/mcpbridge"
+	"cfui/internal/service"
 )
+
+func BenchmarkTunnelStatusPoll(b *testing.B) {
+	for _, count := range []int{1, 32, 128} {
+		b.Run(fmt.Sprint(count), func(b *testing.B) {
+			manager, err := config.NewManager(b.TempDir())
+			if err != nil {
+				b.Fatal(err)
+			}
+			cfg := manager.Get()
+			cfg.Tunnels = make([]config.TunnelProfileConfig, count)
+			for i := range cfg.Tunnels {
+				cfg.Tunnels[i] = config.DefaultTunnelProfileConfig()
+				cfg.Tunnels[i].Key = fmt.Sprintf("profile-%d", i)
+			}
+			if err := manager.Save(cfg); err != nil {
+				b.Fatal(err)
+			}
+			s := Server{cfgMgr: manager, runner: service.NewRunner(manager)}
+			b.ReportAllocs()
+			for b.Loop() {
+				if len(s.tunnelsResponse(manager.Get()).Statuses) != count {
+					b.Fatal("missing profile status")
+				}
+			}
+		})
+	}
+}
 
 func TestStatusResponsePreservesTransitionalState(t *testing.T) {
 	next := time.Now().UTC().Add(time.Minute)

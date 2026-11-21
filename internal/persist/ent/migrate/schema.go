@@ -192,6 +192,13 @@ var (
 		Name:       "oauth_validation_reports",
 		Columns:    OauthValidationReportsColumns,
 		PrimaryKey: []*schema.Column{OauthValidationReportsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "oauthvalidationreport_saved_at",
+				Unique:  false,
+				Columns: []*schema.Column{OauthValidationReportsColumns[9]},
+			},
+		},
 	}
 	// S3WebdavSettingsColumns holds the columns for the "s3_webdav_settings" table.
 	S3WebdavSettingsColumns = []*schema.Column{

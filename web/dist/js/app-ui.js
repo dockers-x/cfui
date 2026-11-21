@@ -3,7 +3,7 @@
    ========================================================================= */
 (() => {
     'use strict';
-    const { state, $, $$, t, apiGet, toast } = window.cfui;
+    const { state, $, $$, t } = window.cfui;
 
     /* ---- i18n ---- */
 
@@ -69,13 +69,14 @@
 
     function initTheme() {
         document.documentElement.setAttribute('data-theme', state.currentTheme);
+        $('theme-btn').setAttribute('aria-pressed', String(state.currentTheme === 'dark'));
     }
 
-    function toggleTheme() {
+    function toggleTheme(event) {
+        $('theme-btn').toggleAttribute('data-animate', event?.detail > 0);
         state.currentTheme = state.currentTheme === 'light' ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', state.currentTheme);
+        initTheme();
         localStorage.setItem('theme', state.currentTheme);
-        toast.info(t('theme_changed'), { duration: 1800 });
     }
 
     /* ---- Dialog ---- */
@@ -95,7 +96,8 @@
         dialog.hidden = false;
         document.body.classList.add('modal-open');
         setTimeout(() => {
-            const target = dialog.querySelector('input, select, textarea, button');
+            if (state.activeDialog !== dialog || dialog.hidden) return;
+            const target = options.initialFocus || dialog.querySelector('input, select, textarea, button');
             target?.focus();
         }, 0);
     }
@@ -304,13 +306,14 @@
 
     /* ---- Language menu ---- */
 
-    function openLangMenu() {
+    function openLangMenu(event) {
         const menu = $('lang-menu');
         if (!menu) return;
+        menu.toggleAttribute('data-animate', event?.detail > 0);
         $$('[data-lang]', menu).forEach((b) => {
-            b.classList.toggle('btn--primary', b.dataset.lang === state.currentLang);
+            b.setAttribute('aria-pressed', String(b.dataset.lang === state.currentLang));
         });
-        openDialog(menu);
+        openDialog(menu, { initialFocus: menu.querySelector('[aria-pressed="true"]') });
     }
 
     /* ---- Wire document-level UI listeners ---- */
@@ -343,7 +346,7 @@
             }
             const close = e.target.closest('[data-close-dialog]');
             if (close) { e.preventDefault(); const dlg = close.closest('.modal-backdrop'); if (dlg) closeDialog(dlg); return; }
-            if (e.target.classList?.contains('modal-backdrop') && e.target.id !== 'lang-menu' && e.target.dataset.modalStatic !== 'true') closeDialog(e.target);
+            if (e.target.classList?.contains('modal-backdrop') && e.target.dataset.modalStatic !== 'true') closeDialog(e.target);
         });
 
         /* Confirm OK */

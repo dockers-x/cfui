@@ -496,7 +496,12 @@ func (m *Manager) Load() error {
 func (m *Manager) Save(cfg Config) error {
 	m.saveMu.Lock()
 	defer m.saveMu.Unlock()
+	return m.saveLocked(cfg)
+}
 
+// saveLocked persists a snapshot while saveMu serializes writers. Readers
+// continue to see the previous snapshot until the transaction commits.
+func (m *Manager) saveLocked(cfg Config) error {
 	m.mu.RLock()
 	current := cloneConfig(m.cfg)
 	m.mu.RUnlock()
@@ -553,6 +558,8 @@ func (m *Manager) ListTunnelProfiles() []TunnelProfileConfig {
 }
 
 func (m *Manager) SaveTunnelProfile(key string, tunnel TunnelProfileConfig) (Config, error) {
+	m.saveMu.Lock()
+	defer m.saveMu.Unlock()
 	cfg := normalizeTunnelProfiles(m.Get())
 	key = normalizeTunnelKey(key)
 	tunnel = normalizeTunnelProfile(tunnel, len(cfg.Tunnels))
@@ -572,22 +579,21 @@ func (m *Manager) SaveTunnelProfile(key string, tunnel TunnelProfileConfig) (Con
 		}
 	}
 	if !found {
-		if tunnelProfileExists(cfg.Tunnels, tunnel.Key) {
-			return Config{}, fmt.Errorf("tunnel profile %q already exists", tunnel.Key)
-		}
 		cfg.Tunnels = append(cfg.Tunnels, normalizeTunnelProfile(tunnel, len(cfg.Tunnels)))
 	}
 	if cfg.ActiveTunnelKey == "" {
 		cfg.ActiveTunnelKey = cfg.Tunnels[0].Key
 	}
 	cfg = applyActiveTunnelToTopLevel(cfg)
-	if err := m.Save(cfg); err != nil {
+	if err := m.saveLocked(cfg); err != nil {
 		return Config{}, err
 	}
 	return m.Get(), nil
 }
 
 func (m *Manager) DeleteTunnelProfile(key string) (Config, error) {
+	m.saveMu.Lock()
+	defer m.saveMu.Unlock()
 	cfg := normalizeTunnelProfiles(m.Get())
 	key = normalizeTunnelKey(key)
 	if key == "" {
@@ -613,13 +619,15 @@ func (m *Manager) DeleteTunnelProfile(key string) (Config, error) {
 		cfg.ActiveTunnelKey = cfg.Tunnels[0].Key
 	}
 	cfg = applyActiveTunnelToTopLevel(cfg)
-	if err := m.Save(cfg); err != nil {
+	if err := m.saveLocked(cfg); err != nil {
 		return Config{}, err
 	}
 	return m.Get(), nil
 }
 
 func (m *Manager) ActivateTunnelProfile(key string) (Config, error) {
+	m.saveMu.Lock()
+	defer m.saveMu.Unlock()
 	cfg := normalizeTunnelProfiles(m.Get())
 	key = normalizeTunnelKey(key)
 	if key == "" {
@@ -630,7 +638,7 @@ func (m *Manager) ActivateTunnelProfile(key string) (Config, error) {
 	}
 	cfg.ActiveTunnelKey = key
 	cfg = applyActiveTunnelToTopLevel(cfg)
-	if err := m.Save(cfg); err != nil {
+	if err := m.saveLocked(cfg); err != nil {
 		return Config{}, err
 	}
 	return m.Get(), nil

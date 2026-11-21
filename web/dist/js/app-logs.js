@@ -192,6 +192,7 @@
         if (!pill) return;
         pill.setAttribute('data-state', pillState);
         pill.setAttribute('aria-label', t(textKey));
+        pill.setAttribute('data-i18n-attr', `aria-label|${textKey}`);
         const text = pill.querySelector('.text');
         if (text) {
             text.textContent = t(textKey);
@@ -251,6 +252,7 @@
         btn.setAttribute('aria-pressed', String(state.isStreamConnected));
         btn.setAttribute('aria-label', t(textKey));
         btn.title = t(textKey);
+        btn.setAttribute('data-i18n-attr', `aria-label|${textKey};title|${textKey}`);
         const text = btn.querySelector('.text');
         if (text) {
             text.textContent = t(textKey);

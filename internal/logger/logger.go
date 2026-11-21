@@ -220,49 +220,58 @@ func NewLogBroadcaster(bufferSize int) *LogBroadcaster {
 	}
 
 	// Start background cleanup goroutine
-	b.wg.Add(1)
-	go b.cleanupInactiveSubscribers()
+	b.wg.Go(b.cleanupInactiveSubscribers)
 
 	return b
 }
 
 // cleanupInactiveSubscribers periodically removes inactive subscribers
 func (b *LogBroadcaster) cleanupInactiveSubscribers() {
-	defer b.wg.Done()
 	ticker := time.NewTicker(cleanupInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-ticker.C:
-			b.mu.Lock()
-			now := time.Now()
-			for ch, info := range b.subscribers {
-				if now.Sub(info.lastActive) > subscriberTimeout {
+		case now := <-ticker.C:
+			// Writing a warning broadcasts it to the remaining subscribers.
+			for _, info := range b.removeInactive(now) {
+				if Sugar != nil {
 					Sugar.Warnf("Removing inactive log subscriber (addr: %s, inactive: %v)",
 						info.remoteAddr, now.Sub(info.lastActive))
-					delete(b.subscribers, ch)
-					close(ch)
 				}
 			}
-			b.mu.Unlock()
 		case <-b.cleanupDone:
 			return
 		}
 	}
 }
 
-// Close stops the broadcaster and cleans up resources
-func (b *LogBroadcaster) Close() {
-	close(b.cleanupDone)
-	b.wg.Wait()
-
+func (b *LogBroadcaster) removeInactive(now time.Time) []*subscriberInfo {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	for ch := range b.subscribers {
-		close(ch)
+	var expired []*subscriberInfo
+	for ch, info := range b.subscribers {
+		if now.Sub(info.lastActive) > subscriberTimeout {
+			expired = append(expired, info)
+			delete(b.subscribers, ch)
+			close(ch)
+		}
 	}
-	b.subscribers = make(map[chan string]*subscriberInfo)
+	return expired
+}
+
+// Close stops the broadcaster and cleans up resources
+func (b *LogBroadcaster) Close() {
+	b.mu.Lock()
+	if b.subscribers != nil {
+		close(b.cleanupDone)
+		for ch := range b.subscribers {
+			close(ch)
+		}
+		b.subscribers = nil
+	}
+	b.mu.Unlock()
+	b.wg.Wait()
 }
 
 // Subscribe creates a new subscriber channel
@@ -271,6 +280,10 @@ func (b *LogBroadcaster) Subscribe(remoteAddr string) chan string {
 	defer b.mu.Unlock()
 
 	ch := make(chan string, subscriberBufferSize)
+	if b.subscribers == nil {
+		close(ch)
+		return ch
+	}
 	b.subscribers[ch] = &subscriberInfo{
 		ch:         ch,
 		lastActive: time.Now(),

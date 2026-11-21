@@ -101,14 +101,14 @@
                     <span class="text" data-i18n="status_checking">Checking...</span>
                     <button class="proto" type="button" disabled><span class="proto__value" aria-hidden="true">AUTO</span></button>
                 </span>
-                <button id="lang-btn" class="icon-btn" type="button" aria-haspopup="listbox" aria-label="Language" title="Language">
+                <button id="lang-btn" class="icon-btn" type="button" aria-haspopup="dialog" aria-controls="lang-menu" aria-label="Choose language" title="Choose language" data-i18n-attr="aria-label|language_choose;title|language_choose">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="2" y1="12" x2="22" y2="12"></line>
                         <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                     </svg>
                 </button>
-                <button id="theme-btn" class="icon-btn" type="button" aria-label="Toggle theme" title="Theme">
+                <button id="theme-btn" class="icon-btn" type="button" aria-pressed="false" aria-label="Dark theme" title="Dark theme" data-i18n-attr="aria-label|dark_theme;title|dark_theme">
                     <svg class="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="4"></circle>
                         <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
@@ -269,20 +269,18 @@
                             <p class="card-subtitle" data-i18n="tunnel_config_subtitle">Manage your Cloudflare Tunnel connection</p>
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body tunnel-editor">
                         <div class="tunnel-profile-bar" role="group" aria-labelledby="tunnel-profile-heading">
-                            <div class="tunnel-profile-head">
-                                <div class="tunnel-profile-title">
-                                    <div id="tunnel-profile-heading" class="tunnel-profile-label" data-i18n="tunnel_profiles_label">Tunnel profiles</div>
-                                    <p class="help-text" data-i18n="tunnel_profiles_help">Select a tunnel to edit. Each tunnel can be started and stopped independently and may run at the same time.</p>
-                                </div>
-                                <div class="btn-row">
-                                    <button id="add-tunnel-profile" type="button" class="btn btn--sm" data-i18n="add_tunnel_profile">Add tunnel</button>
-                                    <button id="delete-tunnel-profile" type="button" class="btn btn--sm btn--ghost" data-i18n="delete_tunnel_profile">Delete</button>
-                                </div>
+                            <div class="tunnel-profile-title">
+                                <h3 id="tunnel-profile-heading" class="tunnel-profile-label" data-i18n="tunnel_profiles_label">Tunnel profiles</h3>
+                                <p class="help-text" data-i18n="tunnel_profiles_help">Select a tunnel to edit. Tunnels can run independently.</p>
                             </div>
                             <select id="tunnel-profile-select" class="tunnel-profile-select-native" aria-hidden="true" tabindex="-1"></select>
                             <div id="tunnel-profile-list" class="tunnel-profile-list" role="list" aria-label="Tunnel profiles" data-i18n-attr="aria-label|tunnel_profiles_label"></div>
+                            <div class="btn-row">
+                                <button id="add-tunnel-profile" type="button" class="btn btn--sm" data-i18n="add_tunnel_profile">Add tunnel</button>
+                                <button id="delete-tunnel-profile" type="button" class="btn btn--sm btn--ghost" data-i18n="delete_tunnel_profile">Delete</button>
+                            </div>
                         </div>
                         <form id="config-form" novalidate>
                             <div class="form-field">
@@ -1825,20 +1823,18 @@
     </div>
 
     <!-- Language menu -->
-    <div id="lang-menu" class="modal-backdrop" hidden style="background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;">
-        <div class="modal" style="max-width: 320px;">
+    <div id="lang-menu" class="modal-backdrop" hidden>
+        <div class="modal language-dialog" role="dialog" aria-modal="true" aria-labelledby="language-title">
             <div class="modal-head">
-                <div>
-                    <h2 data-i18n="language_choose">Choose language</h2>
-                </div>
+                <h2 id="language-title" data-i18n="language_choose">Choose language</h2>
                 <button type="button" class="icon-btn" data-close-dialog aria-label="Close" title="Close" data-i18n-attr="aria-label|toast_close;title|toast_close">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
                 </button>
             </div>
-            <div class="modal-body" style="display: grid; gap: 6px;">
-                <button class="btn btn--block" type="button" data-lang="en" style="justify-content: flex-start;">English</button>
-                <button class="btn btn--block" type="button" data-lang="zh" style="justify-content: flex-start;">中文</button>
-                <button class="btn btn--block" type="button" data-lang="ja" style="justify-content: flex-start;">日本語</button>
+            <div class="language-options">
+                <button class="btn" type="button" data-lang="en" lang="en">English</button>
+                <button class="btn" type="button" data-lang="zh" lang="zh">中文</button>
+                <button class="btn" type="button" data-lang="ja" lang="ja">日本語</button>
             </div>
         </div>
     </div>

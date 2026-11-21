@@ -3,8 +3,10 @@ package config
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"cfui/internal/persist"
@@ -560,6 +562,33 @@ func TestDeleteActiveTunnelProfileSelectsNextDefault(t *testing.T) {
 	}
 	if got.Token != "office-token" {
 		t.Fatalf("legacy tunnel fields did not mirror next default: %#v", got)
+	}
+}
+
+func TestConcurrentProfileSavesSurviveReload(t *testing.T) {
+	mgr, err := NewManager(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	const count = 8
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := range count {
+		wg.Go(func() {
+			<-start
+			key := fmt.Sprintf("office-%d", i)
+			if _, err := mgr.SaveTunnelProfile(key, DefaultTunnelProfileConfig()); err != nil {
+				t.Errorf("save %s: %v", key, err)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if err := mgr.Load(); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(mgr.Get().Tunnels); got != count+1 {
+		t.Fatalf("got %d profiles after reload, want %d", got, count+1)
 	}
 }
 

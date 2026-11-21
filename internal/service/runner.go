@@ -73,14 +73,13 @@ func OptionsFromProfile(p config.TunnelProfileConfig) cloudflared.Options {
 	}
 }
 
-// resolveKey maps a request key ("" means active) onto the canonical profile
-// key. Unknown keys are returned as-is so instances of just-deleted profiles
-// can still be stopped.
+// Named instances remain addressable after their profile is deleted. Only
+// the legacy implicit key needs a configuration lookup.
 func (r *Runner) resolveKey(key string) string {
-	if profile, ok := r.cfgMgr.Get().TunnelProfile(key); ok {
-		return profile.Key
+	if canonical := config.NormalizeTunnelKey(key); canonical != "" {
+		return canonical
 	}
-	return key
+	return r.cfgMgr.Get().ActiveTunnelKey
 }
 
 // instanceFor returns (creating if needed) the instance for a profile.

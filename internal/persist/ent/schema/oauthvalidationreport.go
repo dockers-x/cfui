@@ -5,12 +5,18 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 )
 
 // OAuthValidationReport stores a sanitized Cloudflare OAuth validation report
 // snapshot for comparing real-account scope/API behavior over time.
 type OAuthValidationReport struct {
 	ent.Schema
+}
+
+// Indexes supports fetching the most recently saved reports without sorting the archive.
+func (OAuthValidationReport) Indexes() []ent.Index {
+	return []ent.Index{index.Fields("saved_at")}
 }
 
 // Fields of the OAuthValidationReport.

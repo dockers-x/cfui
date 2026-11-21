@@ -692,6 +692,8 @@
 
     function syncTunnelProfileListState(selected = selectedTunnelProfile()) {
         const selectedKey = selected?.key || selectedTunnelKey();
+        const profiles = new Map();
+        for (const profile of tunnelProfiles()) profiles.set(profile.key, profile);
         document.querySelectorAll('.tunnel-profile-item').forEach((item) => {
             const key = item.dataset.key;
             const isSelected = key === selectedKey;
@@ -706,9 +708,9 @@
             item.dataset.state = view.state;
 
             const runtime = item.querySelector('.tunnel-profile-item__runtime');
-            if (runtime) runtime.textContent = statusText;
+            if (runtime && runtime.textContent !== statusText) runtime.textContent = statusText;
 
-            const profile = tunnelProfiles().find(profile => profile.key === key) || { key };
+            const profile = profiles.get(key) || { key };
             const protoText = profileProtocolLabels(profile, st).join(' / ');
             const protocol = item.querySelector('.tunnel-profile-item__protocol');
             if (protocol) {
@@ -941,7 +943,7 @@
 
         document.addEventListener('localechange', () => {
             renderTunnelProfileSelector();
-            updateTunnelProfileUI();
+            if (state.status !== 'unknown') updateStatusUI();
         });
     }
 
