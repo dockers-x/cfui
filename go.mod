@@ -11,7 +11,7 @@ require (
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/cloudflare/cloudflare-go v0.119.0
 	github.com/cloudflare/cloudflared v0.0.0-20261123114120-dc57315806d5
-	github.com/fclairamb/afero-s3 v0.5.0
+	github.com/fclairamb/afero-s3 v0.5.1
 	github.com/google/uuid v1.6.0
 	github.com/lib-x/aferodav v0.2.0
 	github.com/lib-x/entsqlite v0.2.7
@@ -32,7 +32,7 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.27 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.30 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.23.24 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.12 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.12 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.12 // indirect
