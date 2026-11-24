@@ -7,7 +7,7 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.21.0
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.10
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.116.0
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/cloudflare/cloudflare-go v0.119.0
 	github.com/cloudflare/cloudflared v0.0.0-20261123114120-dc57315806d5
